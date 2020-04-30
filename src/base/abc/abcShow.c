@@ -363,7 +363,11 @@ void Abc_ShowFile( char * FileNameDot )
 
     // generate the PostScript file using DOT
     sprintf( CommandDot,  "%s -Tps -o %s %s", pDotName, FileNamePs, FileNameDot ); 
+#if defined(__wasm)
+    RetValue = -1;
+#else
     RetValue = system( CommandDot );
+#endif
     if ( RetValue == -1 )
     {
         fprintf( stdout, "Command \"%s\" did not succeed.\n", CommandDot );
@@ -401,7 +405,11 @@ void Abc_ShowFile( char * FileNameDot )
         char CommandPs[1000];
         unlink( FileNameDot );
         sprintf( CommandPs,  "%s %s &", pGsNameUnix, FileNamePs ); 
+#if defined(__wasm)
+        if ( 1 )
+#else
         if ( system( CommandPs ) == -1 )
+#endif
         {
             fprintf( stdout, "Cannot execute \"%s\".\n", CommandPs );
             return;
