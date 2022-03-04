@@ -2987,15 +2987,13 @@ int IoCommandWriteCex( Abc_Frame_t * pAbc, int argc, char **argv )
             {
                 if ( pCex == NULL )
                     continue;
-                if (!fAiger)
-                    fprintf( pFile, "#\n#\n# CEX for output %d\n#\n", i );
+                fprintf( pFile, "#\n#\n# CEX for output %d\n#\n", i );
                 Abc_NtkDumpOneCex( pFile, pNtk, pCex, 
                     fPrintFull, fNames, fUseFfNames, fMinimize, fUseOldMin, fCexInfo,
                     fCheckCex, fUseSatBased, fHighEffort, fAiger, fVerbose, fExtended );
             }
         }
-        if (!fAiger)
-            fprintf( pFile, "# DONE\n" ); 
+        fprintf( pFile, "# DONE\n" ); 
         fclose( pFile );
     }
     else
