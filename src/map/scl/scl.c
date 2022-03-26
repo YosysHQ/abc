@@ -1066,7 +1066,7 @@ int Scl_CommandBuffer( Abc_Frame_t * pAbc, int argc, char ** argv )
     }
     if ( !pPars->fSizeOnly && !pPars->fAddBufs && pNtk->vPhases == NULL )
     {
-        Abc_Print( -1, "Fanin phase information is not avaiable.\n" );
+        Abc_Print( -1, "Fanin phase information is not available.\n" );
         return 1;
     }
     if ( !pAbc->pLibScl || !Abc_SclHasDelayInfo(pAbc->pLibScl) )
@@ -1202,7 +1202,7 @@ int Scl_CommandBufferOld( Abc_Frame_t * pAbc, int argc, char ** argv )
     }
     if ( fAddInvs && pNtk->vPhases == NULL )
     {
-        Abc_Print( -1, "Fanin phase information is not avaiable.\n" );
+        Abc_Print( -1, "Fanin phase information is not available.\n" );
         return 1;
     }
     if ( !pAbc->pLibScl || !Abc_SclHasDelayInfo(pAbc->pLibScl) )
