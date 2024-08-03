@@ -141,6 +141,7 @@ class Clause {
       unsigned canbedel  : 1;
       unsigned size      : 32;
       unsigned szWithoutSelectors : 32;
+      uint32_t trace_tag : 32;
 
     }                            header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
@@ -159,6 +160,7 @@ class Clause {
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
+        header.trace_tag = ~0;
     header.lbd = 0;
     header.canbedel = 1;
         for (int i = 0; i < ps.size(); i++) 
@@ -277,6 +279,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
       to[cr].setLBD(c.lbd());
       to[cr].setSizeWithoutSelectors(c.sizeWithoutSelectors());
       to[cr].setCanBeDel(c.canBeDel());
+      to[cr].header.trace_tag = c.header.trace_tag;
     }
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }

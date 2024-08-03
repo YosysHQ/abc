@@ -150,6 +150,10 @@ Solver::Solver() :
   , incremental(opt_incremental)
   , nbVarsInitialFormula(INT32_MAX)
 
+  , trace_proof(false)
+  , trace_default_tag(~0)
+  , trace_qhead(0)
+
   #ifdef CGLUCOSE_EXP
   //, jheap         (JustOrderLt(this))
   , jheap         (JustOrderLt2(this))
@@ -283,7 +287,7 @@ bool Solver::addClause_(vec<Lit>& ps)
     oc.clear();
 
     Lit p; int i, j, flag = 0;
-    if(certifiedUNSAT) {
+    if(certifiedUNSAT || trace_proof) {
       for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
         oc.push(ps[i]);
         if (value(ps[i]) == l_True || ps[i] == ~p || value(ps[i]) == l_False)
@@ -304,6 +308,8 @@ bool Solver::addClause_(vec<Lit>& ps)
         printf( "\n" );
     }
     
+    assert(!(flag && trace_proof)); // TODO implement this
+
     if (flag && (certifiedUNSAT)) {
       for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         fprintf(certifiedOutput, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
@@ -322,6 +328,7 @@ bool Solver::addClause_(vec<Lit>& ps)
         return ok = (propagate() == CRef_Undef);
     }else{
         CRef cr = ca.alloc(ps, false);
+        ca[cr].header.trace_tag = trace_default_tag;
         clauses.push(cr);
         attachClause(cr);
     }
@@ -378,6 +385,7 @@ void Solver::removeClause(CRef cr) {
 
   Clause& c = ca[cr];
 
+  // assert(!trace_proof); // TODO implement this
   if (certifiedUNSAT) {
     fprintf(certifiedOutput, "d ");
     for (int i = 0; i < c.size(); i++)
@@ -601,7 +609,7 @@ Lit Solver::pickBranchLit()
 |        rest of literals. There may be others from the same level though.
 |  
 |________________________________________________________________________________________________@*/
-void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& out_btlevel,unsigned int &lbd,unsigned int &szWithoutSelectors)
+void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& out_btlevel,unsigned int &lbd,unsigned int &szWithoutSelectors, uint32_t &out_trace_tag)
 {
     //double clk = Abc_Clock();
     heap_rescale = 0;
@@ -615,8 +623,13 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& o
     int index   = trail.size() - 1;
     
     analyze_toclear.shrink_( analyze_toclear.size() );
+    trace_crefs.shrink_( trace_crefs.size() );
+    trace_units.shrink_( trace_units.size() );
     do{
         assert(confl != CRef_Undef); // (otherwise should be UIP)
+
+        if (trace_proof)
+            trace_crefs.push(confl);
 
         #ifdef CGLUCOSE_EXP
         Clause& c = ca[ lit_Undef != p ? castCRef(p): getConfClause(confl) ];
@@ -654,6 +667,11 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& o
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
             bool fBump = 0;
+
+            if (trace_proof && level(var(q)) == 0 && !seen[var(q)]) {
+                trace_units.push(~q);
+                seen[var(q)] = 1;
+            }
 
             if (!seen[var(q)] && level(var(q)) > 0){
                 if(!isSelector(var(q))){
@@ -732,10 +750,14 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& o
                 Clause& c = ca[reason(var(out_learnt[i]))];
                 #endif
                 // Thanks to Siert Wieringa for this bug fix!
-                for (int k = ((c.size()==2) ? 0:1); k < c.size(); k++)
+                int k;
+                for (k = ((c.size()==2) ? 0:1); k < c.size(); k++)
                     if (!seen[var(c[k])] && level(var(c[k])) > 0){
                         out_learnt[j++] = out_learnt[i];
                         break; }
+                assert (!trace_proof); // FIXME this currently doesn't keep track of used unit clauses
+                if (trace_proof && k == c.size())
+                  trace_crefs.push(reason(var(out_learnt[i])));
             }
         }
     }else
@@ -752,7 +774,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& o
       Then, we reduce clauses with small LBD.
       Otherwise, this can be useless
      */
-    if(!incremental && out_learnt.size()<=lbSizeMinimizingClause) {
+    if(!incremental && !trace_proof && out_learnt.size()<=lbSizeMinimizingClause) {
       minimisationWithBinaryResolution(out_learnt);
     }
     // Find correct backtrack level:
@@ -799,6 +821,27 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt,vec<Lit>&selectors, int& o
         lastDecisionLevel.shrink_( lastDecisionLevel.size() );
     } 
 #endif
+    if (trace_proof) {
+        trace_tags.shrink_(trace_tags.size());
+        for (int i = 0; i < trace_crefs.size(); i++) {
+            CRef used = trace_crefs[i];
+            assert(used != CRef_Undef);
+            if (isGateCRef(used)) {
+                trace_tags.push(used);
+            } else {
+                trace_tags.push(ca[used].header.trace_tag);
+            }
+        }
+
+        out_trace_tag = trace_proof_learnt_clause(
+            trace_proof_callback_data,
+            (int *)(Lit *)out_learnt, out_learnt.size(),
+            trace_tags, trace_tags.size(),
+            (int *)(Lit *)trace_units, trace_units.size());
+
+        for(int i = 0; i < trace_units.size(); i++)
+            seen[var(trace_units[i])] = 0;
+    }
 
 
     if( justUsage() ){
@@ -842,8 +885,12 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
 {
     analyze_stack.shrink_( analyze_stack.size() ); analyze_stack.push(p);
     int top = analyze_toclear.size();
+    int crefs_top = trace_crefs.size();
+    int units_top = trace_units.size();
     while (analyze_stack.size() > 0){
         assert(reason(var(analyze_stack.last())) != CRef_Undef);
+        if (trace_proof)
+            trace_crefs.push(reason(var(analyze_stack.last())));
         #ifdef CGLUCOSE_EXP
         Clause& c = ca[castCRef(analyze_stack.last())]; analyze_stack.pop();
         #else
@@ -857,6 +904,10 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
 
         for (int i = 1; i < c.size(); i++){
             Lit p  = c[i];
+            if (trace_proof && level(var(p)) == 0 && !seen[var(p)]) {
+                trace_units.push(~p);
+                seen[var(p)] = 1;
+            }
             if (!seen[var(p)] && level(var(p)) > 0){
                 if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0){
                     seen[var(p)] = 1;
@@ -865,7 +916,11 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
                 }else{
                     for (int j = top; j < analyze_toclear.size(); j++)
                         seen[var(analyze_toclear[j])] = 0;
+                    for (int j = units_top; j < trace_units.size(); j++)
+                        seen[var(trace_units[j])] = 0;
                     analyze_toclear.shrink_(analyze_toclear.size() - top);
+                    trace_crefs.shrink_(trace_crefs.size() - crefs_top);
+                    trace_units.shrink_(trace_units.size() - units_top);
                     return false;
                 }
             }
@@ -890,8 +945,17 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     out_conflict.shrink_( out_conflict.size() );
     out_conflict.push(p);
 
-    if (decisionLevel() == 0)
+    trace_crefs.shrink_(trace_crefs.size());
+    trace_units.shrink_(trace_units.size());
+    trace_tags.shrink_(trace_tags.size());
+
+    if (decisionLevel() == 0) {
+        if (trace_proof) {
+            int p_int = toInt(p);
+            trace_proof_conflict(trace_proof_callback_data, NULL, 0, &p_int, 1);
+        }
         return;
+    }
 
     seen[var(p)] = 1;
 
@@ -907,16 +971,47 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
               #else
                 Clause& c = ca[reason(x)];
               #endif
+                if (trace_proof)
+                    trace_crefs.push(reason(x));
                 //                for (int j = 1; j < c.size(); j++) Minisat (glucose 2.0) loop 
                 // Bug in case of assumptions due to special data structures for Binary.
                 // Many thanks to Sam Bayless (sbayless@cs.ubc.ca) for discover this bug.
                 for (int j = ((c.size()==2) ? 0:1); j < c.size(); j++)
-                    if (level(var(c[j])) > 0)
+                {
+                    if (level(var(c[j])) > 0) {
                         seen[var(c[j])] = 1;
+                    } else if (trace_proof) {
+                        seen[var(c[j])] = 1;
+                        trace_units.push(~c[j]);
+                    }
+                }
             }  
 
             seen[x] = 0;
         }
+    }
+
+    if (trace_proof) {
+        trace_tags.shrink_(trace_tags.size());
+        for (int i = 0; i < trace_crefs.size(); i++) {
+            CRef used = trace_crefs[i];
+            assert(used != CRef_Undef);
+            if (isGateCRef(used)) {
+                trace_tags.push(used);
+            } else {
+                trace_tags.push(ca[used].header.trace_tag);
+            }
+        }
+
+        assert(false);
+
+        trace_proof_conflict(
+            trace_proof_callback_data,
+            trace_tags, trace_tags.size(),
+            (int *)(Lit *)trace_units, trace_units.size());
+
+        for(int i = 0; i < trace_units.size(); i++)
+            seen[var(trace_units[i])] = 0;
     }
 
     seen[var(p)] = 0;
@@ -1053,6 +1148,26 @@ CRef Solver::propagate()
     }
     propagations += num_props;
     simpDB_props -= num_props;
+
+    if (trace_proof && confl == CRef_Undef && decisionLevel() == 0) {
+        while (trace_qhead < trail.size()) {
+            Lit p = trail[trace_qhead++];
+            CRef cr = reason(var(p));
+            if (cr == CRef_Undef) {
+                continue;
+            }
+            trace_units.shrink_(trace_units.size());
+            uint32_t tag = isGateCRef(cr) ? cr : ca[cr].header.trace_tag;
+
+            Clause &clause = ca[castCRef(p)];
+            for (int i = 0; i < clause.size(); i++)
+                if (value(clause[i]) == l_False)
+                    trace_units.push(~clause[i]);
+
+            trace_proof_learnt_unit(trace_proof_callback_data, toInt(p), tag, (int *)(Lit *)trace_units, trace_units.size());
+        }
+
+    }
 
     return confl;
 }
@@ -1242,9 +1357,10 @@ lbool Solver::search(int nof_conflicts)
             if(!blocked) {lastblockatrestart=starts;nbstopsrestartssame++;blocked=true;}
           }
 
+            uint32_t trace_tag = ~0;
             learnt_clause.shrink_( learnt_clause.size() );
             selectors    .shrink_( selectors.size() );
-            analyze(confl, learnt_clause, selectors,backtrack_level,nblevels,szWoutSelectors);
+            analyze(confl, learnt_clause, selectors,backtrack_level,nblevels,szWoutSelectors,trace_tag);
 
             lbdQueue.push(nblevels);
             sumLBD += nblevels;
@@ -1260,6 +1376,7 @@ lbool Solver::search(int nof_conflicts)
               uncheckedEnqueue(learnt_clause[0]);nbUn++;
             }else{
                 CRef cr = ca.alloc(learnt_clause, true);
+                ca[cr].header.trace_tag = trace_tag;
                 ca[cr].setLBD(nblevels); 
                 ca[cr].setSizeWithoutSelectors(szWoutSelectors);
                 if(nblevels<=2) nbDL2++; // stats

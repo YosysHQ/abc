@@ -206,6 +206,7 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     // if (!find(subsumption_queue, &c))
     subsumption_queue.insert(cr);
 
+    assert(!trace_proof); // TODO implement this
     if (certifiedUNSAT) {
       for (int i = 0; i < c.size(); i++)
         if (c[i] != l) fprintf(certifiedOutput, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
