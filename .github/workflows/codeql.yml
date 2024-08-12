@@ -1,0 +1,30 @@
+name: "CodeQL"
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install deps
+      run: sudo apt-get install libreadline-dev
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+       submodules: true
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: cpp
+        queries: security-extended,security-and-quality
+
+    - name: Build
+      run: make abc -j6
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
