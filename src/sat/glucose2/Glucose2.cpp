@@ -154,6 +154,8 @@ Solver::Solver() :
   , trace_default_tag(~0)
   , trace_qhead(0)
 
+  , produceInnerModel(false)
+
   #ifdef CGLUCOSE_EXP
   //, jheap         (JustOrderLt(this))
   , jheap         (JustOrderLt2(this))
@@ -1579,7 +1581,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
                 int i = 0, j = 0;
                 JustModel.push(toLit(0));
                 for (; i < trail.size(); i++) 
-                    if( isRoundWatch(var(trail[i])) && !isTwoFanin(var(trail[i])) )
+                    if( isRoundWatch(var(trail[i])) && (produceInnerModel || !isTwoFanin(var(trail[i])) ))
                         JustModel.push(trail[i]), j++;
                 JustModel[0] = toLit(j);
             }

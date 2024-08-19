@@ -495,6 +495,7 @@ public:
     //double justActivity(int v) const { return jdata[v].act_fanin;}
     int varPolarity(int v){ return polarity[v]? 1: 0;}
     vec<Lit> JustModel; // model obtained by justification enabled
+    bool produceInnerModel;
 
     int justUsage() const ;
     int solveLimited( int * , int nlits );
