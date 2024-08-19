@@ -187,6 +187,9 @@ Solver::Solver() :
   travId = 0;
   travId_prev = 0;
 
+  jlevel.push(-1);
+  jlevel.push(-1);
+
   // allocate space for clause interpretation 
   vec<Lit> tmp; tmp.growTo(3); 
   itpc = ca.alloc(tmp);
@@ -1910,6 +1913,9 @@ void Solver::reset()
     JustModel    .shrink_(JustModel .size());
     jlevel       .shrink_(jlevel.size());
     jnext        .shrink_(jnext.size());
+
+    jlevel.push(-1);
+    jlevel.push(-1);
 
     //var2FaninLits.shrink_(var2FaninLits.size());
     var2NodeData .shrink_(var2NodeData .size());
