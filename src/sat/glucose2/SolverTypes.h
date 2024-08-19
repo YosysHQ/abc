@@ -274,13 +274,13 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         // Copy extra data-fields: 
         // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
         to[cr].mark(c.mark());
+        to[cr].header.trace_tag = c.header.trace_tag;
         if (to[cr].learnt())        {
-      to[cr].activity() = c.activity();
-      to[cr].setLBD(c.lbd());
-      to[cr].setSizeWithoutSelectors(c.sizeWithoutSelectors());
-      to[cr].setCanBeDel(c.canBeDel());
-      to[cr].header.trace_tag = c.header.trace_tag;
-    }
+            to[cr].activity() = c.activity();
+            to[cr].setLBD(c.lbd());
+            to[cr].setSizeWithoutSelectors(c.sizeWithoutSelectors());
+            to[cr].setCanBeDel(c.canBeDel());
+        }
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }
 };

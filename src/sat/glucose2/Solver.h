@@ -201,7 +201,7 @@ public:
     void *trace_proof_callback_data;
     uint32_t (*trace_proof_learnt_clause)(void *data, const int *lits, int nlits, const uint32_t *tags, int ntags, const int *units, int nunits);
     void (*trace_proof_learnt_unit)(void *data, int unit, uint32_t tag, const int *units, int nunits);
-    void (*trace_proof_conflict)(void *data, const uint32_t *tags, int ntags, const int *units, int nunits);
+    void (*trace_proof_conflict)(void *data, const int *lits, int nlits, const uint32_t *tags, int ntags, const int *units, int nunits);
 
     
     // Statistics: (read-only member variable)

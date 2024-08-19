@@ -285,7 +285,7 @@ bool Solver::addClause_(vec<Lit>& ps)
     // Check if clause is satisfied and remove false/duplicate literals:
     sort(ps);
 
-    vec<Lit>    oc;
+    vec<Lit>    oc, used_units;
     oc.clear();
 
     Lit p; int i, j, flag = 0;
@@ -294,6 +294,8 @@ bool Solver::addClause_(vec<Lit>& ps)
         oc.push(ps[i]);
         if (value(ps[i]) == l_True || ps[i] == ~p || value(ps[i]) == l_False)
           flag = 1;
+        if (trace_proof && value(ps[i]) == l_False)
+          used_units.push(~ps[i]);
       }
     }
 
@@ -310,7 +312,14 @@ bool Solver::addClause_(vec<Lit>& ps)
         printf( "\n" );
     }
     
-    assert(!(flag && trace_proof)); // TODO implement this
+    uint32_t trace_tag = trace_default_tag;
+
+    if (flag && trace_proof) {
+        trace_tag = trace_proof_learnt_clause(trace_proof_callback_data,
+            (int *)(Lit *)ps, ps.size(),
+            &trace_tag, 1,
+            (int *)(Lit *)used_units, used_units.size());
+    }
 
     if (flag && (certifiedUNSAT)) {
       for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
@@ -954,12 +963,16 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     if (decisionLevel() == 0) {
         if (trace_proof) {
             int p_int = toInt(p);
-            trace_proof_conflict(trace_proof_callback_data, NULL, 0, &p_int, 1);
+            trace_proof_conflict(trace_proof_callback_data,
+                (int *)(Lit *)out_conflict, out_conflict.size(), NULL, 0, &p_int, 1);
         }
         return;
     }
 
     seen[var(p)] = 1;
+
+    if (trace_proof && level(var(p)) == 0)
+        trace_units.push(p);
 
     for (int i = trail.size()-1; i >= trail_lim[0]; i--){
         Var x = var(trail[i]);
@@ -1005,10 +1018,9 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
             }
         }
 
-        assert(false);
-
         trace_proof_conflict(
             trace_proof_callback_data,
+            (int *)(Lit *)out_conflict, out_conflict.size(),
             trace_tags, trace_tags.size(),
             (int *)(Lit *)trace_units, trace_units.size());
 
