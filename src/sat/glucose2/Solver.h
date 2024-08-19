@@ -71,6 +71,7 @@ public:
     void sat_solver_set_var_fanin_lit(int, int, int);  
     void sat_solver_start_new_round();  
     void sat_solver_mark_cone(int);  
+    void sat_solver_mark_var(int);
     void sat_solver_set_jftr(int);
     int  sat_solver_jftr();
     void sat_solver_reset();
@@ -486,6 +487,7 @@ public:
 
     void setNewRound(){ travId ++ ; }
     void markCone( Var v );
+    void markVar( Var v );
     void setJust( int njftr ){ jftr = njftr; }
     bool isRoundWatch( Var v ) const { return travId==var2TravId[v]; }
     void justReset(){ jftr = 0; reset(); }
@@ -627,6 +629,7 @@ inline void     Solver::addVar(Var v) { while (v >= nVars()) newVar(); }
 inline void     Solver::sat_solver_set_var_fanin_lit(int v, int lit0, int lit1) { setVarFaninLits( Var(v), toLit(lit0), toLit(lit1) ); }
 inline void     Solver::sat_solver_start_new_round()  { setNewRound(); }
 inline void     Solver::sat_solver_mark_cone(int v) { markCone(v); }
+inline void     Solver::sat_solver_mark_var(int v) { markVar(v); }
 inline void     Solver::sat_solver_set_jftr( int njftr ){ setJust(njftr); }
 inline int      Solver::sat_solver_jftr(){ return jftr; }
 inline void     Solver::sat_solver_reset(){ justReset();  }

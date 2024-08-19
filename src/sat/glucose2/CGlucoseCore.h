@@ -338,7 +338,7 @@ inline CRef Solver::gatePropagateCheckFanout( Var v, Lit lfo ){
 				return Var2CRef(var(lfo));
 			
 			var2NodeData[var(lfo)].dir = sign(lfo);
-			uncheckedEnqueue2(~mkLit(var(lfo)), Var2CRef( var(lfo) ) );
+			uncheckedEnqueue(~mkLit(var(lfo)), Var2CRef( var(lfo) ) );
 		} else {
 			assert( l_True == value(faninLit) );
 
@@ -355,11 +355,11 @@ inline CRef Solver::gatePropagateCheckFanout( Var v, Lit lfo ){
 				if( l_True == value(faninLitP) )
 					return Var2CRef(var(lfo));
 
-				uncheckedEnqueue2( ~faninLitP, Var2CRef( var(lfo) ) );
+				uncheckedEnqueue( ~faninLitP, Var2CRef( var(lfo) ) );
 			}
 			else
 			if( l_True == value(faninLitP) )
-				uncheckedEnqueue2( mkLit(var(lfo)), Var2CRef( var(lfo) ) );
+				uncheckedEnqueue( mkLit(var(lfo)), Var2CRef( var(lfo) ) );
 		}
 	} else { // xor scope
 		// check value of the other fanin 
@@ -374,10 +374,10 @@ inline CRef Solver::gatePropagateCheckFanout( Var v, Lit lfo ){
 			return CRef_Undef;
 		else
 		if( l_Undef == val1 )
-			uncheckedEnqueue2( ~faninLitP ^ ( (l_True == val0) ^ (l_True == valo) ), Var2CRef( var(lfo) ) );
+			uncheckedEnqueue( ~faninLitP ^ ( (l_True == val0) ^ (l_True == valo) ), Var2CRef( var(lfo) ) );
 		else
 		if( l_Undef == valo )
-			uncheckedEnqueue2( ~mkLit( var(lfo), (l_True == val0) ^ (l_True == val1) ), Var2CRef( var(lfo) ) );
+			uncheckedEnqueue( ~mkLit( var(lfo), (l_True == val0) ^ (l_True == val1) ), Var2CRef( var(lfo) ) );
 		else
 		if( l_False  == (valo ^ (val0 == val1)) )
 			return Var2CRef(var(lfo));
@@ -398,19 +398,19 @@ inline CRef Solver::gatePropagateCheckThis( Var v ){
 				return CRef_Undef;
 
 			if( l_True == value(getFaninLit0(v)) )
-				uncheckedEnqueue2(~getFaninLit1( v ), Var2CRef( v ) );
+				uncheckedEnqueue(~getFaninLit1( v ), Var2CRef( v ) );
 			if( l_True == value(getFaninLit1(v)) )
-				uncheckedEnqueue2(~getFaninLit0( v ), Var2CRef( v ) );
+				uncheckedEnqueue(~getFaninLit0( v ), Var2CRef( v ) );
 		} else {
 			assert( l_True == value(v) );
 			if( l_False == value(getFaninLit0(v)) || l_False == value(getFaninLit1(v)) )
 				confl = Var2CRef(v);
 
 			if( l_Undef == value( getFaninLit0( v )) )
-				uncheckedEnqueue2( getFaninLit0( v ), Var2CRef( v ) );
+				uncheckedEnqueue( getFaninLit0( v ), Var2CRef( v ) );
 
 			if( l_Undef == value( getFaninLit1( v )) )
-				uncheckedEnqueue2( getFaninLit1( v ), Var2CRef( v ) );
+				uncheckedEnqueue( getFaninLit1( v ), Var2CRef( v ) );
 
 		}
 	} else { // xor scope
@@ -421,10 +421,10 @@ inline CRef Solver::gatePropagateCheckThis( Var v ){
 		if( l_Undef == val0 && l_Undef == val1 )
 			return CRef_Undef;
 		if( l_Undef == val0 )
-			uncheckedEnqueue2(~getFaninLit0( v ) ^ ( (l_True == val1) ^ (l_True == valo) ), Var2CRef( v ) );
+			uncheckedEnqueue(~getFaninLit0( v ) ^ ( (l_True == val1) ^ (l_True == valo) ), Var2CRef( v ) );
 		else
 		if( l_Undef == val1 )
-			uncheckedEnqueue2(~getFaninLit1( v ) ^ ( (l_True == val0) ^ (l_True == valo) ), Var2CRef( v ) );
+			uncheckedEnqueue(~getFaninLit1( v ) ^ ( (l_True == val0) ^ (l_True == valo) ), Var2CRef( v ) );
 		else
 		if( l_False == (valo ^ (val0 == val1)) )
 			return Var2CRef(v);
@@ -566,10 +566,15 @@ inline void Solver::markCone( Var v ){
 	Var var0, var1;
 	var0 = getFaninVar0(v);
 	var1 = getFaninVar1(v);
-	if( !isTwoFanin(v) )
+	if( !isTwoFanin(v) || (value(v) != l_Undef && level(v) == 0) )
 		return;
 	markCone( var0 );
 	markCone( var1 );
+}
+
+inline void Solver::markVar( Var v ){
+	var2TravId[v] = travId;
+	var2NodeData[v].sort = 0;
 }
 
 inline void Solver::inplace_sort( Var v ){
