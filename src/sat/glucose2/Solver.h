@@ -396,6 +396,7 @@ protected:
     //vec<Lit> var2FaninLits; // (~0): undefine
     vec<unsigned> var2TravId;
     vec<Lit> var2Fanout0, var2FanoutN;//, var2FanoutP;
+    vec<Var> flushFanout;
     CRef itpc; // the interpreted clause of a gate 
     void inplace_sort( Var v );
 

@@ -246,6 +246,16 @@ inline void Solver::setVarFaninLits( Var v, Lit lit1, Lit lit2 ){
 	int mincap = var(lit1) < var(lit2)? var(lit2): var(lit1);
 	mincap = (v < mincap? mincap: v) + 1;
 
+	if (var2NodeData[ v ].lit0 != toLit(~0)) {
+		flushFanout.push(var(var2NodeData[ v ].lit0));
+		flushFanout.push(var(var2NodeData[ v ].lit1));
+
+		var2NodeData[ v ].lit0 = lit1;
+		var2NodeData[ v ].lit1 = lit2;
+
+		return;
+	}
+
 	var2NodeData[ v ].lit0 = lit1;
 	var2NodeData[ v ].lit1 = lit2;
 

@@ -1043,6 +1043,49 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 |________________________________________________________________________________________________@*/
 CRef Solver::propagate()
 {
+
+    if (flushFanout.size() != 0) {
+        sort(flushFanout);
+        int w = 1;
+        for (int r = 1; r < flushFanout.size(); r++) {
+            if (flushFanout[w - 1] != flushFanout[r])
+                flushFanout[w++] = flushFanout[r];
+        }
+        flushFanout.shrink_(flushFanout.size() - w);
+
+        for (int i = 0; i < flushFanout.size(); i++) {
+            Var v = flushFanout[i];
+              var2NodeData[v].sort = 0;
+
+            Lit current = var2Fanout0[v];
+            Lit prev = toLit(~0);
+            while (current != toLit(~0)) {
+                Var found = sign(current) ? var(var2NodeData[var(current)].lit1) : var(var2NodeData[var(current)].lit0);
+
+                if (found == v) {
+                    prev = current;
+                    current = var2FanoutN[toInt(current)];
+                } else {
+                    Lit move = current;
+                    current = var2FanoutN[toInt(current)];
+
+                    if (prev == toLit(~0)) {
+                        var2Fanout0[v] = current;
+                    } else {
+                        var2FanoutN[toInt(prev)] = current;
+                    }
+
+                    var2FanoutN[toInt(move)] = var2Fanout0[found];
+                    var2Fanout0[found] = move;
+                    var2NodeData[found].sort = 0;
+                }
+            }
+
+        }
+
+        flushFanout.shrink_(flushFanout.size());
+    }
+
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll();
@@ -1860,6 +1903,8 @@ void Solver::reset()
     var2NodeData .shrink_(var2NodeData .size());
     var2Fanout0  .shrink_(var2Fanout0  .size());
     var2FanoutN  .shrink_(var2FanoutN  .size());
+
+    flushFanout.shrink_(flushFanout.size());
     //var2FanoutP.clear(false);
     if( CRef_Undef != itpc ){
         itpc = CRef_Undef;       // clause allocator has been cleared, do not worry 
