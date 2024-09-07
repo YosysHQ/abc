@@ -94,6 +94,7 @@ inline Lit Solver::pickJustLit( int& index ){
 	for( ; jhead < trail.size() ; jhead++ ){
 		Var x = var(trail[jhead]);
 		if( !decisionLevel() && !isRoundWatch(x) ) continue;
+		if( level(x) == 0 ) continue;
 		if( isJReason(x) && l_Undef == value( getFaninVar0(x) ) && l_Undef == value( getFaninVar1(x) ) )
 			pushJustQueue(x,jhead);
 	}
