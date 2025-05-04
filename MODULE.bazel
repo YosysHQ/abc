@@ -10,3 +10,8 @@ bazel_dep(name = "platforms", version = "0.0.11")
 bazel_dep(name = "readline", version = "8.2.bcr.2")
 bazel_dep(name = "rules_cc", version = "0.1.1")
 bazel_dep(name = "zlib", version = "1.3.1.bcr.5")
+git_override(
+    module_name = "ncurses",
+    commit = "f918fafc9f7aeb1745d02e7978597abf8e580de2",
+    remote = "https://github.com/amorphic-io/ncurses",
+)

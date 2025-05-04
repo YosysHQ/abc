@@ -67,3 +67,5 @@ abc.history
 
 /.envrc
 /.direnv
+
+bazel-*

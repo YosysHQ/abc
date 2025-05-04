@@ -1372,6 +1372,7 @@ cc_library(
         "ABC_USE_PTHREADS",
         "ABC_USE_READLINE",
         "ABC_NAMESPACE=abc",
+        "ABC_USE_STDINT_H=1",
     ],
     includes = [
         "src",
