@@ -206,7 +206,7 @@ static int Exa8_ManVarReserve( Exa8_Man_t * p )
 {
     int nMintMax = 1 << p->nVars;
     int nVarsPerMint = p->pPars->fUseIncr ? p->nNodes : (p->nLutSize + 1) * p->nNodes;
-    int64_t nTotal = (int64_t)p->iVar + (int64_t)nVarsPerMint * nMintMax;
+    ABC_INT64_T nTotal = (ABC_INT64_T)p->iVar + (ABC_INT64_T)nVarsPerMint * nMintMax;
     if ( nTotal > INT_MAX )
         nTotal = INT_MAX;
     return (int)nTotal;

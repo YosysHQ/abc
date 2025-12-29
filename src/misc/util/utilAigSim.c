@@ -25,7 +25,14 @@
 #include <assert.h>
 #include <ctype.h>
 #include <time.h>
-#include <unistd.h>   // mkstemp(), close(), unlink()
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#include <windows.h>
+#include <process.h>
+#include <io.h>
+#define unlink _unlink
+#else
+#include <unistd.h>
+#endif
 
 #define AIGSIM_LIBRARY_ONLY
 
