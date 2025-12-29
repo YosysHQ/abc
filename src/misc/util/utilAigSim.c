@@ -41,7 +41,12 @@
 ABC_NAMESPACE_IMPL_START
 #endif
 
-
+#if defined(_MSC_VER)
+int SimulateAigTop( char *fname1, char *fname2, char *mask, int verbose )
+{
+    return 3;
+}
+#else
 ////////////////////////////////////////////////////////////////////////
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
@@ -151,7 +156,7 @@ static AigMan* Aig_ManLoadAigerBinary(const char *filename, int verbose) {
 
 /* ---------------------- sim helpers ---------------------- */
 
-static inline uint64_t u64_mask_n(int nBits) {
+static inline ABC_UINT64_T u64_mask_n(int nBits) {
     return (nBits >= 64) ? ~0ull : ((nBits <= 0) ? 0ull : ((1ull << nBits) - 1ull));
 }
 static void u128_to_dec(unsigned __int128 x, char *buf, size_t cap) {
@@ -164,12 +169,12 @@ static void u128_to_dec(unsigned __int128 x, char *buf, size_t cap) {
 
 enum { NW = 64, BATCH = NW * 64 }; // 4096 patterns/round
 
-static inline uint64_t SimLit(const uint64_t *S, uint32_t lit, int w) {
-    uint64_t v = S[(size_t)Aig_LitId(lit) * NW + (size_t)w];
+static inline ABC_UINT64_T SimLit(const ABC_UINT64_T *S, uint32_t lit, int w) {
+    ABC_UINT64_T v = S[(size_t)Aig_LitId(lit) * NW + (size_t)w];
     return Aig_LitCompl(lit) ? ~v : v;
 }
 
-static inline void SimulateOne(const AigMan *p, uint64_t *S) {
+static inline void SimulateOne(const AigMan *p, ABC_UINT64_T *S) {
     const int firstAnd = p->nCis + 1;
     const int lastAnd  = p->nCis + p->nAnds;
     for (int id = firstAnd; id <= lastAnd; ++id) {
@@ -204,7 +209,7 @@ static void PrintMaskSegmentsOneLine(const char *maskStr,
     printf("%s\n", buf);
 }
 
-static int ParseMaskString(const char *maskStr, int nCis, uint64_t *varMasks, int *pnVars, int verbose) {
+static int ParseMaskString(const char *maskStr, int nCis, ABC_UINT64_T *varMasks, int *pnVars, int verbose) {
     if (!maskStr || !*maskStr) {
         for (int i = 0; i < nCis; ++i) varMasks[i] = 1ull << i;
         *pnVars = nCis;
@@ -260,7 +265,7 @@ static int ParseMaskString(const char *maskStr, int nCis, uint64_t *varMasks, in
         nSeg++;
 
         if (grouped) {
-            uint64_t m = ((w == 64) ? ~0ull : (((1ull << (unsigned)w) - 1ull) << (unsigned)off));
+            ABC_UINT64_T m = ((w == 64) ? ~0ull : (((1ull << (unsigned)w) - 1ull) << (unsigned)off));
             if (nVars >= 64) { fprintf(stderr, "Error: too many vars in mask\n"); return 0; }
             varMasks[nVars++] = m;
         } else {
@@ -308,18 +313,18 @@ static int make_tmp_path_noexist(char *path, size_t cap, const char *prefix) {
     return 1;
 }
 
-static int write_words(const char *fname, const uint64_t *data, size_t nWords) {
+static int write_words(const char *fname, const ABC_UINT64_T *data, size_t nWords) {
     FILE *f = fopen(fname, "wb");
     if (!f) return 0;
-    size_t wr = fwrite(data, sizeof(uint64_t), nWords, f);
+    size_t wr = fwrite(data, sizeof(ABC_UINT64_T), nWords, f);
     fclose(f);
     return wr == nWords;
 }
 
-static int read_words(const char *fname, uint64_t *data, size_t nWords) {
+static int read_words(const char *fname, ABC_UINT64_T *data, size_t nWords) {
     FILE *f = fopen(fname, "rb");
     if (!f) return 0;
-    size_t rd = fread(data, sizeof(uint64_t), nWords, f);
+    size_t rd = fread(data, sizeof(ABC_UINT64_T), nWords, f);
     fclose(f);
     return rd == nWords;
 }
@@ -327,7 +332,7 @@ static int read_words(const char *fname, uint64_t *data, size_t nWords) {
 /* ---------------------- compare: AIG vs AIG ---------------------- */
 
 static int SimulateCompareAigAig(const AigMan *p1, const AigMan *p2,
-                                 const uint64_t *varMasks, int nVars, int verbose)
+                                 const ABC_UINT64_T *varMasks, int nVars, int verbose)
 {
     if (p1->nCis != p2->nCis || p1->nCos != p2->nCos) {
         fprintf(stderr, "Error: interface mismatch: (I,O)=(%d,%d) vs (%d,%d)\n",
@@ -339,8 +344,8 @@ static int SimulateCompareAigAig(const AigMan *p1, const AigMan *p2,
         return 0;
     }
 
-    const uint64_t inMask  = u64_mask_n(p1->nCis);
-    const uint64_t outMask = u64_mask_n(p1->nCos);
+    const ABC_UINT64_T inMask  = u64_mask_n(p1->nCis);
+    const ABC_UINT64_T outMask = u64_mask_n(p1->nCos);
     const unsigned __int128 combs = ((unsigned __int128)1) << (unsigned)nVars;
 
     uint32_t *co1 = ABC_ALLOC(uint32_t, p1->nCos);
@@ -350,10 +355,10 @@ static int SimulateCompareAigAig(const AigMan *p1, const AigMan *p2,
         co2[o] = p2->nodes[p2->nCis + p2->nAnds + 1 + o].f0;
     }
 
-    uint64_t *S1 = ABC_CALLOC(uint64_t, (size_t)p1->nObjs * NW);
-    uint64_t *S2 = ABC_CALLOC(uint64_t, (size_t)p2->nObjs * NW);
+    ABC_UINT64_T *S1 = ABC_CALLOC(ABC_UINT64_T, (size_t)p1->nObjs * NW);
+    ABC_UINT64_T *S2 = ABC_CALLOC(ABC_UINT64_T, (size_t)p2->nObjs * NW);
 
-    uint64_t inVec[BATCH], valid[NW];
+    ABC_UINT64_T inVec[BATCH], valid[NW];
     unsigned long long rounds = 0;
     unsigned __int128 patsDone = 0;
 
@@ -379,15 +384,15 @@ static int SimulateCompareAigAig(const AigMan *p1, const AigMan *p2,
 
         // Fill CIs
         for (int ptn = 0; ptn < nThis; ++ptn) {
-            uint64_t idx = (uint64_t)(base + (unsigned)ptn);
-            uint64_t in = 0;
+            ABC_UINT64_T idx = (ABC_UINT64_T)(base + (unsigned)ptn);
+            ABC_UINT64_T in = 0;
             for (int j = 0; j < nVars; ++j) if ((idx >> j) & 1ull) in |= varMasks[j];
             in &= inMask;
             inVec[ptn] = in;
 
             int w = ptn >> 6;
-            uint64_t bit = 1ull << (ptn & 63);
-            uint64_t x = in;
+            ABC_UINT64_T bit = 1ull << (ptn & 63);
+            ABC_UINT64_T x = in;
             while (x) {
                 int i = __builtin_ctzll(x);
                 x &= x - 1;
@@ -403,15 +408,15 @@ static int SimulateCompareAigAig(const AigMan *p1, const AigMan *p2,
         // Compare COs
         for (int o = 0; o < p1->nCos; ++o) {
             for (int w = 0; w < NW; ++w) {
-                uint64_t y1 = SimLit(S1, co1[o], w);
-                uint64_t y2 = SimLit(S2, co2[o], w);
-                uint64_t diff = (y1 ^ y2) & valid[w];
+                ABC_UINT64_T y1 = SimLit(S1, co1[o], w);
+                ABC_UINT64_T y2 = SimLit(S2, co2[o], w);
+                ABC_UINT64_T diff = (y1 ^ y2) & valid[w];
                 if (!diff) continue;
 
                 int bit = __builtin_ctzll(diff);
                 int ptn = (w << 6) | bit;
 
-                uint64_t out1 = 0, out2 = 0;
+                ABC_UINT64_T out1 = 0, out2 = 0;
                 for (int oo = 0; oo < p1->nCos; ++oo) {
                     out1 |= ((SimLit(S1, co1[oo], w) >> bit) & 1ull) << oo;
                     out2 |= ((SimLit(S2, co2[oo], w) >> bit) & 1ull) << oo;
@@ -452,15 +457,15 @@ static int SimulateCompareAigAig(const AigMan *p1, const AigMan *p2,
 /* ---------------------- compare: AIG vs external binary ---------------------- */
 
 static int SimulateCompareAigBin(const AigMan *p1, const char *bin,
-                                 const uint64_t *varMasks, int nVars, int verbose)
+                                 const ABC_UINT64_T *varMasks, int nVars, int verbose)
 {
     if (p1->nCis > 64 || p1->nCos > 64) {
         fprintf(stderr, "Error: supports nCis<=64 and nCos<=64 (got I=%d O=%d)\n", p1->nCis, p1->nCos);
         return 0;
     }
 
-    const uint64_t inMask  = u64_mask_n(p1->nCis);
-    const uint64_t outMask = u64_mask_n(p1->nCos);
+    const ABC_UINT64_T inMask  = u64_mask_n(p1->nCis);
+    const ABC_UINT64_T outMask = u64_mask_n(p1->nCos);
     const unsigned __int128 combs = ((unsigned __int128)1) << (unsigned)nVars;
 
     // Precompute AIG CO literals
@@ -468,8 +473,8 @@ static int SimulateCompareAigBin(const AigMan *p1, const char *bin,
     for (int o = 0; o < p1->nCos; ++o)
         co1[o] = p1->nodes[p1->nCis + p1->nAnds + 1 + o].f0;
 
-    uint64_t *S1 = ABC_CALLOC(uint64_t, (size_t)p1->nObjs * NW);
-    uint64_t *out2 = ABC_ALLOC(uint64_t, (size_t)p1->nCos * NW);
+    ABC_UINT64_T *S1 = ABC_CALLOC(ABC_UINT64_T, (size_t)p1->nObjs * NW);
+    ABC_UINT64_T *out2 = ABC_ALLOC(ABC_UINT64_T, (size_t)p1->nCos * NW);
 
     // Temp IO files for the binary
     char inFile[128], outFile[128], cmd[512];
@@ -480,7 +485,7 @@ static int SimulateCompareAigBin(const AigMan *p1, const char *bin,
         return 0;
     }
 
-    uint64_t inVec[BATCH], valid[NW];
+    ABC_UINT64_T inVec[BATCH], valid[NW];
     unsigned long long rounds = 0;
     unsigned __int128 patsDone = 0;
 
@@ -505,16 +510,16 @@ static int SimulateCompareAigBin(const AigMan *p1, const char *bin,
 
         // Fill CIs for this batch
         for (int ptn = 0; ptn < nThis; ++ptn) {
-            uint64_t idx = (uint64_t)(base + (unsigned)ptn);
-            uint64_t in = 0;
+            ABC_UINT64_T idx = (ABC_UINT64_T)(base + (unsigned)ptn);
+            ABC_UINT64_T in = 0;
             for (int j = 0; j < nVars; ++j) if ((idx >> j) & 1ull) in |= varMasks[j];
             in &= inMask;
             inVec[ptn] = in;
 
             int w = ptn >> 6;
-            uint64_t bit = 1ull << (ptn & 63);
+            ABC_UINT64_T bit = 1ull << (ptn & 63);
 
-            uint64_t x = in;
+            ABC_UINT64_T x = in;
             while (x) {
                 int i = __builtin_ctzll(x);
                 x &= x - 1;
@@ -549,15 +554,15 @@ static int SimulateCompareAigBin(const AigMan *p1, const char *bin,
         // Compare AIG outputs vs binary outputs
         for (int o = 0; o < p1->nCos; ++o) {
             for (int w = 0; w < NW; ++w) {
-                uint64_t y1 = SimLit(S1, co1[o], w);
-                uint64_t y2 = out2[(size_t)o * NW + (size_t)w];
-                uint64_t diff = (y1 ^ y2) & valid[w];
+                ABC_UINT64_T y1 = SimLit(S1, co1[o], w);
+                ABC_UINT64_T y2 = out2[(size_t)o * NW + (size_t)w];
+                ABC_UINT64_T diff = (y1 ^ y2) & valid[w];
                 if (!diff) continue;
 
                 int bit = __builtin_ctzll(diff);
                 int ptn = (w << 6) | bit;
 
-                uint64_t out1 = 0, outB = 0;
+                ABC_UINT64_T out1 = 0, outB = 0;
                 for (int oo = 0; oo < p1->nCos; ++oo) {
                     out1 |= ((SimLit(S1, co1[oo], w) >> bit) & 1ull) << oo;
                     outB |= ((out2[(size_t)oo * NW + (size_t)w] >> bit) & 1ull) << oo;
@@ -609,7 +614,7 @@ int SimulateAigTop( char *fname1, char *fname2, char *mask, int verbose )
     AigMan *p1 = Aig_ManLoadAigerBinary(fname1, verbose);
     if (!p1) return 2;
 
-    uint64_t varMasks[64];
+    ABC_UINT64_T varMasks[64];
     int nVars = 0;
     if (!ParseMaskString(mask, p1->nCis, varMasks, &nVars, verbose)) {
         Aig_ManStop(p1);
@@ -667,4 +672,4 @@ int main(int argc, char **argv) {
 ABC_NAMESPACE_IMPL_END
 #endif
 
-
+#endif

@@ -192,7 +192,7 @@ static int Exa9_ManCountAuxTotal( Exa9_Man_t * p )
 ***********************************************************************/
 static int Exa9_ManVarReserve( Exa9_Man_t * p )
 {
-    int64_t Count = 2 * (int64_t)p->nSelVars + (int64_t)p->nValVars;
+    ABC_INT64_T Count = 2 * (ABC_INT64_T)p->nSelVars + (ABC_INT64_T)p->nValVars;
     if ( Count > INT_MAX )
         Count = INT_MAX;
     return (int)Count;
