@@ -4185,6 +4185,10 @@ SOURCE=.\src\opt\eslim\utils.hpp
 
 SOURCE=.\src\opt\eslim\synthesisEngine.hpp
 # End Source File
+# End Group
+# Begin Group "ufar"
+
+# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=.\src\opt\ufar\UfarCmd.cpp
