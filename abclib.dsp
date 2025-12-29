@@ -499,6 +499,10 @@ SOURCE=.\src\base\abci\abcTiming.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\base\abci\abcTopo.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\base\abci\abcUnate.c
 # End Source File
 # Begin Source File
@@ -584,6 +588,10 @@ SOURCE=.\src\base\io\ioInt.h
 # Begin Source File
 
 SOURCE=.\src\base\io\ioJson.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\io\ioJsonc.c
 # End Source File
 # Begin Source File
 
@@ -2132,6 +2140,18 @@ SOURCE=.\src\sat\bmc\bmcMaj2.c
 # Begin Source File
 
 SOURCE=.\src\sat\bmc\bmcMaj3.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\sat\bmc\bmcMaj7.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\sat\bmc\bmcMaj8.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\sat\bmc\bmcMaj9.c
 # End Source File
 # Begin Source File
 
@@ -4167,6 +4187,35 @@ SOURCE=.\src\opt\eslim\synthesisEngine.hpp
 # End Source File
 # End Group
 # End Group
+# Begin Group "ufar"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\opt\ufar\UfarCmd.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\ufar\UfarCmd.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\ufar\UfarMgr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\ufar\UfarMgr.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\ufar\UfarPth.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\ufar\UfarPth.h
+# End Source File
+# Begin Source File
+# End Group
 # Begin Group "map"
 
 # PROP Default_Filter ""
@@ -4376,6 +4425,10 @@ SOURCE=.\src\map\if\ifDec66.c
 # Begin Source File
 
 SOURCE=.\src\map\if\ifDec75.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\map\if\ifDecJ.c
 # End Source File
 # Begin Source File
 
@@ -4951,6 +5004,10 @@ SOURCE=.\src\misc\util\utilBridge.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\misc\util\utilAigSim.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\misc\util\utilBSet.c
 # End Source File
 # Begin Source File
@@ -4991,11 +5048,19 @@ SOURCE=.\src\misc\util\utilMem.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\misc\util\utilMiniver.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\misc\util\utilNam.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\src\misc\util\utilNam.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\misc\util\utilNet.c
 # End Source File
 # Begin Source File
 
@@ -5827,6 +5892,10 @@ SOURCE=.\src\aig\gia\giaCut.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\aig\gia\giaDecGraph.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\aig\gia\giaDecs.c
 # End Source File
 # Begin Source File
@@ -5955,6 +6024,10 @@ SOURCE=.\src\aig\gia\giaLf.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\aig\gia\giaLutCas.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\aig\gia\giaMan.c
 # End Source File
 # Begin Source File
@@ -5984,6 +6057,10 @@ SOURCE=.\src\aig\gia\giaMinLut2.c
 # Begin Source File
 
 SOURCE=.\src\aig\gia\giaMulFind.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\aig\gia\giaMulFind3.c
 # End Source File
 # Begin Source File
 
