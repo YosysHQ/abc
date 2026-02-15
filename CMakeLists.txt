@@ -57,6 +57,12 @@ if( APPLE )
     set(make_env ${CMAKE_COMMAND} -E env SDKROOT=${CMAKE_OSX_SYSROOT})
 endif()
 
+include(CheckIncludeFile)
+check_include_file(stdint.h HAS_STDINT)
+if(${HAS_STDINT})
+    list(APPEND ABC_STDINT_FLAGS "ABC_USE_STDINT_H=1")
+endif()
+
 # run make to extract compiler options, linker options and list of source files
 execute_process(
   COMMAND
@@ -64,6 +70,7 @@ execute_process(
     make
         ${ABC_READLINE_FLAGS}
         ${ABC_USE_NAMESPACE_FLAGS}
+        ${ABC_STDINT_FLAGS}
         ARCHFLAGS_EXE=${CMAKE_CURRENT_BINARY_DIR}/abc_arch_flags_program.exe
         ABC_MAKE_NO_DEPS=1
         CC=${CMAKE_C_COMPILER}
