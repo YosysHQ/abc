@@ -1,20 +1,20 @@
 /**CFile****************************************************************
 
-  FileName    [ifDecJ.c]
+  FileName    [ifTrace.c]
 
   SystemName  [ABC: Logic synthesis and verification system.]
 
   PackageName [FPGA mapping based on priority cuts.]
 
-  Synopsis    [Performs additional check.]
+  Synopsis    [Public stub for delay trace dumping.]
 
   Author      [Alan Mishchenko]
   
   Affiliation [UC Berkeley]
 
-  Date        [Ver. 1.0. Started - November 21, 2006.]
+  Date        [Ver. 1.0. Started - March 23, 2026.]
 
-  Revision    [$Id: ifDecJ.c,v 1.00 2006/11/21 00:00:00 alanmi Exp $]
+  Revision    [$Id: ifTrace.c,v 1.00 2026/03/23 00:00:00 alanmi Exp $]
 
 ***********************************************************************/
 
@@ -31,24 +31,12 @@ ABC_NAMESPACE_IMPL_START
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
 
-int If_CutPerformCheckJ( If_Man_t * p, unsigned * pTruth, int nVars, int nLeaves, char * pStr )
-{
-    return 1;
-}
-word If_CutPerformDeriveJ( If_Man_t * p, unsigned * pTruth, int nVars, int nLeaves, char * pStr, int fDerive, int fDelay )
-{
-    return 0;
-}
-void If_CutComputeIntrinsicJ( If_Man_t * p, word Config, int nLeaves, int * pIntrinsicDelays )
-{
-}
-void If_PermUnpack( unsigned Value, int Pla2Var[9] )
+void Gia_ManDelayTraceDump( Gia_Man_t * p, char * pFileName )
 {
 }
 
 ////////////////////////////////////////////////////////////////////////
 ///                       END OF FILE                                ///
 ////////////////////////////////////////////////////////////////////////
-
 
 ABC_NAMESPACE_IMPL_END

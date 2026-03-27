@@ -10,6 +10,7 @@ SRC +=  src/map/if/ifCom.c \
     src/map/if/ifDec66.c \
     src/map/if/ifDec75.c \
     src/map/if/ifDecJ.c \
+    src/map/if/ifTrace.c \
     src/map/if/ifDelay.c \
     src/map/if/ifDsd.c \
     src/map/if/ifLibBox.c \

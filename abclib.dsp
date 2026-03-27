@@ -4510,6 +4510,10 @@ SOURCE=.\src\map\if\ifUtil.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\map\if\ifTrace.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\map\if\ifDecJ.c
 # End Source File
 # End Group

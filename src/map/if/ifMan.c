@@ -226,7 +226,7 @@ void If_ManSimpleSort( int * pArray, int nSize )
 void If_ManDumpCut( If_Cut_t * pCut, int nLutSize, Vec_Int_t * vCuts )
 {
     int i;
-    for ( i = 0; i < pCut->nLeaves; i++ )
+    for ( i = 0; i < (int)pCut->nLeaves; i++ )
         Vec_IntPush( vCuts, pCut->pLeaves[i] );
     for ( ; i < nLutSize; i++ )
         Vec_IntPush( vCuts, -1 );
@@ -719,6 +719,7 @@ void If_ManSetupCutTriv( If_Man_t * p, If_Cut_t * pCut, int ObjId )
     pCut->uSign      = If_ObjCutSign( pCut->pLeaves[0] );
     pCut->iCutFunc   = p->pPars->fUseTtPerm ? 3 : (p->pPars->fTruth ? 2: -1);
     pCut->uMaskFunc  = 0;
+    pCut->Config     = 0;
     assert( pCut->pLeaves[0] < p->vObjs->nSize );
 }
 

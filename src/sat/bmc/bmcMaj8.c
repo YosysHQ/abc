@@ -485,6 +485,161 @@ static void Exa8_ManPrintPerm( Exa8_Man_t * p )
         }
     }
 }
+static void Exa8_ManDumpVerilogName( Exa8_Man_t * p, char * pBase )
+{
+    char Flags[32];
+    int n = 0;
+    if ( p->pPars->pSymStr )
+        snprintf( pBase, 128, "Y%.*s", 15, p->pPars->pSymStr );
+    else
+        snprintf( pBase, 128, "%.*s", 16, p->pPars->pTtStr );
+    if ( p->pPars->fUseIncr )    Flags[n++] = 'i';
+    if ( p->pPars->fOnlyAnd )    Flags[n++] = 'a';
+    if ( p->pPars->fFewerVars )  Flags[n++] = 'o';
+    if ( p->pPars->fLutCascade ) Flags[n++] = 'r';
+    if ( p->pPars->fLutInFixed ) Flags[n++] = 'f';
+    if ( p->pPars->fGlucose )    Flags[n++] = 'g';
+    if ( p->pPars->fCadical )    Flags[n++] = 'c';
+    if ( p->pPars->fKissat )     Flags[n++] = 'k';
+    if ( p->pPars->fDumpBlif )   Flags[n++] = 'd';
+    if ( p->pPars->fMinNodes )   Flags[n++] = 'm';
+    if ( p->pPars->fUsePerm )    Flags[n++] = 'p';
+    Flags[n] = '\0';
+    snprintf( pBase + strlen(pBase), 128 - strlen(pBase), "_K%d_M%d_%s", p->nLutSize, p->nNodes, Flags );
+}
+static int Exa8_ManDumpCascadeVerilog( Exa8_Man_t * p, int fCompl )
+{
+    static const char * pBels[8] = { "A6LUT", "B6LUT", "C6LUT", "D6LUT", "E6LUT", "F6LUT", "G6LUT", "H6LUT" };
+    int i, k, iVar;
+    char pBase[128], pFileName[132], pModuleName[160];
+    FILE * pFile;
+    if ( p->nLutSize > 6 )
+    {
+        if ( !p->pPars->fSilent )
+            printf( "Vivado LUT cascade dumping supports only LUTs with up to 6 inputs. Falling back to BLIF dumping.\n" );
+        return 0;
+    }
+    Exa8_ManDumpVerilogName( p, pBase );
+    snprintf( pFileName, sizeof(pFileName), "%s.v", pBase );
+    snprintf( pModuleName, sizeof(pModuleName), "lut_cascade_%s", pBase );
+    pFile = fopen( pFileName, "wb" );
+    if ( pFile == NULL )
+        return 0;
+    fprintf( pFile, "// Vivado LUT cascade for the %d-input function %s synthesized by ABC on %s\n", p->nVars, pBase, Extra_TimeStamp() );
+    fprintf( pFile, "module %s (\n", pModuleName );
+    fprintf( pFile, "  input  wire [%d:0] x,\n", p->nVars - 1 );
+    fprintf( pFile, "  output wire       y\n" );
+    fprintf( pFile, ");\n" );
+    for ( i = 0; i < p->nNodes - 1; i++ )
+        fprintf( pFile, "  (* KEEP = \"yes\", DONT_TOUCH = \"yes\" *) wire n%d;\n", i );
+    if ( p->nNodes > 1 )
+        fprintf( pFile, "\n" );
+    for ( i = p->nVars; i < p->nObjs; i++ )
+    {
+        int iNode = i - p->nVars;
+        int iSlice = iNode / 8;
+        int iVarStart = 1 + p->LutMask * iNode;
+        word Truth = 0;
+        word Mask = p->nLutSize == 6 ? ~(word)0 : ((((word)1) << (1 << p->nLutSize)) - 1);
+        for ( k = 0; k < p->LutMask; k++ )
+            if ( Exa8_KissatVarValue(p, iVarStart + k) )
+                Truth |= ((word)1) << (k + 1);
+        if ( i == p->nObjs - 1 && fCompl )
+            Truth = (~Truth) & Mask;
+        if ( p->nLutSize < 6 )
+            Truth = Abc_Tt6Stretch( Truth, p->nLutSize );
+        fprintf( pFile, "  (* HU_SET = \"hu_lut_cascade_%d\", RLOC = \"X0Y%d\", BEL = \"%s\", DONT_TOUCH = \"yes\", KEEP = \"yes\", IS_BEL_FIXED = \"yes\" *)\n",
+            iSlice, iSlice, pBels[iNode % 8] );
+        fprintf( pFile, "  LUT6 #(.INIT(64'h%016llX)) u_lut%d (\n", (unsigned long long)Truth, iNode );
+        for ( k = 0; k < 6; k++ )
+        {
+            fprintf( pFile, "    .I%d(", k );
+            if ( k < p->nLutSize )
+            {
+                iVar = Exa8_ManFindFanin( p, i, k );
+                if ( iVar < p->nVars )
+                    fprintf( pFile, "x[%d]", iVar );
+                else
+                    fprintf( pFile, "n%d", iVar - p->nVars );
+            }
+            else
+                fprintf( pFile, "1'b0" );
+            fprintf( pFile, "),\n" );
+        }
+        if ( i == p->nObjs - 1 )
+            fprintf( pFile, "    .O(y)\n" );
+        else
+            fprintf( pFile, "    .O(n%d)\n", iNode );
+        fprintf( pFile, "  );\n\n" );
+    }
+    fprintf( pFile, "endmodule\n\n" );
+    fclose( pFile );
+    if ( !p->pPars->fSilent )
+        printf( "Finished dumping the resulting LUT cascade into file \"%s\".\n", pFileName );
+    return 1;
+}
+static int Exa8_ManDumpVerilog( Exa8_Man_t * p, int fCompl )
+{
+    int i, k, iVar;
+    int nBits = 1 << p->nLutSize;
+    int nDigits = (nBits + 3) >> 2;
+    char pBase[128], pFileName[132], pModuleName[160];
+    FILE * pFile;
+    if ( p->nLutSize > 6 )
+    {
+        if ( !p->pPars->fSilent )
+            printf( "Vivado LUT dumping supports only LUTs with up to 6 inputs. Skipping Verilog dump.\n" );
+        return 0;
+    }
+    Exa8_ManDumpVerilogName( p, pBase );
+    snprintf( pFileName, sizeof(pFileName), "%s.v", pBase );
+    snprintf( pModuleName, sizeof(pModuleName), "lut_net_%s", pBase );
+    pFile = fopen( pFileName, "wb" );
+    if ( pFile == NULL )
+        return 0;
+    fprintf( pFile, "// Vivado LUT net for the %d-input function %s synthesized by ABC on %s\n", p->nVars, pBase, Extra_TimeStamp() );
+    fprintf( pFile, "module %s (\n", pModuleName );
+    fprintf( pFile, "  input  wire [%d:0] x,\n", p->nVars - 1 );
+    fprintf( pFile, "  output wire       y\n" );
+    fprintf( pFile, ");\n" );
+    for ( i = 0; i < p->nNodes - 1; i++ )
+        fprintf( pFile, "  wire n%d;\n", i );
+    if ( p->nNodes > 1 )
+        fprintf( pFile, "\n" );
+    for ( i = p->nVars; i < p->nObjs; i++ )
+    {
+        int iNode = i - p->nVars;
+        int iVarStart = 1 + p->LutMask * iNode;
+        word Truth = 0;
+        word Mask = p->nLutSize == 6 ? ~(word)0 : ((((word)1) << nBits) - 1);
+        for ( k = 0; k < p->LutMask; k++ )
+            if ( Exa8_KissatVarValue(p, iVarStart + k) )
+                Truth |= ((word)1) << (k + 1);
+        if ( i == p->nObjs - 1 && fCompl )
+            Truth = (~Truth) & Mask;
+        fprintf( pFile, "  LUT%d #(.INIT(%d'h%0*llX)) u_lut%d (\n", p->nLutSize, nBits, nDigits, (unsigned long long)Truth, iNode );
+        for ( k = 0; k < p->nLutSize; k++ )
+        {
+            fprintf( pFile, "    .I%d(", k );
+            iVar = Exa8_ManFindFanin( p, i, k );
+            if ( iVar < p->nVars )
+                fprintf( pFile, "x[%d]", iVar );
+            else
+                fprintf( pFile, "n%d", iVar - p->nVars );
+            fprintf( pFile, "),\n" );
+        }
+        if ( i == p->nObjs - 1 )
+            fprintf( pFile, "    .O(y)\n" );
+        else
+            fprintf( pFile, "    .O(n%d)\n", iNode );
+        fprintf( pFile, "  );\n\n" );
+    }
+    fprintf( pFile, "endmodule\n\n" );
+    fclose( pFile );
+    if ( !p->pPars->fSilent )
+        printf( "Finished dumping the resulting LUT network into file \"%s\".\n", pFileName );
+    return 1;
+}
 
 /**Function*************************************************************
 
@@ -789,7 +944,13 @@ int Exa8_ManExactSynthesis( Bmc_EsPar_t * pPars )
         Exa8_ManPrintPerm(p);
         printf( "\".\n" );
         if ( pPars->fDumpBlif )
+        {
             Exa8_ManDumpBlif( p, fCompl );
+            if ( pPars->fLutCascade )
+                Exa8_ManDumpCascadeVerilog( p, fCompl );
+            else
+                Exa8_ManDumpVerilog( p, fCompl );
+        }
         if ( p->pPars->fGenTruths ) {
             if ( p->pPars->vTruths )
                 Vec_WrdFreeP( &p->pPars->vTruths );

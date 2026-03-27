@@ -390,6 +390,39 @@ If_LibCell_t * If_LibCellAlloc( void )
 
 /**Function*************************************************************
 
+  Synopsis    [Computes the record size.]
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+static int If_LibCellComputeRecordSize( char * pFuncDesc, int nInputs )
+{
+    int i, nMapBytes, nRecordSize;
+    assert( pFuncDesc != NULL );
+    nMapBytes = (Abc_Base2Log(nInputs + 2) + 7) / 8;
+    nRecordSize = 1 + nInputs * nMapBytes;
+    for ( i = 0; pFuncDesc[i]; i++ )
+    {
+        int nLutVars = 0;
+        if ( pFuncDesc[i] != '{' )
+            continue;
+        for ( i++; pFuncDesc[i] && pFuncDesc[i] != '}'; i++ )
+            if ( pFuncDesc[i] >= 'a' && pFuncDesc[i] <= 'z' )
+                nLutVars++;
+        assert( nLutVars < 31 );
+        nRecordSize += ((1 << nLutVars) + 7) / 8;
+        if ( pFuncDesc[i] == 0 )
+            break;
+    }
+    return nRecordSize;
+}
+
+/**Function*************************************************************
+
   Synopsis    [Reads the description of cells from the cell library file.]
 
   Description []
@@ -471,6 +504,7 @@ If_LibCell_t * If_LibCellRead( char * FileName )
                 nInputs = maxChar - 'a' + 1;
         }
         p->nCellInputs[CellId] = nInputs;
+        p->pCellRecordSizes[CellId] = If_LibCellComputeRecordSize( FuncDesc, nInputs );
 
         // Read Area
         pToken = strtok( NULL, " \t\n" );

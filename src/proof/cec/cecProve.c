@@ -79,12 +79,15 @@ typedef struct Par_ThData_t_
     Gia_Man_t * p;
     int         iEngine;
     int         fWorking;
+    int         fStop;
     int         nTimeOut;
     int         Result;
     int         fVerbose;
     int         nTimeOutU;
     Wlc_Ntk_t * pWlc;
     Par_Share_t * pShare;
+    pthread_mutex_t Mutex;
+    pthread_cond_t  Cond;
 } Par_ThData_t;
 typedef struct Cec_ScorrStop_t_
 {
@@ -98,12 +101,12 @@ static inline const char * Cec_SolveEngineName( int iEngine )
     if ( iEngine == 0 ) return "rar";
     if ( iEngine == 1 ) return "bmc";
     if ( iEngine == 2 ) return "pdr";
-    if ( iEngine == 3 ) return "bmc-glucose";
-    if ( iEngine == 4 ) return "pdr-abs";
+    if ( iEngine == 3 ) return "bmc-g";
+    if ( iEngine == 4 ) return "pdr-t";
     if ( iEngine == 5 ) return "bmcg";
     if ( iEngine == PAR_ENGINE_UFAR ) return "ufar";
-    if ( iEngine == PAR_ENGINE_SCORR1 ) return "scorr-new";
-    if ( iEngine == PAR_ENGINE_SCORR2 ) return "scorr-old";
+    if ( iEngine == PAR_ENGINE_SCORR1 ) return "scnew";
+    if ( iEngine == PAR_ENGINE_SCORR2 ) return "scold";
     if ( iEngine == PAR_ENGINE_GLA ) return "gla-q";
     return "unknown";
 }
@@ -189,12 +192,12 @@ int Cec_GiaProveOne( Gia_Man_t * p, int iEngine, int nTimeOut, int fVerbose, Par
     if ( iEngine != PAR_ENGINE_UFAR && iEngine != PAR_ENGINE_GLA && Gia_ManRegNum(p) == 0 )
     {
         if ( fVerbose )
-            printf( "Engine %d skipped because the current miter is combinational.\n", iEngine );
+            printf( "Engine %d (%-5s) skipped because the current miter is combinational.\n", iEngine, Cec_SolveEngineName(iEngine) );
         return -1;
     }
     //abctime clkStop = nTimeOut * CLOCKS_PER_SEC + Abc_Clock();
     if ( fVerbose )
-    printf( "Calling engine %d with timeout %d sec.\n", iEngine, nTimeOut );
+    printf( "Calling engine %d (%-5s) with timeout %d sec.\n", iEngine, Cec_SolveEngineName(iEngine), nTimeOut );
     Abc_CexFreeP( &p->pCexSeq );
     if ( iEngine == 0 )
     {
@@ -324,7 +327,7 @@ int Cec_GiaProveOne( Gia_Man_t * p, int iEngine, int nTimeOut, int fVerbose, Par
     if ( pThData && pThData->pShare && RetValue != -1 )
         Cec_SProveCallback( (void *)pThData, 1, (unsigned)RetValue );
     if ( fVerbose ) {
-        printf( "Engine %d finished and %ssolved the problem.   ", iEngine, RetValue != -1 ? "    " : "not " );
+        printf( "Engine %d (%-5s) finished and %ssolved the problem.   ", iEngine, Cec_SolveEngineName(iEngine), RetValue != -1 ? "    " : "not " );
         Abc_PrintTime( 1, "Time", Abc_Clock() - clk );
     }
     return RetValue;
@@ -379,30 +382,86 @@ Gia_Man_t * Cec_GiaScorrNew( Gia_Man_t * p, int nTimeOut, Par_Share_t * pShare )
 void * Cec_GiaProveWorkerThread( void * pArg )
 {
     Par_ThData_t * pThData = (Par_ThData_t *)pArg;
-    volatile int * pPlace = &pThData->fWorking;
+    int status, Result;
+    status = pthread_mutex_lock( &pThData->Mutex );
+    assert( status == 0 );
     while ( 1 )
     {
-        while ( *pPlace == 0 );
-        assert( pThData->fWorking );
-        if ( pThData->p == NULL )
+        while ( !pThData->fWorking && !pThData->fStop )
         {
-            pthread_exit( NULL );
-            assert( 0 );
-            return NULL;
+            status = pthread_cond_wait( &pThData->Cond, &pThData->Mutex );
+            assert( status == 0 );
         }
-        pThData->Result = Cec_GiaProveOne( pThData->p, pThData->iEngine, pThData->nTimeOut, pThData->fVerbose, pThData );
+        if ( pThData->fStop )
+            break;
+        status = pthread_mutex_unlock( &pThData->Mutex );
+        assert( status == 0 );
+        Result = Cec_GiaProveOne( pThData->p, pThData->iEngine, pThData->nTimeOut, pThData->fVerbose, pThData );
+        status = pthread_mutex_lock( &pThData->Mutex );
+        assert( status == 0 );
+        pThData->Result = Result;
         pThData->fWorking = 0;
+        status = pthread_cond_broadcast( &pThData->Cond );
+        assert( status == 0 );
     }
-    assert( 0 );
+    status = pthread_mutex_unlock( &pThData->Mutex );
+    assert( status == 0 );
     return NULL;
 }
-void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int nTimeOut, int nTimeOutU, Wlc_Ntk_t * pWlc, int fUseUif, int fVerbose, pthread_t * WorkerThread, Par_Share_t * pShare )
+static void Cec_GiaStartThreads( Par_ThData_t * ThData, int nWorkers )
+{
+    int i, status;
+    for ( i = 0; i < nWorkers; i++ )
+    {
+        status = pthread_mutex_lock( &ThData[i].Mutex );
+        assert( status == 0 );
+        assert( !ThData[i].fStop );
+        assert( !ThData[i].fWorking );
+        ThData[i].fWorking = 1;
+        status = pthread_cond_signal( &ThData[i].Cond );
+        assert( status == 0 );
+        status = pthread_mutex_unlock( &ThData[i].Mutex );
+        assert( status == 0 );
+    }
+}
+static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int nTimeOut, int nTimeOutU, Wlc_Ntk_t * pWlc, int fUseUif, int fVerbose, pthread_t * WorkerThread, Par_Share_t * pShare )
 {
     int i, status;
     assert( nWorkers <= PAR_THR_MAX );
     for ( i = 0; i < nWorkers; i++ )
     {
-        ThData[i].p        = Gia_ManDup(p);
+        if ( WorkerThread )
+        {
+            ThData[i].p = Gia_ManDup( p );
+            Cec_CopyGiaName( p, ThData[i].p );
+            if ( fUseUif && i == nWorkers - 1 )
+                ThData[i].iEngine = PAR_ENGINE_UFAR;
+            else if ( !fUseUif && nWorkers == 6 && i == 5 )
+                ThData[i].iEngine = PAR_ENGINE_GLA;
+            else
+                ThData[i].iEngine = i;
+            ThData[i].fWorking = 0;
+            ThData[i].fStop    = 0;
+            ThData[i].nTimeOut = nTimeOut;
+            ThData[i].Result   = -1;
+            ThData[i].fVerbose = fVerbose;
+            ThData[i].nTimeOutU= nTimeOutU;
+            ThData[i].pWlc     = pWlc;
+            ThData[i].pShare   = pShare;
+            status = pthread_mutex_init( &ThData[i].Mutex, NULL );
+            assert( status == 0 );
+            status = pthread_cond_init( &ThData[i].Cond, NULL );
+            assert( status == 0 );
+            status = pthread_create( WorkerThread + i, NULL, Cec_GiaProveWorkerThread, (void *)(ThData + i) );
+            assert( status == 0 );
+            continue;
+        }
+        status = pthread_mutex_lock( &ThData[i].Mutex );
+        assert( status == 0 );
+        assert( !ThData[i].fStop );
+        assert( !ThData[i].fWorking );
+        Gia_ManStopP( &ThData[i].p );
+        ThData[i].p = Gia_ManDup( p );
         Cec_CopyGiaName( p, ThData[i].p );
         if ( fUseUif && i == nWorkers - 1 )
             ThData[i].iEngine = PAR_ENGINE_UFAR;
@@ -411,31 +470,58 @@ void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int
         else
             ThData[i].iEngine = i;
         ThData[i].nTimeOut = nTimeOut;
-        ThData[i].fWorking = 0;
         ThData[i].Result   = -1;
         ThData[i].fVerbose = fVerbose;
         ThData[i].nTimeOutU= nTimeOutU;
         ThData[i].pWlc     = pWlc;
         ThData[i].pShare   = pShare;
-        if ( !WorkerThread )
-            continue;
-        status = pthread_create( WorkerThread + i, NULL,Cec_GiaProveWorkerThread, (void *)(ThData + i) );  assert( status == 0 );
+        status = pthread_mutex_unlock( &ThData[i].Mutex );
+        assert( status == 0 );
     }
-    for ( i = 0; i < nWorkers; i++ )
-        ThData[i].fWorking = 1;
+    Cec_GiaStartThreads( ThData, nWorkers );
 }
-int Cec_GiaWaitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int RetValue, int * pRetEngine )
+static void Cec_GiaStopThreads( Par_ThData_t * ThData, pthread_t * WorkerThread, int nWorkers )
 {
-    int i;
+    int i, status;
     for ( i = 0; i < nWorkers; i++ )
     {
-        if ( RetValue == -1 && !ThData[i].fWorking && ThData[i].Result != -1 ) {
+        status = pthread_mutex_lock( &ThData[i].Mutex );
+        assert( status == 0 );
+        ThData[i].fStop = 1;
+        status = pthread_cond_signal( &ThData[i].Cond );
+        assert( status == 0 );
+        status = pthread_mutex_unlock( &ThData[i].Mutex );
+        assert( status == 0 );
+    }
+    for ( i = 0; i < nWorkers; i++ )
+    {
+        status = pthread_join( WorkerThread[i], NULL );
+        assert( status == 0 );
+        Gia_ManStopP( &ThData[i].p );
+        status = pthread_cond_destroy( &ThData[i].Cond );
+        assert( status == 0 );
+        status = pthread_mutex_destroy( &ThData[i].Mutex );
+        assert( status == 0 );
+    }
+}
+static int Cec_GiaWaitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int RetValue, int * pRetEngine )
+{
+    int i, status, fWorking;
+    for ( i = 0; i < nWorkers; i++ )
+    {
+        status = pthread_mutex_lock( &ThData[i].Mutex );
+        assert( status == 0 );
+        fWorking = ThData[i].fWorking;
+        if ( RetValue == -1 && !fWorking && ThData[i].Result != -1 )
+        {
             RetValue = ThData[i].Result;
             *pRetEngine = ThData[i].iEngine;
             if ( !p->pCexSeq && ThData[i].p->pCexSeq )
                 p->pCexSeq = Abc_CexDup( ThData[i].p->pCexSeq, -1 );
         }
-        if ( ThData[i].fWorking )
+        status = pthread_mutex_unlock( &ThData[i].Mutex );
+        assert( status == 0 );
+        if ( fWorking )
             i = -1;
     }
     return RetValue;
@@ -447,8 +533,10 @@ int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, in
     Par_ThData_t ThData[PAR_THR_MAX];
     pthread_t WorkerThread[PAR_THR_MAX];
     Par_Share_t Share;
-    int i, nWorkers = nProcs + (fUseUif ? 1 : 0), RetValue = -1, RetEngine = -1;
+    int nWorkers = nProcs + (fUseUif ? 1 : 0), RetValue = -1, RetEngine = -1;
     memset( &Share, 0, sizeof(Par_Share_t) );
+    memset( ThData, 0, sizeof(ThData) );
+    memset( WorkerThread, 0, sizeof(WorkerThread) );
     Abc_CexFreeP( &p->pCexComb );
     Abc_CexFreeP( &p->pCexSeq );        
     if ( !fSilent && fVerbose )
@@ -457,7 +545,7 @@ int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, in
         printf( "Processes = %d   TimeOut = %d sec   Verbose = %d.\n", nProcs, nTimeOut, fVerbose );
     fflush( stdout );
 
-    assert( nProcs == 3 || nProcs == 5 || nProcs == 6 );
+    assert( nProcs >= 1 && nProcs <= 6 );
     assert( nWorkers <= PAR_THR_MAX );
     Cec_GiaInitThreads( ThData, nWorkers, p, nTimeOut, nTimeOut3, pWlc, fUseUif, fVerbose, WorkerThread, &Share );
 
@@ -465,7 +553,12 @@ int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, in
     Gia_Man_t * pScorr = Cec_GiaScorrNew( p, nTimeOut, &Share );
     clkScorr = Abc_Clock() - clkTotal;
     if ( Gia_ManAndNum(pScorr) == 0 )
+    {
+        Share.fSolved = 1;
+        Share.Result  = 1;
+        Share.iEngine = PAR_ENGINE_SCORR1;
         RetValue = 1, RetEngine = PAR_ENGINE_SCORR1;
+    }
     
     RetValue = Cec_GiaWaitThreads( ThData, nWorkers, p, RetValue, &RetEngine );
     if ( RetValue == -1 )
@@ -484,7 +577,12 @@ int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, in
             Gia_Man_t * pScorr2 = Cec_GiaScorrOld( pScorr, nTimeOut3, &Share );
             clkScorr2 = Abc_Clock() - clkStart;
             if ( Gia_ManAndNum(pScorr2) == 0 )
+            {
+                Share.fSolved = 1;
+                Share.Result  = 1;
+                Share.iEngine = PAR_ENGINE_SCORR2;
                 RetValue = 1, RetEngine = PAR_ENGINE_SCORR2;
+            }
 
             if ( RetValue == -1 )
             {
@@ -503,11 +601,7 @@ int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, in
     Gia_ManStop( pScorr );    
 
     // stop threads
-    for ( i = 0; i < nWorkers; i++ )
-    {
-        ThData[i].p = NULL;
-        ThData[i].fWorking = 1;
-    }
+    Cec_GiaStopThreads( ThData, WorkerThread, nWorkers );
     if ( !fSilent )
     {
         char * pProbName = p->pSpec ? p->pSpec : Gia_ManName(p);

@@ -162,12 +162,13 @@ int * If_CutArrTimeProfile( If_Man_t * p, If_Cut_t * pCut )
 void If_ObjPerformMappingAnd( If_Man_t * p, If_Obj_t * pObj, int Mode, int fPreprocess, int fFirst )
 {
     If_Set_t * pCutSet;
+    If_Obj_t * pLeaf;
     If_Cut_t * pCut0, * pCut1, * pCut;
     If_Cut_t * pCut0R, * pCut1R;
     int fFunc0R, fFunc1R;
     int i, k, v, iCutDsd, fChange;
     int fSave0 = p->pPars->fDelayOpt || p->pPars->fDelayOptLut || p->pPars->fDsdBalance || p->pPars->fUserRecLib || p->pPars->fUserSesLib || p->pPars->fUserLutDec || p->pPars->fUserLut2D ||
-        p->pPars->fUseDsdTune || p->pPars->fUseCofVars || p->pPars->fUseAndVars || p->pPars->fUse34Spec || p->pPars->pLutStruct || p->pPars->pFuncCell2 || p->pPars->fUseCheck1 || p->pPars->fUseCheck2;
+        p->pPars->fUseDsdTune || p->pPars->fUseCofVars || p->pPars->fUseAndVars || p->pPars->fUse34Spec || p->pPars->pLutStruct || p->pPars->pFuncCell2 || p->pPars->fUseCheck1 || p->pPars->fUseCheck2 || p->pPars->fEnableCheck07;
     int fUseAndCut = (p->pPars->nAndDelay > 0) || (p->pPars->nAndArea > 0);
     assert( !If_ObjIsAnd(pObj->pFanin0) || pObj->pFanin0->pCutSet->nCuts > 0 );
     assert( !If_ObjIsAnd(pObj->pFanin1) || pObj->pFanin1->pCutSet->nCuts > 0 );
@@ -193,6 +194,30 @@ void If_ObjPerformMappingAnd( If_Man_t * p, If_Obj_t * pObj, int Mode, int fPrep
             pCut->Delay = If_CutSopBalanceEval( p, pCut, NULL );
         else if ( p->pPars->fDsdBalance )
             pCut->Delay = If_CutDsdBalanceEval( p, pCut, NULL );
+        else if ( p->pPars->fEnableCheck07 && p->pPars->fDelayOptCell )
+        {
+            int iLeaf, Intrinsic[IF_MAX_LUTSIZE];
+            float Delay = -IF_FLOAT_LARGE;
+            if ( pCut->nLeaves == 0 )
+            {
+                pCut->fUseless = 0;
+                pCut->Delay = 0.0;
+                goto IfMapBestCutDone;
+            }
+            assert( pCut->nLeaves == 1 || pCut->Config );
+            If_CutComputeIntrinsicJ( p, pCut->Config, pCut->nLeaves, Intrinsic );
+            If_CutForEachLeaf( p, pCut, pLeaf, iLeaf )
+            {
+                If_Cut_t * pBestCut = If_ObjCutBest( pLeaf );
+                assert( pBestCut != NULL );
+                assert( pBestCut->fUseless == 0 );
+                Delay = IF_MAX( Delay, If_ObjArrTime(pLeaf) + (float)Intrinsic[iLeaf] );
+            }
+            pCut->fUseless = (Delay > IF_FLOAT_LARGE/2);
+            pCut->Delay = Delay;
+IfMapBestCutDone:
+            ;
+        }
         else if ( p->pPars->fUserRecLib )
             pCut->Delay = If_CutDelayRecCost3( p, pCut, pObj ); 
         else if ( p->pPars->fUserSesLib )
@@ -268,7 +293,7 @@ void If_ObjPerformMappingAnd( If_Man_t * p, If_Obj_t * pObj, int Mode, int fPrep
             if ( !If_CutMergeOrdered( p, pCut0, pCut1, pCut ) )
                 continue;
         }
-        if ( p->pPars->fUserLutDec && !fFirst && pCut->nLeaves > p->pPars->nLutDecSize )
+        if ( p->pPars->fUserLutDec && !fFirst && (int)pCut->nLeaves > p->pPars->nLutDecSize )
             continue;
         if ( pObj->fSpec && pCut->nLeaves == (unsigned)p->pPars->nLutSize )
             continue;
@@ -324,12 +349,32 @@ void If_ObjPerformMappingAnd( If_Man_t * p, If_Obj_t * pObj, int Mode, int fPrep
             {
                 assert( p->pPars->fUseTtPerm == 0 );
                 assert( pCut->nLimit >= 4 && pCut->nLimit <= 16 );
+                pCut->Config = 0;
                 if ( p->pPars->fUseDsd )
                     pCut->fUseless = If_DsdManCheckDec( p->pIfDsdMan, If_CutDsdLit(p, pCut) );
                 else if ( p->pPars->pFuncCell2 )
                     pCut->fUseless = !p->pPars->pFuncCell2( p, (word *)If_CutTruthW(p, pCut), pCut->nLeaves, NULL, NULL );
                 else
+                {
+                    int iLeaf;
+                    // Expose current cut context for user callbacks.
+                    p->pCutObjCur = pObj;
+                    p->pCutCur = pCut;
+                    p->nCutLeavesCur = pCut->nLeaves;
+                    for ( iLeaf = 0; iLeaf < p->nCutLeavesCur; iLeaf++ )
+                    {
+                        If_Obj_t * pLeaf = If_CutLeaf( p, pCut, iLeaf );
+                        if ( p->pPars->fEnableCheck07 && p->pPars->fDelayOptCell && pCut->nLeaves > 1 )
+                        {
+                            If_Cut_t * pBestCut = If_ObjCutBest( pLeaf );
+                            assert( pBestCut != NULL );
+                            assert( pBestCut->fUseless == 0 );
+                        }
+                        p->pCutLeavesCur[iLeaf] = pLeaf->Id;
+                        p->pCutLeafArrCur[iLeaf] = If_ObjArrTime( pLeaf );
+                    }
                     pCut->fUseless = !p->pPars->pFuncCell( p, If_CutTruth(p, pCut), Abc_MaxInt(6, pCut->nLeaves), pCut->nLeaves, p->pPars->pLutStruct );
+                }
                 p->nCutsUselessAll += pCut->fUseless;
                 p->nCutsUseless[pCut->nLeaves] += pCut->fUseless;
                 p->nCutsCountAll++;
@@ -427,6 +472,27 @@ void If_ObjPerformMappingAnd( If_Man_t * p, If_Obj_t * pObj, int Mode, int fPrep
             pCut->Delay = If_CutSopBalanceEval( p, pCut, NULL );
         else if ( p->pPars->fDsdBalance )
             pCut->Delay = If_CutDsdBalanceEval( p, pCut, NULL );
+        else if ( p->pPars->fEnableCheck07 && p->pPars->fDelayOptCell )
+        {
+            if ( pCut->nLeaves == 0 )
+            {
+                pCut->Delay = 0.0;
+                pCut->fUseless = 0;
+                goto IfMapCutEvalDone;
+            }
+            if ( pCut->nLeaves == 1 )
+            {
+                pLeaf = If_ManObj( p, pCut->pLeaves[0] );
+                pCut->Delay = If_ObjArrTime( pLeaf );
+                pCut->fUseless = 0;
+                goto IfMapCutEvalDone;
+            }
+            assert( pCut->fUseless || p->fCutDelayCurValid );
+            assert( pCut->fUseless || pCut->Config != 0 );
+            pCut->Delay = pCut->fUseless ? IF_FLOAT_LARGE : p->CutDelayCur;
+IfMapCutEvalDone:
+            ;
+        }
         else if ( p->pPars->fUserRecLib )
             pCut->Delay = If_CutDelayRecCost3( p, pCut, pObj );
         else if ( p->pPars->fUserLutDec )
@@ -502,7 +568,7 @@ void If_ObjPerformMappingAnd( If_Man_t * p, If_Obj_t * pObj, int Mode, int fPrep
     if ( Mode && pObj->nRefs > 0 )
         If_CutAreaRef( p, If_ObjCutBest(pObj) );
     if ( If_ObjCutBest(pObj)->fUseless )
-        Abc_Print( 1, "The best cut is useless.\n" );
+        Abc_Print( 1, "The best cut is useless.  Please increase the number of cuts used by the mapper, for example: \"&if -C 32\"\n" );
     // call the user specified function for each cut
     if ( p->pPars->pFuncUser )
         If_ObjForEachCut( pObj, pCut, i )
@@ -527,7 +593,7 @@ void If_ObjPerformMappingChoice( If_Man_t * p, If_Obj_t * pObj, int Mode, int fP
     If_Set_t * pCutSet;
     If_Obj_t * pTemp;
     If_Cut_t * pCutTemp, * pCut;
-    int i, fSave0 = p->pPars->fDelayOpt || p->pPars->fDelayOptLut || p->pPars->fDsdBalance || p->pPars->fUserRecLib || p->pPars->fUserSesLib || p->pPars->fUse34Spec || p->pPars->fUserLutDec || p->pPars->fUserLut2D;
+    int i, fSave0 = p->pPars->fDelayOpt || p->pPars->fDelayOptLut || p->pPars->fDsdBalance || p->pPars->fUserRecLib || p->pPars->fUserSesLib || p->pPars->fUse34Spec || p->pPars->fUserLutDec || p->pPars->fUserLut2D || p->pPars->fEnableCheck07;
     assert( pObj->pEquiv != NULL );
 
     // prepare
@@ -702,4 +768,3 @@ int If_ManPerformMappingRound( If_Man_t * p, int nCutsUsed, int Mode, int fPrepr
 
 
 ABC_NAMESPACE_IMPL_END
-

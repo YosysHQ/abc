@@ -1031,12 +1031,14 @@ void * If_ManDeriveGiaFromCells2( void * pGia )
 {
     Gia_Man_t * p = (Gia_Man_t *)pGia;
     Gia_Man_t * pNew, * pTemp;
+    If_LibCell_t * pCellLib = (If_LibCell_t *)p->pCellLib;
     Vec_Int_t * vCover, * vLeaves;
     Gia_Obj_t * pObj;
     unsigned char * pConfigData;
     int k, i, iLut, iVar;
     int Count = 0;
     assert( p->vConfigs2 != NULL );
+    assert( pCellLib != NULL );
     assert( Gia_ManHasMapping(p) );
     // create new manager
     pNew = Gia_ManStart( 6*Gia_ManObjNum(p)/5 + 100 );
@@ -1078,7 +1080,7 @@ void * If_ManDeriveGiaFromCells2( void * pGia )
             Truth = Abc_Tt6Stretch( Truth, 4 );
             extern int Kit_TruthToGia( Gia_Man_t * pMan, unsigned * pTruth, int nVars, Vec_Int_t * vMemory, Vec_Int_t * vLeaves, int fHash );
             Gia_ManObj(p, iLut)->Value = Kit_TruthToGia( pNew, (unsigned *)&Truth, Vec_IntSize(vLeaves), vCover, vLeaves, 1 );
-            bytePos += 7; // 1 byte CellId + 4 bytes mapping + 2 bytes truth table
+            bytePos += pCellLib->pCellRecordSizes[CellId];
         }
         else if ( CellId == 1 )
         {
@@ -1122,7 +1124,7 @@ void * If_ManDeriveGiaFromCells2( void * pGia )
             iObjLit2 = Kit_TruthToGia( pNew, (unsigned *)&Truth2, Vec_IntSize(vLeavesTemp), vCover, vLeavesTemp, 1 );
             Gia_ManObj(p, iLut)->Value = iObjLit2;
             Vec_IntFree( vLeavesTemp );
-            bytePos += 12; // 1 byte CellId + 7 bytes mapping + 4 bytes truth tables
+            bytePos += pCellLib->pCellRecordSizes[CellId];
         }
         else if ( CellId == 2 )
         {
@@ -1177,7 +1179,7 @@ void * If_ManDeriveGiaFromCells2( void * pGia )
             iObjLit3 = Gia_ManHashMux( pNew, iSelectLit, iObjLit2, iObjLit1 );
             Gia_ManObj(p, iLut)->Value = iObjLit3;
             Vec_IntFree( vLeavesTemp );
-            bytePos += 14; // 1 byte CellId + 9 bytes mapping + 4 bytes truth tables
+            bytePos += pCellLib->pCellRecordSizes[CellId];
         }
         else
         {
@@ -1755,4 +1757,3 @@ void Ifn_NtkRead()
 
 
 ABC_NAMESPACE_IMPL_END
-
