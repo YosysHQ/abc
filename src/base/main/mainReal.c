@@ -56,6 +56,7 @@ SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #endif
 
 #include "base/abc/abc.h"
+#include "base/cmd/cmdInt.h"
 #include "mainInt.h"
 #include "base/wlc/wlc.h"
 
@@ -363,9 +364,15 @@ int Abc_RealMain( int argc, char * argv[] )
         // execute commands given by the user
         while ( !feof(stdin) )
         {
+            int did_subst;
             // print command line prompt and
             // get the command from the user
             sCommand = Abc_UtilsGetUsersInput( pAbc );
+            sCommand = CmdHistorySubstitution( pAbc, sCommand, &did_subst );
+            if ( sCommand == NULL )
+                break;
+            if ( did_subst )
+                fprintf( pAbc->Out, "%s\n", sCommand );
 
             // execute the user's command
             fStatus = Cmd_CommandExecute( pAbc, sCommand );

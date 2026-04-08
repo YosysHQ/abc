@@ -41,6 +41,39 @@ static inline Wlc_Ntk_t * Wlc_AbcGetNtk( Abc_Frame_t * pAbc )                   
 static inline void        Wlc_AbcFreeNtk( Abc_Frame_t * pAbc )                      { if ( pAbc->pAbcWlc ) Wlc_NtkFree(Wlc_AbcGetNtk(pAbc));  }
 static inline void        Wlc_AbcUpdateNtk( Abc_Frame_t * pAbc, Wlc_Ntk_t * pNtk )  { Wlc_AbcFreeNtk(pAbc); pAbc->pAbcWlc = pNtk;             }
 
+static string Ufar_GetStatusName( Wlc_Ntk_t * pNtk )
+{
+    if ( pNtk == NULL || Wlc_NtkPoNum(pNtk) == 0 )
+        return "result";
+    if ( Wlc_NtkPoNum(pNtk) == 1 )
+        return Wlc_ObjName( pNtk, Wlc_ObjId(pNtk, Wlc_NtkPo(pNtk, 0)) );
+
+    string Name0 = Wlc_ObjName( pNtk, Wlc_ObjId(pNtk, Wlc_NtkPo(pNtk, 0)) );
+    string Name1 = Wlc_ObjName( pNtk, Wlc_ObjId(pNtk, Wlc_NtkPo(pNtk, 1)) );
+    return Name0 + "_xor_" + Name1;
+}
+
+static void Ufar_DumpStatusLog( const string & FileName, int RetValue, const string & StatusName )
+{
+    FILE * pFile;
+    if ( FileName.empty() || FileName == "none" )
+        return;
+    pFile = fopen( FileName.c_str(), "wb" );
+    if ( pFile == NULL )
+    {
+        cout << "Cannot open file \"" << FileName << "\" for writing." << endl;
+        return;
+    }
+    if ( RetValue == 1 )
+        fprintf( pFile, "STATUS: UNSAT " );
+    else if ( RetValue == 0 )
+        fprintf( pFile, "STATUS: SAT " );
+    else
+        fprintf( pFile, "STATUS: ABORTED " );
+    fprintf( pFile, "%s\n", StatusName.c_str() );
+    fclose( pFile );
+}
+
 
 void Ufar_Init(Abc_Frame_t *pAbc)
 {
@@ -146,6 +179,7 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
     opt_mgr.AddOpt("--crossonly", ufar_manager.params.fCrossOnly ? "yes" : "no", "", "allow UIF pairs only across LHS/RHS cones of the miter");
     opt_mgr.AddOpt("--crossstats", "no", "", "print multiplier counts in LHS/RHS/shared cones and exit");
     opt_mgr.AddOpt("--dump", "none", "str", "specify file name");
+    opt_mgr.AddOpt("--dump-log", "none", "str", "write status log");
     opt_mgr.AddOpt("--dump-first-aig", "none", "str", "dump first internal bit-blasted AIG and exit");
     opt_mgr.AddOpt("--dump-abs", "none", "str", "specify file name");
     opt_mgr.AddOpt("--par", "none", "str", "use parallel solvers");
@@ -254,6 +288,8 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
 
     // ufar_manager.DumpParams();
     LogT::prefix = "UIF_PROVE";
+    string dumpLogFile = opt_mgr["--dump-log"] ? opt_mgr.GetOptVal("--dump-log") : "";
+    string statusName = Ufar_GetStatusName( Wlc_AbcGetNtk(pAbc) );
 
     set<unsigned> set_op_types;
     set_op_types.insert(WLC_OBJ_ARI_MULTI);
@@ -372,6 +408,7 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
     } else {
         LOG(0) << "Undecided by UIF.";
     }
+    Ufar_DumpStatusLog( dumpLogFile, ret, statusName );
 
     gettimeofday(&t2, NULL);
     unsigned tTotal = elapsed_time_usec(t1, t2);

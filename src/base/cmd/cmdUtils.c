@@ -25,7 +25,6 @@
 #include <ctype.h>
 
 ABC_NAMESPACE_IMPL_START
-    // proper declaration of isspace
 
 ////////////////////////////////////////////////////////////////////////
 ///                        DECLARATIONS                              ///
@@ -393,9 +392,51 @@ int CmdApplyAlias( Abc_Frame_t * pAbc, int *argcp, char ***argvp, int *loop )
 ***********************************************************************/
 char * CmdHistorySubstitution( Abc_Frame_t * pAbc, char *line, int *changed )
 {
-    // as of today, no history substitution 
-    *changed = 0;
-    return line;
+    char * pBeg = line, * pEnd, * pStr;
+    int iRecall, nSize;
+    while ( *pBeg && isspace((unsigned char)*pBeg) )
+        pBeg++;
+    if ( *pBeg == 0 )
+    {
+        *changed = 0;
+        return line;
+    }
+    pEnd = pBeg;
+    while ( *pEnd && !isspace((unsigned char)*pEnd) )
+        pEnd++;
+    if ( *pEnd )
+    {
+        char * pTemp = pEnd;
+        while ( *pTemp && isspace((unsigned char)*pTemp) )
+            pTemp++;
+        if ( *pTemp )
+        {
+            *changed = 0;
+            return line;
+        }
+    }
+    if ( *pBeg < '1' || *pBeg > '9' )
+    {
+        *changed = 0;
+        return line;
+    }
+    for ( pStr = pBeg; pStr < pEnd; pStr++ )
+        if ( *pStr < '0' || *pStr > '9' )
+        {
+            *changed = 0;
+            return line;
+        }
+    iRecall = atoi( pBeg );
+    nSize = Vec_PtrSize( pAbc->aHistory );
+    if ( iRecall < 1 || iRecall > nSize )
+    {
+        fprintf( pAbc->Err, "History entry %d does not exist.\n", iRecall );
+        line[0] = 0;
+        *changed = 0;
+        return line;
+    }
+    *changed = 1;
+    return (char *)Vec_PtrEntry( pAbc->aHistory, nSize - iRecall );
 }
 
 /**Function*************************************************************
@@ -905,4 +946,3 @@ void Cmd_CommandSGen( Abc_Frame_t * pAbc, int nParts, int nIters, int fVerbose )
 ///                       END OF FILE                                ///
 ////////////////////////////////////////////////////////////////////////
 ABC_NAMESPACE_IMPL_END
-

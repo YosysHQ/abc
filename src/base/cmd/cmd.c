@@ -98,6 +98,7 @@ void Cmd_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "Basic", "quit",          CmdCommandQuit,            0 );
     Cmd_CommandAdd( pAbc, "Basic", "abcrc",         CmdCommandAbcrc,           0 );
     Cmd_CommandAdd( pAbc, "Basic", "history",       CmdCommandHistory,         0 );
+    Cmd_CommandAdd( pAbc, "Basic", "hi",            CmdCommandHistory,         0 );
     Cmd_CommandAdd( pAbc, "Basic", "alias",         CmdCommandAlias,           0 );
     Cmd_CommandAdd( pAbc, "Basic", "unalias",       CmdCommandUnalias,         0 );
     Cmd_CommandAdd( pAbc, "Basic", "help",          CmdCommandHelp,            0 );
@@ -441,38 +442,31 @@ int CmdCommandAbcrc( Abc_Frame_t * pAbc, int argc, char **argv )
 int CmdCommandHistory( Abc_Frame_t * pAbc, int argc, char **argv )
 {
     char * pName, * pStr = NULL;
-    int i, c;
+    char ** ppMatches = NULL;
+    int * pIds = NULL;
+    int i;
     int nPrints = 20;
     int nPrinted = 0;
-    Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
-    {
-        switch ( c )
-        {
-            case 'h':
-                goto usage;
-            default :
-                goto usage;
-        }
-    }
-    if ( argc > globalUtilOptind + 2 )
+    if ( argc == 2 && !strcmp(argv[1], "-h") )
+        goto usage;
+    if ( argc > 3 )
         goto usage;
     // parse arguments: can be [substring] [number] in either order
-    if ( argc == globalUtilOptind + 1 )
+    if ( argc == 2 )
     {
         // one argument: either number or substring
-        pStr = argv[globalUtilOptind];
+        pStr = argv[1];
         if ( pStr && pStr[0] >= '1' && pStr[0] <= '9' )
         {
             nPrints = atoi(pStr);
             pStr = NULL;
         }
     }
-    else if ( argc == globalUtilOptind + 2 )
+    else if ( argc == 3 )
     {
         // two arguments: substring and number
-        char * arg1 = argv[globalUtilOptind];
-        char * arg2 = argv[globalUtilOptind + 1];
+        char * arg1 = argv[1];
+        char * arg2 = argv[2];
 
         // Try to parse second argument as number
         if ( arg2[0] >= '1' && arg2[0] <= '9' )
@@ -500,14 +494,22 @@ int CmdCommandHistory( Abc_Frame_t * pAbc, int argc, char **argv )
             fprintf( pAbc->Out, "%4d : %s\n", Vec_PtrSize(pAbc->aHistory)-i, pName );
     }
     else {
-        // Search string provided, show up to nPrints matching entries
-        Vec_PtrForEachEntry( char *, pAbc->aHistory, pName, i )
+        // Search string provided, select up to nPrints most recent matching entries
+        ppMatches = ABC_ALLOC( char *, nPrints );
+        pIds = ABC_ALLOC( int, nPrints );
+        Vec_PtrForEachEntryReverse( char *, pAbc->aHistory, pName, i )
             if ( strstr(pName, pStr) )
             {
-                fprintf( pAbc->Out, "%4d : %s\n", Vec_PtrSize(pAbc->aHistory)-i, pName );
+                pIds[nPrinted] = Vec_PtrSize(pAbc->aHistory)-i;
+                ppMatches[nPrinted] = pName;
                 if ( ++nPrinted >= nPrints )
                     break;
             }
+        // Print the selected entries in reverse so larger history indices appear first
+        for ( i = nPrinted - 1; i >= 0; i-- )
+            fprintf( pAbc->Out, "%4d : %s\n", pIds[i], ppMatches[i] );
+        ABC_FREE( pIds );
+        ABC_FREE( ppMatches );
     }
     return 0;
 

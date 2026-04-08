@@ -1480,10 +1480,10 @@ Gia_Man_t * Gia_ManGenAdder( int nVars, int fSK, int fBK, int fHC, int fCarries,
     for ( k = 1; k < nVars; k++ )
         if ( pStore[i][k] >= 0 )
             Gia_ManGenPrefix( p, &pLits[2*k], &pLits[2*k+1], pLits[2*pStore[i][k]], pLits[2*pStore[i][k]+1] );
-    for ( k = 0; k < nVars; k++ ) 
-        Gia_ManAppendCo( p, k ? Gia_ManHashXor(p, pLitsI[2*k], pLits[2*(k-1)+1]) : pLitsI[2*k] );
     if ( fCarries )
         Gia_ManAppendCo( p, pLits[2*(k-1)+1] );
+    for ( k = 0; k < nVars; k++ ) 
+        Gia_ManAppendCo( p, k ? Gia_ManHashXor(p, pLitsI[2*k], pLits[2*(k-1)+1]) : pLitsI[2*k] );
     ABC_FREE( pStore );
     ABC_FREE( pLitsI );
     ABC_FREE( pLits );    

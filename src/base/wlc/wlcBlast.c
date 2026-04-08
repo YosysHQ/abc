@@ -1856,29 +1856,26 @@ Gia_Man_t * Wlc_NtkBitBlast( Wlc_Ntk_t * p, Wlc_BstPar_t * pParIn )
             Wlc_Obj_t * pFanin = Wlc_ObjFanin0(p, pObj);
             int End = Wlc_ObjRangeEnd(pObj);
             int Beg = Wlc_ObjRangeBeg(pObj);
-            if ( End >= Beg )
+            int Low  = Abc_MinInt( End, Beg );
+            int High = Abc_MaxInt( End, Beg );
+            assert( nRange == High - Low + 1 );
+            if ( pFanin->End >= pFanin->Beg )
             {
-                if ( pFanin->End >= pFanin->Beg ) 
+                assert( pFanin->Beg <= Low && High <= pFanin->End );
+                for ( k = 0; k < nRange; k++ )
                 {
-                    assert( nRange == End - Beg + 1 );
-                    assert( pFanin->Beg <= Beg && End <= pFanin->End );
-                    for ( k = Beg; k <= End; k++ )
-                        Vec_IntPush( vRes, pFans0[k - pFanin->Beg] );
-                }
-                else
-                {
-                    assert( nRange == End - Beg + 1 );
-                    assert( pFanin->End <= Beg && End <= pFanin->Beg );
-                    for ( k = Beg; k <= End; k++ )
-                        Vec_IntPush( vRes, pFans0[k - pFanin->End] );
+                    int Label = End >= Beg ? Beg + k : Beg - k;
+                    Vec_IntPush( vRes, pFans0[Label - pFanin->Beg] );
                 }
             }
             else
             {
-                assert( nRange == Beg - End + 1 );
-                assert( pFanin->End <= End && Beg <= pFanin->Beg );
-                for ( k = End; k <= Beg; k++ )
-                    Vec_IntPush( vRes, pFans0[k - pFanin->End] );
+                assert( pFanin->End <= Low && High <= pFanin->Beg );
+                for ( k = 0; k < nRange; k++ )
+                {
+                    int Label = End >= Beg ? Beg + k : Beg - k;
+                    Vec_IntPush( vRes, pFans0[pFanin->Beg - Label] );
+                }
             }
         }
         else if ( pObj->Type == WLC_OBJ_BIT_CONCAT )

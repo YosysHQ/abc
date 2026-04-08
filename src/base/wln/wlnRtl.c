@@ -19,6 +19,9 @@
 ***********************************************************************/
 
 #include "wln.h"
+#include "aig/aig/aig.h"
+#include "aig/gia/giaAig.h"
+#include "base/io/ioAbc.h"
 #include "base/main/main.h"
 
 #ifdef WIN32
@@ -171,30 +174,54 @@ Rtl_Lib_t * Wln_ReadSystemVerilog( char * pFileName, char * pTopModule, char * p
     unlink( pFileTemp );
     return pNtk;
 }
-Gia_Man_t * Wln_BlastSystemVerilog( char * pFileName, char * pTopModule, char * pDefines, int fSkipStrash, int fInvert, int fTechMap, int fLibInDir, int fSetUndef, int fVerbose )
+Gia_Man_t * Wln_BlastSystemVerilog( char * pFileName, char * pFileName2, char * pTopModule, char * pDefines, int fSkipStrash, int fInvert, int fTechMap, int fLibInDir, int fSetUndef, int fVerbose )
 {
     Gia_Man_t * pGia = NULL;
     char Command[1000];
     char * pFileTemp = "_temp_.aig";
     int fRtlil = strstr(pFileName, ".rtl") != NULL;
-    int fSVlog = strstr(pFileName, ".sv")  != NULL;
-    sprintf( Command, "%s -qp \"%s %s%s %s%s; hierarchy %s%s; flatten; proc; opt; async2sync; opt; setundef -undriven -zero; %s%smemory -nomap; memory_map; dffunmap; opt_clean; opt_expr; aigmap; write_aiger -symbols %s\"",
+    int fSVlog = strstr(pFileName, ".sv")  != NULL || (pFileName2 && strstr(pFileName2, ".sv") != NULL);
+    sprintf( Command, "%s -qp \"%s %s%s %s%s%s%s; hierarchy %s%s; flatten; proc; opt; async2sync; opt; setundef -undriven -zero; %s%smemory -nomap; memory_map; dffunmap; opt_clean; opt_expr; %saigmap; write_aiger -symbols %s\"",
         Wln_GetYosysName(), 
         fRtlil ? "read_rtlil"   : "read_verilog",
         pDefines  ? "-D"        : "",
         pDefines  ? pDefines    : "",
         fSVlog    ? "-sv "      : "",
         pFileName,
+        pFileName2 ? " "        : "",
+        pFileName2 ? pFileName2 : "",
         pTopModule ? "-top "    : "-auto-top",
         pTopModule ? pTopModule : "", 
         fTechMap ? (fLibInDir ? "techmap -map techmap.v; " : "techmap; ") : "",
         fSetUndef ? "setundef -init -zero; " : "",
+        pFileName2 ? "delete t:\\$scopeinfo; " : "",
         pFileTemp );
     if ( fVerbose )
     printf( "%s\n", Command );
     if ( !Wln_ConvertToRtl(Command, pFileTemp) )
         return NULL;
-    pGia = Gia_AigerRead( pFileTemp, 0, fSkipStrash, 0 );
+    if ( pFileName2 )
+    {
+        extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+        Aig_Man_t * pAig = NULL;
+        Abc_Ntk_t * pNtk = Io_Read( pFileTemp, IO_FILE_AIGER, 1, 0 );
+        if ( pNtk == NULL )
+        {
+            printf( "Reading AIGER from file \"%s\" has failed.\n", pFileTemp );
+            return NULL;
+        }
+        pAig = Abc_NtkToDar( pNtk, 0, 1 );
+        Abc_NtkDelete( pNtk );
+        if ( pAig == NULL )
+        {
+            printf( "Converting the AIGER network into an internal AIG has failed.\n" );
+            return NULL;
+        }
+        pGia = fSkipStrash ? Gia_ManFromAigSimple(pAig) : Gia_ManFromAig(pAig);
+        Aig_ManStop( pAig );
+    }
+    else
+        pGia = Gia_AigerRead( pFileTemp, 0, fSkipStrash, 0 );
     if ( pGia == NULL )
     {
         printf( "Converting to AIG has failed.\n" );
