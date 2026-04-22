@@ -12,9 +12,9 @@
   
   Affiliation [University of Freiburg]
 
-  Date        [Ver. 1.0. Started - March 2025.]
+  Date        [Ver. 1.0. Started - April 2026.]
 
-  Revision    [$Id: eSLIM.h,v 1.00 2025/03/17 00:00:00 Exp $]
+  Revision    [$Id: eSLIM.cpp,v 1.00 2025/04/14 00:00:00 Exp $]
 
 ***********************************************************************/
 
@@ -23,39 +23,52 @@
 
 #include "misc/util/abc_namespaces.h"
 #include "aig/gia/gia.h"
+#include "base/abc/abc.h"
 
 ABC_NAMESPACE_HEADER_START
 
   typedef struct eSLIM_ParamStruct_ eSLIM_ParamStruct;
   struct eSLIM_ParamStruct_ {
-    int forbidden_pairs;                                // Allow forbidden pairs in the selected subcircuits
-    int extended_normality_processing;                  // Additional checks for non normal subcircuits
-    int fill_subcircuits;                               // If a subcircuit has fewer than subcircuit_size_bound gates, try to fill it with rejected gates.
+    int fill_subcircuits;                               // If a subcircuit has fewer than subcircuit_max_size gates, try to fill it with rejected gates.
     int apply_strash;                                   
     int fix_seed;                                       
     int trial_limit_active;
     int apply_inprocessing;
-    
+    int synthesis_approach;
+    int seed;
+    int verbosity_level;     
+    int approximate_relation;
+    int relation_tfo_bound;
+    int generate_relation_with_tfi_limit;
+    int relation_tfi_bound;
+    int use_taboo_list; 
+    int forward_search;
+    int nWindows;
+    int window_size;
+
+    int criticial_path_selection_bias;
+   
+
     unsigned int timeout;                               // available time in seconds (soft limit)
-    unsigned int timeout_inprocessing;
     unsigned int iterations;                            // maximal number of iterations. No limit if 0
-    unsigned int subcircuit_size_bound;                 // upper bound for the subcircuit sizes
-    unsigned int strash_intervall;    
-    unsigned int nselection_trials;
-    unsigned int nruns;
+    unsigned int subcircuit_max_size;                   // upper bound for the subcircuit sizes
+    unsigned int additional_gates;                      // number of gates that may be introduced to reduce delay
 
     double expansion_probability;                       // the probability that a node is added to the subcircuit
+    unsigned int nruns;
 
-    int mode;                                           // 0: Cadical Incremental, 1: Kissat Oneshot                                       
-    int seed;
-    int verbosity_level;                                        
+    unsigned int strash_intervall;    
+    unsigned int nselection_trials;
 
+
+    int gate_size;
+    int aig;
   };
 
   void seteSLIMParams(eSLIM_ParamStruct* params);
 
   Gia_Man_t* applyeSLIM(Gia_Man_t * pGia, const eSLIM_ParamStruct* params);
-  Gia_Man_t* applyeSLIMIncremental(Gia_Man_t * pGia, const eSLIM_ParamStruct* params, unsigned int restarts, unsigned int deepsynTimeout);
+  Abc_Ntk_t* applyelSLIM(Abc_Ntk_t * ntk, const eSLIM_ParamStruct* params); //LUT-eSLIM
 
 
 ABC_NAMESPACE_HEADER_END

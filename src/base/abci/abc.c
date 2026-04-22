@@ -580,6 +580,7 @@ static int Abc_CommandAbc9GroupProve         ( Abc_Frame_t * pAbc, int argc, cha
 static int Abc_CommandAbc9MultiProve         ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SplitProve         ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SProve             ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9SProve2            ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SplitSat           ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Bmc                ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SBmc               ( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -665,6 +666,7 @@ static int Abc_CommandAbc9Divide             ( Abc_Frame_t * pAbc, int argc, cha
 static int Abc_CommandAbc9Test               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 static int Abc_CommandAbc9eSLIM              ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9elSLIM             ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 static int Abc_CommandAbc9CatBtor            ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
@@ -685,7 +687,9 @@ extern void Extra_BitMatrixTransposeP( Vec_Wrd_t * vSimsIn, int nWordsIn, Vec_Wr
 typedef struct Wlc_Ntk_t_    Wlc_Ntk_t;
 typedef struct Wlc_BstPar_t_ Wlc_BstPar_t;
 extern Gia_Man_t * Wlc_NtkBitBlast( Wlc_Ntk_t * p, Wlc_BstPar_t * pPars );
-extern int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent );
+extern int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile );
+extern int Cec_GiaReplayReadParams( char * pFileName, int * pnProcs, int * pnTimeOut, int * pnTimeOut2, int * pnTimeOut3, int * pfUseUif );
+extern int Cec_GiaReplayTest( Gia_Man_t * p, Wlc_Ntk_t * pWlc, char * pFileName, int fVerbose, int fVeryVerbose, int fSilent );
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -1422,7 +1426,8 @@ void Abc_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "ABC9",         "&gprove",       Abc_CommandAbc9GroupProve,   0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&mprove",       Abc_CommandAbc9MultiProve,   0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&splitprove",   Abc_CommandAbc9SplitProve,   0 );
-    Cmd_CommandAdd( pAbc, "ABC9",         "&sprove",       Abc_CommandAbc9SProve,       0 );    
+    Cmd_CommandAdd( pAbc, "ABC9",         "&sprove",       Abc_CommandAbc9SProve,       0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&sprove2",      Abc_CommandAbc9SProve2,      0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&splitsat",     Abc_CommandAbc9SplitSat,     0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&bmc",          Abc_CommandAbc9Bmc,          0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&bmcs",         Abc_CommandAbc9SBmc,         0 );
@@ -1514,6 +1519,7 @@ void Abc_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "ABC9",         "&test",         Abc_CommandAbc9Test,                   0 );
 
     Cmd_CommandAdd( pAbc, "ABC9",         "&eslim",        Abc_CommandAbc9eSLIM,                  0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "elslim",        Abc_CommandAbc9elSLIM,                 0 );
     
     Cmd_CommandAdd( pAbc, "ABC9",         "&catbtor",      Abc_CommandAbc9CatBtor,                0 );
     {
@@ -51568,9 +51574,10 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
 {
     Gia_Man_t * pGiaUse = pAbc->pGia, * pGiaTemp = NULL;
     Wlc_Ntk_t * pWlc = (Wlc_Ntk_t *)pAbc->pAbcWlc;
+    char * pReplayFile = NULL;
     int c, nProcs = 6, nProcsNew = 0, nTimeOut = 3, nTimeOut2 = 10, nTimeOut3 = 100, fUseUif = 0, fVerbose = 0, fVeryVerbose = 0, fSilent = 0;
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "PTUWusvwh" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "PTUWRusvwh" ) ) != EOF )
     {
         switch ( c )
         {
@@ -51619,6 +51626,15 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
             if ( nTimeOut3 <= 0 )
                 goto usage;
             break;                          
+        case 'R':
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-R\" should be followed by a file name.\n" );
+                goto usage;
+            }
+            pReplayFile = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
         case 'u':
             fUseUif ^= 1;
             break;
@@ -51673,20 +51689,124 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
             Gia_ManStop( pGiaUse );
         return 1;
     }
-    pAbc->Status = Cec_GiaProveTest( pGiaUse, nProcs, nTimeOut, nTimeOut2, nTimeOut3, fUseUif, pWlc, fVerbose, fVeryVerbose, fSilent );
+    pAbc->Status = Cec_GiaProveTest( pGiaUse, nProcs, nTimeOut, nTimeOut2, nTimeOut3, fUseUif, pWlc, fVerbose, fVeryVerbose, fSilent, pReplayFile );
     Abc_FrameReplaceCex( pAbc, &pGiaUse->pCexSeq ); 
     if ( fUseUif )
         Gia_ManStop( pGiaUse );
     return 0;
 
 usage:
-    Abc_Print( -2, "usage: &sprove [-PTUW num] [-usvwh]\n" );
+    Abc_Print( -2, "usage: &sprove [-PTUW num] [-R file] [-usvwh]\n" );
     Abc_Print( -2, "\t         proves CEC problem by case-splitting\n" );
     Abc_Print( -2, "\t-P num : the number of concurrent processes (1 <= num <= 6) [default = %d]\n", nProcs );
     Abc_Print( -2, "\t-T num : runtime limit in seconds per subproblem [default = %d]\n",     nTimeOut );
     Abc_Print( -2, "\t-U num : runtime limit in seconds per subproblem [default = %d]\n",     nTimeOut2 );
     Abc_Print( -2, "\t-W num : runtime limit in seconds per subproblem [default = %d]\n",     nTimeOut3 );
+    Abc_Print( -2, "\t-R str : dump replay/trace file for later execution by &sprove2\n" );
     Abc_Print( -2, "\t-u     : enable concurrent UFAR on word-level design (uses internal %%blast + &miter -x)\n" );
+    Abc_Print( -2, "\t-s     : enable silent computation (no reporting) [default = %s]\n",    fSilent? "yes": "no" );
+    Abc_Print( -2, "\t-v     : toggle printing verbose information [default = %s]\n",         fVerbose? "yes": "no" );
+    Abc_Print( -2, "\t-w     : toggle printing more verbose information [default = %s]\n",    fVeryVerbose? "yes": "no" );
+    Abc_Print( -2, "\t-h     : print the command usage\n");
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9SProve2( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Gia_Man_t * pGiaUse = pAbc->pGia, * pGiaTemp = NULL;
+    Wlc_Ntk_t * pWlc = (Wlc_Ntk_t *)pAbc->pAbcWlc;
+    char * pTraceFile = NULL;
+    int c, nProcs = 0, nTimeOut = 0, nTimeOut2 = 0, nTimeOut3 = 0, fUseUif = 0, fVerbose = 0, fVeryVerbose = 0, fSilent = 0;
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "svwh" ) ) != EOF )
+    {
+        switch ( c )
+        {
+        case 's':
+            fSilent ^= 1;
+            break;
+        case 'v':
+            fVerbose ^= 1;
+            break;
+        case 'w':
+            fVeryVerbose ^= 1;
+            break;
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+    if ( globalUtilOptind >= argc )
+    {
+        Abc_Print( -1, "Command &sprove2 expects a replay file name.\n" );
+        goto usage;
+    }
+    pTraceFile = argv[globalUtilOptind];
+    globalUtilOptind++;
+    if ( globalUtilOptind != argc )
+        goto usage;
+    if ( !Cec_GiaReplayReadParams( pTraceFile, &nProcs, &nTimeOut, &nTimeOut2, &nTimeOut3, &fUseUif ) )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9SProve2(): Cannot read replay file \"%s\".\n", pTraceFile );
+        return 1;
+    }
+    if ( fUseUif )
+    {
+        pGiaUse = NULL;
+        if ( pWlc == NULL )
+        {
+            Abc_Print( -1, "Abc_CommandAbc9SProve2(): Replay requires word-level design for UIF mode.\n" );
+            return 1;
+        }
+        pGiaTemp = Wlc_NtkBitBlast( pWlc, NULL );
+        if ( pGiaTemp == NULL )
+        {
+            Abc_Print( -1, "Abc_CommandAbc9SProve2(): Word-level bit-blasting has failed.\n" );
+            return 1;
+        }
+        if ( (Gia_ManPoNum(pGiaTemp) & 1) == 1 )
+        {
+            Abc_Print( -1, "Abc_CommandAbc9SProve2(): Internal \"&miter -x\" requires even number of bit-level outputs.\n" );
+            Gia_ManStop( pGiaTemp );
+            return 1;
+        }
+        pGiaUse = Gia_ManTransformMiter2( pGiaTemp );
+        Gia_ManStop( pGiaTemp );
+        pGiaTemp = NULL;
+    }
+    if ( pGiaUse == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9SProve2(): There is no AIG.\n" );
+        return 1;
+    }
+    if ( Gia_ManRegNum(pGiaUse) == 0 )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9SProve2(): The problem is combinational.\n" );
+        if ( fUseUif )
+            Gia_ManStop( pGiaUse );
+        return 1;
+    }
+    pAbc->Status = Cec_GiaReplayTest( pGiaUse, pWlc, pTraceFile, fVerbose, fVeryVerbose, fSilent );
+    Abc_FrameReplaceCex( pAbc, &pGiaUse->pCexSeq );
+    if ( fUseUif )
+        Gia_ManStop( pGiaUse );
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: &sprove2 <trace_file> [-svwh]\n" );
+    Abc_Print( -2, "\t         replays &sprove strategy stored in the given trace file\n" );
     Abc_Print( -2, "\t-s     : enable silent computation (no reporting) [default = %s]\n",    fSilent? "yes": "no" );
     Abc_Print( -2, "\t-v     : toggle printing verbose information [default = %s]\n",         fVerbose? "yes": "no" );
     Abc_Print( -2, "\t-w     : toggle printing more verbose information [default = %s]\n",    fVeryVerbose? "yes": "no" );
@@ -59873,18 +59993,43 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
   int c;
   Gia_Man_t * pTemp;
   seteSLIMParams(&params);
+  params.aig = 1;
   Extra_UtilGetoptReset();
-  while ( ( c = Extra_UtilGetopt( argc, argv, "DIMPRSTVZdfhns" ) ) != EOF ) {
+  while ( ( c = Extra_UtilGetopt( argc, argv, "CDIPRSTVWXZcfhistx" ) ) != EOF ) {
       switch ( c ) {
+        case 'C':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-C\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.approximate_relation = 1;
+          params.relation_tfo_bound  = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.relation_tfo_bound < 0 )
+              goto usage;
+          if (globalUtilOptind < argc) {
+            char *next;
+            int tfi_bound = strtol (argv[globalUtilOptind], &next, 10);
+            if (argv[globalUtilOptind] != next && *next == '\0') {
+              params.generate_relation_with_tfi_limit = 1;
+              params.relation_tfi_bound = tfi_bound;
+              globalUtilOptind++;
+              if (params.relation_tfi_bound < 0) {
+                goto usage;
+              }
+            }
+          }
+          break;
         case 'D':
           if ( globalUtilOptind >= argc )
           {
               Abc_Print( -1, "Command line switch \"-D\" should be followed by an integer.\n" );
               goto usage;
           }
-          params.timeout_inprocessing = atoi(argv[globalUtilOptind]);
+          params.synthesis_approach = atoi(argv[globalUtilOptind]);
           globalUtilOptind++;
-          if ( params.timeout_inprocessing < 1 )
+          if ( params.synthesis_approach < 0 ||  params.synthesis_approach > 2)
               goto usage;
           break;
         case 'I':
@@ -59896,17 +60041,6 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
           params.iterations = atoi(argv[globalUtilOptind]);
           globalUtilOptind++;
           if ( params.iterations < 0 )
-              goto usage;
-          break;
-        case 'M':
-          if ( globalUtilOptind >= argc )
-          {
-              Abc_Print( -1, "Command line switch \"-M\" should be followed by an integer.\n" );
-              goto usage;
-          }
-          params.mode = atoi(argv[globalUtilOptind]);
-          globalUtilOptind++;
-          if ( params.mode < 0 || params.mode > 2)
               goto usage;
           break;
         case 'P':
@@ -59937,9 +60071,9 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
               Abc_Print( -1, "Command line switch \"-S\" should be followed by an integer.\n" );
               goto usage;
           }
-          params.subcircuit_size_bound = atoi(argv[globalUtilOptind]);
+          params.subcircuit_max_size = atoi(argv[globalUtilOptind]);
           globalUtilOptind++;
-          if ( params.subcircuit_size_bound < 2 )
+          if ( params.subcircuit_max_size < 2 )
               goto usage;
           break;
         case 'T':
@@ -59964,6 +60098,32 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
           if ( params.verbosity_level < 0 || params.verbosity_level > 3 )
               goto usage;
           break;
+        case 'W':
+          if ( globalUtilOptind >= argc + 1)
+          {
+              Abc_Print( -1, "Command line switch \"-W\" should be followed by two integers.\n" );
+              goto usage;
+          }
+          params.nWindows = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if (params.nWindows < 0) 
+            goto usage;
+          params.window_size = atoi(argv[globalUtilOptind]);
+          if (params.window_size <= 0)
+            goto usage;
+          globalUtilOptind++;
+          break;
+        case 'X':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-X\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.additional_gates = atoi(argv[globalUtilOptind]);
+          if ( params.additional_gates < 0 )
+              goto usage;
+          globalUtilOptind++;
+          break;
         case 'Z':
           if ( globalUtilOptind >= argc )
           {
@@ -59974,23 +60134,33 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
           params.seed = atoi(argv[globalUtilOptind]);
           globalUtilOptind++;
           break;
-        case 'd' :
-          params.apply_inprocessing ^= 1;
+        case 'c' :
+          params.criticial_path_selection_bias ^= 1;
           break;
         case 'f' :
-          params.forbidden_pairs ^= 1;
+          params.forward_search ^= 1;
           break;
         case 'h':
           goto usage;
-        case 'n' :
-          params.extended_normality_processing ^= 1;
+        case 'i' :
+          params.apply_inprocessing ^= 1;
           break;
         case 's' :
           params.fill_subcircuits ^= 1;
           break;
+        case 't' :
+          params.use_taboo_list ^= 1;
+          break;
+        case 'x' :
+          params.aig = 0;
+          break;
         default:
           goto usage;
       }
+  }
+  if (params.nWindows > 0 && params.synthesis_approach != 0) {
+    Abc_Print( -1, "Windows can only be used with area minimization\n" );
+    return 1;
   }
   if ( pAbc->pGia == NULL ) {
         Abc_Print( -1, "Abc_CommandAbc9Test(): There is no AIG.\n" );
@@ -60002,26 +60172,265 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
   Abc_FrameUpdateGia( pAbc, pTemp );
   return 0;
 
+
   usage:
-    Abc_Print( -2, "usage: &eslim [-DIMPRSTVZ <num>] [-dfhns]\n" );
-    Abc_Print( -2, "\t           circuit minimization using exact synthesis and the SAT-based local improvement method (SLIM)\n" );
-    Abc_Print( -2, "\t-D <num> : the timeout in seconds for the individual deepsyn runs [default = %d]\n",    params.timeout_inprocessing );
+    Abc_Print( -2, "usage: &eslim [-CDIPRSTVWXZ <num>] [-cfhistx]\n" );
+    Abc_Print( -2, "\t           circuit optimization using exact synthesis and the SAT-based local improvement method (SLIM)\n" );
+    Abc_Print( -2, "\t-C <num> : approximate Boolean relations by only considering the frist C levels in the cone \n");
+    Abc_Print( -2, "\t-D <num> : the delay mode to use [default = %d]\n",  params.synthesis_approach );
     Abc_Print( -2, "\t-I <num> : the maximal number of iterations (0 = no limit) for the individual eSLIM runs [default = %d]\n",  params.iterations  );
-    Abc_Print( -2, "\t-M <num> : the synthesis mode to use [default = %d]\n",  params.mode  );
     Abc_Print( -2, "\t-P <num> : the probability of expanding a node [default = %.2f]\n",    params.expansion_probability );
     Abc_Print( -2, "\t-R <num> : the number of runs of eSLIM + Inprocessing [default = %d]\n",    params.nruns );
-    Abc_Print( -2, "\t-S <num> : the maximal size of considered subcircuits [default = %d]\n",    params.subcircuit_size_bound );
+    Abc_Print( -2, "\t-S <num> : the maximal size of considered subcircuits [default = %d]\n",    params.subcircuit_max_size );
     Abc_Print( -2, "\t-T <num> : the timeout in seconds for the individual eSLIM runs [default = %d]\n",    params.timeout );
     Abc_Print( -2, "\t-V <num> : the verbosity level [default = %d]\n",       params.verbosity_level);
+    Abc_Print( -2, "\t-W <num> <num> : Use m windows of size n [default = %d, %d]\n",       params.nWindows, params.window_size);
+    Abc_Print( -2, "\t-X <num> : the maximal number of additional gates that may be used for depth optimization [default = %d]\n", params.additional_gates);
     Abc_Print( -2, "\t-Z <num> : use a fixed seed\n",       params.seed);
-    Abc_Print( -2, "\t-d       : toggle inprocessing with deepsyn\n");
-    Abc_Print( -2, "\t-f       : toggle using subcircuits with forbidden pairs\n");
+    Abc_Print( -2, "\t-c       : toggle bias for selection of nodes on the crictical path\n");
+    Abc_Print( -2, "\t-f       : toggle forward expansion of root nodes\n");
     Abc_Print( -2, "\t-h       : print the command usage\n");
-    Abc_Print( -2, "\t-n       : toggle extended normality processing\n");
+    Abc_Print( -2, "\t-i       : toggle inprocessing\n");
     Abc_Print( -2, "\t-s       : toggle fill subcircuits\n");
+    Abc_Print( -2, "\t-t       : toggle use taboo list\n");
+    Abc_Print( -2, "\t-x       : allow xor-gates\n");
     Abc_Print( -2, "\t\n" );
     Abc_Print( -2, "\t           This command was contributed by Franz-Xaver Reichl from University of Freiburg.\n" );
+
     return 1;
+
+}
+
+int Abc_CommandAbc9elSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
+  extern void seteSLIMParams(eSLIM_ParamStruct* params);
+  extern Abc_Ntk_t* applyelSLIM(Abc_Ntk_t * pGia, const eSLIM_ParamStruct* params);
+  
+  eSLIM_ParamStruct params;
+  Abc_Ntk_t* pNtk, *pNtknew;
+  int c;
+  seteSLIMParams(&params);
+  Extra_UtilGetoptReset();
+  params.subcircuit_max_size = 4;
+  while ( ( c = Extra_UtilGetopt( argc, argv, "CDGIPRSTVWXZfhist" ) ) != EOF ) {
+      switch ( c ) {
+        case 'C':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-C\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.approximate_relation = 1;
+          params.relation_tfo_bound  = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.relation_tfo_bound < 0 )
+              goto usage;
+          if (globalUtilOptind < argc) {
+            char *next;
+            int tfi_bound = strtol (argv[globalUtilOptind], &next, 10);
+            if (argv[globalUtilOptind] != next && *next == '\0') {
+              params.generate_relation_with_tfi_limit = 1;
+              params.relation_tfi_bound = tfi_bound;
+              globalUtilOptind++;
+              if (params.relation_tfi_bound < 0) {
+                goto usage;
+              }
+            }
+          }
+          break;
+        case 'D':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-D\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.synthesis_approach = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.synthesis_approach < 0 ||  params.synthesis_approach > 2)
+              goto usage;
+          break;
+        case 'I':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-I\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.iterations = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.iterations < 0 )
+              goto usage;
+          break;
+        case 'G':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-G\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.gate_size = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.gate_size < 1 || params.gate_size > 6 )
+              goto usage;
+          break;
+        case 'P':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-P\" should be followed by a float.\n" );
+              goto usage;
+          }
+          params.expansion_probability = atof(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.expansion_probability <= 0 || params.expansion_probability > 1)
+              goto usage;
+          break;
+        case 'R':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-R\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.nruns = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.nruns < 1 )
+              goto usage;
+          break;
+        case 'S':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-S\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.subcircuit_max_size = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.subcircuit_max_size < 2 )
+              goto usage;
+          break;
+        case 'T':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-T\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.timeout = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.timeout < 1 )
+              goto usage;
+          break;
+        case 'V':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-V\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.verbosity_level = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if ( params.verbosity_level < 0 || params.verbosity_level > 3 )
+              goto usage;
+          break;
+        case 'W':
+          if ( globalUtilOptind >= argc + 1)
+          {
+              Abc_Print( -1, "Command line switch \"-W\" should be followed by two integers.\n" );
+              goto usage;
+          }
+          params.nWindows = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          if (params.nWindows < 0) 
+            goto usage;
+          params.window_size = atoi(argv[globalUtilOptind]);
+          if (params.window_size <= 0)
+            goto usage;
+          globalUtilOptind++;
+          break;
+        case 'X':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-X\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.additional_gates = atoi(argv[globalUtilOptind]);
+          if ( params.additional_gates < 0 )
+              goto usage;
+          globalUtilOptind++;
+          break;
+        case 'Z':
+          if ( globalUtilOptind >= argc )
+          {
+              Abc_Print( -1, "Command line switch \"-Z\" should be followed by an integer.\n" );
+              goto usage;
+          }
+          params.fix_seed = 1;
+          params.seed = atoi(argv[globalUtilOptind]);
+          globalUtilOptind++;
+          break;
+        case 'c' :
+          params.criticial_path_selection_bias ^= 1;
+          break;
+        case 'f' :
+          params.forward_search ^= 1;
+          break;
+        case 'h':
+          goto usage;
+        case 'i' :
+          params.apply_inprocessing ^= 1;
+          break;
+        case 's' :
+          params.fill_subcircuits ^= 1;
+          break;
+        case 't' :
+          params.use_taboo_list ^= 1;
+          break;
+        default:
+          goto usage;
+      }
+  }
+
+  pNtk = Abc_FrameReadNtk(pAbc);
+  if ( pNtk == NULL )
+  {
+    Abc_Print( -1, "Empty network.\n" );
+    return 1;
+  }
+  if ( !Abc_NtkIsLogic(pNtk) )
+  {
+    Abc_Print( -1, "This command can only be applied to a logic network.\n" );
+    return 1;
+  }
+  if (!Abc_NtkHasSop(pNtk)) {
+    Abc_NtkToSop( pNtk, -1, ABC_INFINITY );
+  }
+
+
+  params.aig = 0;
+  pNtknew = applyelSLIM(pNtk, &params);
+  Abc_FrameReplaceCurrentNetwork( pAbc, pNtknew );
+    
+  return 0;
+
+  usage:
+    Abc_Print( -2, "usage: elslim [-CDGIPRSTVWXZ <num>] [-cfhist]\n" );
+    Abc_Print( -2, "\t           Lut optimization using exact synthesis and the SAT-based local improvement method (SLIM)\n" );
+    Abc_Print( -2, "\t-C <num> : approximate Boolean relations by only considering the frist C levels in the cone \n");
+    Abc_Print( -2, "\t-D <num> : the delay mode to use [default = %d]\n",  params.synthesis_approach );
+    Abc_Print( -2, "\t-G <num> : the maximal number of fanins gates may use (at most 6) [default = %d]\n",  params.gate_size  );
+    Abc_Print( -2, "\t-I <num> : the maximal number of iterations (0 = no limit) for the individual eSLIM runs [default = %d]\n",  params.iterations  );
+    Abc_Print( -2, "\t-P <num> : the probability of expanding a node [default = %.2f]\n",    params.expansion_probability );
+    Abc_Print( -2, "\t-R <num> : the number of runs of eSLIM + Inprocessing [default = %d]\n",    params.nruns );
+    Abc_Print( -2, "\t-S <num> : the maximal size of considered subcircuits [default = %d]\n",    params.subcircuit_max_size );
+    Abc_Print( -2, "\t-T <num> : the timeout in seconds for the individual eSLIM runs [default = %d]\n",    params.timeout );
+    Abc_Print( -2, "\t-V <num> : the verbosity level [default = %d]\n",       params.verbosity_level);
+    Abc_Print( -2, "\t-W <num> <num> : Use m windows of size n [default = %d, %d]\n",       params.nWindows, params.window_size);
+    Abc_Print( -2, "\t-X <num> : the maximal number of additional gates that may be used for depth optimization [default = %d]\n", params.additional_gates);
+    Abc_Print( -2, "\t-Z <num> : use a fixed seed\n",       params.seed);
+    Abc_Print( -2, "\t-c       : toggle bias for selection of nodes on the crictical path\n");
+    Abc_Print( -2, "\t-f       : toggle forward expansion of root nodes\n");
+    Abc_Print( -2, "\t-h       : print the command usage\n");
+    Abc_Print( -2, "\t-i       : toggle inprocessing\n");
+    Abc_Print( -2, "\t-s       : toggle fill subcircuits\n");
+    Abc_Print( -2, "\t-t       : toggle use taboo list\n");
+    Abc_Print( -2, "\t\n" );
+    Abc_Print( -2, "\t           This command was contributed by Franz-Xaver Reichl from University of Freiburg.\n" );
+
+    return 1;
+
 }
 
 int Abc_CommandAbc9CatBtor( Abc_Frame_t * pAbc, int argc, char ** argv ) {
