@@ -62,16 +62,16 @@ static int Cec_SProveCallback( void * pUser, int fSolved, unsigned Result );
 static Gia_Man_t * Cec_GiaScorrOld( Gia_Man_t * p, int nTimeOut, Par_Share_t * pShare, struct Cec_ScorrStop_t_ * pStopOut );
 static Gia_Man_t * Cec_GiaScorrNew( Gia_Man_t * p, int nTimeOut, Par_Share_t * pShare, struct Cec_ScorrStop_t_ * pStopOut );
 #ifdef ABC_USE_PTHREADS
-static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int nTimeOut, int nTimeOutU, Wlc_Ntk_t * pWlc, int fVerbose, pthread_t * WorkerThread, Par_Share_t * pShare, int * pEngines, int StageId, int NetId, struct Cec_SproveTrace_t_ * pTrace );
+static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int nTimeOut, int nTimeOutU, Wlc_Ntk_t * pWlc, const char * pUfarArgs, int fVerbose, pthread_t * WorkerThread, Par_Share_t * pShare, int * pEngines, int StageId, int NetId, struct Cec_SproveTrace_t_ * pTrace );
 static void Cec_GiaStopThreads( Par_ThData_t * ThData, pthread_t * WorkerThread, int nWorkers );
 #endif
 static int Cec_GiaWaitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int RetValue, int * pRetEngine );
 
-extern int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId );
+extern int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId, const char * pArgs );
 
 #ifndef ABC_USE_PTHREADS
 
-int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile ) { return -1; }
+int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile, char * pUfarArgs ) { return -1; }
 int Cec_GiaReplayReadParams( char * pFileName, int * pnProcs, int * pnTimeOut, int * pnTimeOut2, int * pnTimeOut3, int * pfUseUif ) { return 0; }
 int Cec_GiaReplayTest( Gia_Man_t * p, Wlc_Ntk_t * pWlc, char * pFileName, int fVerbose, int fVeryVerbose, int fSilent ) { return -1; }
 
@@ -106,6 +106,7 @@ typedef struct Par_ThData_t_
     int         fVerbose;
     int         nTimeOutU;
     Wlc_Ntk_t * pWlc;
+    const char * pUfarArgs;
     int         WorkerId;
     int         StageId;
     int         NetId;
@@ -154,6 +155,9 @@ struct Cec_SprovePlan_t_
     int nTimeOut2;
     int nTimeOut3;
     int fUseUif;
+    int fPersistentUif;
+    int nTimeOutUif;
+    char * pUfarArgs;
     int nStages;
     Cec_SproveStage_t Stages[SPROVE_STAGE_MAX];
 };
@@ -307,13 +311,41 @@ static int Cec_SproveParseEngineName( const char * pName )
             return i;
     return -1;
 }
-static void Cec_SproveDeriveEngineList( int nProcs, int fUseUif, int * pEngines, int * pnEngines )
+static int Cec_SprovePlanTimeoutTotal( Cec_SprovePlan_t * pPlan )
 {
-    int i, nEngines = nProcs + (fUseUif ? 1 : 0);
+    int i, Total = 0;
+    for ( i = 0; i < pPlan->nStages; i++ )
+    {
+        Cec_SproveStage_t * pStage = &pPlan->Stages[i];
+        int RoundTime = pStage->fHasRound ? pStage->RoundTimeout : 0;
+        int ReduceTime = pStage->fHasReduce ? pStage->ReduceTimeout : 0;
+        Total += Abc_MaxInt( RoundTime, ReduceTime );
+    }
+    return Total;
+}
+static void Cec_SproveDeriveEngineList( int nProcs, int fUseUif, int fPersistentUif, int * pEngines, int * pnEngines )
+{
+    int i, nEngines = nProcs + ((fUseUif && !fPersistentUif) ? 1 : 0);
     assert( nEngines >= 1 && nEngines <= PAR_THR_MAX );
+    if ( fUseUif && nProcs == 6 )
+    {
+        if ( fPersistentUif )
+        {
+            int UifEngines[6] = { 0, 1, 2, 3, 4, PAR_ENGINE_GLA };
+            memcpy( pEngines, UifEngines, sizeof(UifEngines) );
+            *pnEngines = 6;
+        }
+        else
+        {
+            int UifEngines[7] = { 0, 1, 2, 3, 4, PAR_ENGINE_GLA, PAR_ENGINE_UFAR };
+            memcpy( pEngines, UifEngines, sizeof(UifEngines) );
+            *pnEngines = 7;
+        }
+        return;
+    }
     for ( i = 0; i < nEngines; i++ )
     {
-        if ( fUseUif && i == nEngines - 1 )
+        if ( fUseUif && !fPersistentUif && i == nEngines - 1 )
             pEngines[i] = PAR_ENGINE_UFAR;
         else if ( !fUseUif && nEngines == 6 && i == 5 )
             pEngines[i] = PAR_ENGINE_GLA;
@@ -322,7 +354,25 @@ static void Cec_SproveDeriveEngineList( int nProcs, int fUseUif, int * pEngines,
     }
     *pnEngines = nEngines;
 }
-static void Cec_SprovePlanDefault( Cec_SprovePlan_t * pPlan, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif )
+static void Cec_SproveTrimLineEnd( char * pLine )
+{
+    int nSize = strlen( pLine );
+    while ( nSize > 0 && (pLine[nSize - 1] == '\n' || pLine[nSize - 1] == '\r') )
+        pLine[--nSize] = 0;
+}
+static void Cec_SprovePlanSetUfarArgs( Cec_SprovePlan_t * pPlan, const char * pUfarArgs )
+{
+    ABC_FREE( pPlan->pUfarArgs );
+    pPlan->pUfarArgs = NULL;
+    if ( pUfarArgs && pUfarArgs[0] )
+        pPlan->pUfarArgs = Abc_UtilStrsav( (char *)pUfarArgs );
+}
+static void Cec_SprovePlanFree( Cec_SprovePlan_t * pPlan )
+{
+    ABC_FREE( pPlan->pUfarArgs );
+    pPlan->pUfarArgs = NULL;
+}
+static void Cec_SprovePlanDefault( Cec_SprovePlan_t * pPlan, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, const char * pUfarArgs )
 {
     int nEngines;
     memset( pPlan, 0, sizeof(Cec_SprovePlan_t) );
@@ -336,8 +386,10 @@ static void Cec_SprovePlanDefault( Cec_SprovePlan_t * pPlan, int nProcs, int nTi
     pPlan->nTimeOut2 = nTimeOut2;
     pPlan->nTimeOut3 = nTimeOut3;
     pPlan->fUseUif = fUseUif;
+    pPlan->fPersistentUif = fUseUif ? 1 : 0;
+    Cec_SprovePlanSetUfarArgs( pPlan, pUfarArgs );
     pPlan->nStages = 4;
-    Cec_SproveDeriveEngineList( nProcs, fUseUif, pPlan->Stages[0].RoundEngines, &nEngines );
+    Cec_SproveDeriveEngineList( nProcs, fUseUif, pPlan->fPersistentUif, pPlan->Stages[0].RoundEngines, &nEngines );
 
     pPlan->Stages[0].Id = 1;
     pPlan->Stages[0].fHasRound = 1;
@@ -376,6 +428,7 @@ static void Cec_SprovePlanDefault( Cec_SprovePlan_t * pPlan, int nProcs, int nTi
     pPlan->Stages[3].RoundTimeout = nTimeOut3;
     pPlan->Stages[3].nRoundEngines = nEngines;
     memcpy( pPlan->Stages[3].RoundEngines, pPlan->Stages[0].RoundEngines, sizeof(int) * nEngines );
+    pPlan->nTimeOutUif = pPlan->fPersistentUif ? Cec_SprovePlanTimeoutTotal( pPlan ) : 0;
 }
 static void Cec_SproveTraceWrite( Cec_SproveTrace_t * pTrace, const char * pFormat, ... )
 {
@@ -410,6 +463,10 @@ static void Cec_SproveTraceOpen( Cec_SproveTrace_t * pTrace, Gia_Man_t * p, Cec_
     Cec_SproveTraceWrite( pTrace, "SPROVE_REPLAY 1" );
     Cec_SproveTraceWrite( pTrace, "CASE %s", pProbName ? pProbName : "(none)" );
     Cec_SproveTraceWrite( pTrace, "PARAMS P=%d T=%d U=%d W=%d UIF=%d", pPlan->nProcs, pPlan->nTimeOut, pPlan->nTimeOut2, pPlan->nTimeOut3, pPlan->fUseUif );
+    if ( pPlan->fUseUif )
+        Cec_SproveTraceWrite( pTrace, "UFAR mode=%s timeout=%d", pPlan->fPersistentUif ? "persistent" : "round", pPlan->nTimeOutUif );
+    if ( pPlan->pUfarArgs && pPlan->pUfarArgs[0] )
+        Cec_SproveTraceWrite( pTrace, "UFAR_ARGS %s", pPlan->pUfarArgs );
     Cec_SproveTraceWrite( pTrace, "" );
     Cec_SproveTraceWrite( pTrace, "PLAN_BEGIN" );
     for ( i = 0; i < pPlan->nStages; i++ )
@@ -481,12 +538,29 @@ static int Cec_SproveReplayReadParamsInt( char * pFileName, Cec_SprovePlan_t * p
             pPlan->nTimeOut3 = atoi(Value);
             if ( !Cec_SproveFindValue(Buffer, "UIF=", Value, sizeof(Value)) ) break;
             pPlan->fUseUif = atoi(Value);
+        }
+        else if ( strncmp(Buffer, "UFAR_ARGS ", 10) == 0 )
+        {
+            Cec_SproveTrimLineEnd( Buffer );
+            Cec_SprovePlanSetUfarArgs( pPlan, Buffer + 10 );
+        }
+        else if ( strncmp(Buffer, "UFAR ", 5) == 0 )
+        {
+            if ( Cec_SproveFindValue(Buffer, "mode=", Value, sizeof(Value)) )
+                pPlan->fPersistentUif = !strcmp(Value, "persistent");
+            if ( Cec_SproveFindValue(Buffer, "timeout=", Value, sizeof(Value)) )
+                pPlan->nTimeOutUif = atoi(Value);
+        }
+        else if ( pPlan->nProcs > 0 && (strncmp(Buffer, "PLAN_BEGIN", 10) == 0 || strncmp(Buffer, "OBSERVED_BEGIN", 14) == 0) )
+        {
+            if ( pPlan->fUseUif && pPlan->nTimeOutUif == 0 )
+                pPlan->nTimeOutUif = pPlan->fPersistentUif ? (pPlan->nTimeOut + pPlan->nTimeOut2 + 2 * pPlan->nTimeOut3) : 0;
             fclose( pFile );
             return 1;
         }
     }
     fclose( pFile );
-    return 0;
+    return pPlan->nProcs > 0;
 }
 static int Cec_SproveReplayReadPlan( char * pFileName, Cec_SprovePlan_t * pPlan )
 {
@@ -678,20 +752,35 @@ static Gia_Man_t * Cec_SproveRunReduce( Gia_Man_t * pInput, Cec_SproveStage_t * 
     }
     return pOutput;
 }
+static void Cec_SproveTakeSharedResult( Par_Share_t * pShare, int * pRetValue, int * pRetEngine )
+{
+    if ( pShare == NULL || pRetValue == NULL || pRetEngine == NULL )
+        return;
+    if ( *pRetValue == -1 && pShare->fSolved )
+    {
+        *pRetValue = (int)pShare->Result;
+        *pRetEngine = pShare->iEngine;
+    }
+}
 static int Cec_SproveExecutePlan( Gia_Man_t * p, Cec_SprovePlan_t * pPlan, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile )
 {
     abctime clkTotal = Abc_Clock(), clkStage = 0;
     Par_ThData_t ThData[PAR_THR_MAX];
     pthread_t WorkerThread[PAR_THR_MAX];
+    Par_ThData_t UifData[1];
+    pthread_t UifThread[1];
     Par_Share_t Share;
     Cec_SproveTrace_t Trace;
     Gia_Man_t * pScorr = NULL, * pScorr2 = NULL;
-    int i, RetValue = -1, RetEngine = -1, fThreadsStarted = 0;
+    int UifEngines[1] = { PAR_ENGINE_UFAR };
+    int i, RetValue = -1, RetEngine = -1, fThreadsStarted = 0, fUifStarted = 0;
     (void)fVeryVerbose;
     memset( &Share, 0, sizeof(Par_Share_t) );
     memset( &Trace, 0, sizeof(Cec_SproveTrace_t) );
     memset( ThData, 0, sizeof(ThData) );
     memset( WorkerThread, 0, sizeof(WorkerThread) );
+    memset( UifData, 0, sizeof(UifData) );
+    memset( UifThread, 0, sizeof(UifThread) );
     Abc_CexFreeP( &p->pCexComb );
     Abc_CexFreeP( &p->pCexSeq );
     if ( !fSilent && fVerbose )
@@ -700,10 +789,19 @@ static int Cec_SproveExecutePlan( Gia_Man_t * p, Cec_SprovePlan_t * pPlan, Wlc_N
         printf( "Processes = %d   TimeOut = %d sec   Verbose = %d.\n", pPlan->nProcs, pPlan->nTimeOut, fVerbose );
     fflush( stdout );
     Cec_SproveTraceOpen( &Trace, p, pPlan, pReplayFile );
+    if ( pPlan->fUseUif && pPlan->fPersistentUif && pWlc != NULL )
+    {
+        Cec_SproveTraceWrite( &Trace, "START kind=ufar mode=persistent timeout=%d t=%llu",
+            pPlan->nTimeOutUif, Cec_SproveClockToMs( Cec_SproveTraceTime(&Trace) ) );
+        Cec_GiaInitThreads( UifData, 1, p, pPlan->nTimeOutUif, pPlan->nTimeOutUif, pWlc, pPlan->pUfarArgs, fVerbose,
+            UifThread, &Share, UifEngines, 0, SPROVE_NET_ORIG, &Trace );
+        fUifStarted = 1;
+    }
     for ( i = 0; i < pPlan->nStages; i++ )
     {
         Cec_SproveStage_t * pStage = &pPlan->Stages[i];
         Gia_Man_t * pRoundNet = NULL, * pReduceNet = NULL, * pReduceOut = NULL;
+        Cec_SproveTakeSharedResult( &Share, &RetValue, &RetEngine );
         if ( !Cec_SproveCheckGuard( pStage, RetValue, p, pScorr, pScorr2 ) )
         {
             Cec_SproveTraceWrite( &Trace, "SKIP stage=%d reason=guard", pStage->Id );
@@ -719,7 +817,7 @@ static int Cec_SproveExecutePlan( Gia_Man_t * p, Cec_SprovePlan_t * pPlan, Wlc_N
             }
             Cec_SproveTraceWrite( &Trace, "START kind=round stage=%d net=%s timeout=%d t=%llu",
                 pStage->Id, Cec_SproveNetName(pStage->RoundNet), pStage->RoundTimeout, Cec_SproveClockToMs( Cec_SproveTraceTime(&Trace) ) );
-            Cec_GiaInitThreads( ThData, pStage->nRoundEngines, pRoundNet, pStage->RoundTimeout, pPlan->nTimeOut3, pWlc, fVerbose,
+            Cec_GiaInitThreads( ThData, pStage->nRoundEngines, pRoundNet, pStage->RoundTimeout, pStage->RoundTimeout, pWlc, pPlan->pUfarArgs, fVerbose,
                 fThreadsStarted ? NULL : WorkerThread, &Share, pStage->RoundEngines, pStage->Id, pStage->RoundNet, &Trace );
             fThreadsStarted = 1;
         }
@@ -732,11 +830,13 @@ static int Cec_SproveExecutePlan( Gia_Man_t * p, Cec_SprovePlan_t * pPlan, Wlc_N
             {
                 pReduceOut = Cec_SproveRunReduce( pReduceNet, pStage, &Share, &Trace, &clkStage, &RetValue, &RetEngine );
                 Cec_SproveSetNet( pStage->ReduceNetOut, &pScorr, &pScorr2, pReduceOut );
+                Cec_SproveTakeSharedResult( &Share, &RetValue, &RetEngine );
             }
         }
         if ( pStage->fHasRound )
         {
             RetValue = Cec_GiaWaitThreads( ThData, pStage->nRoundEngines, p, RetValue, &RetEngine );
+            Cec_SproveTakeSharedResult( &Share, &RetValue, &RetEngine );
             Cec_SproveTraceWrite( &Trace, "STOP kind=round stage=%d net=%s result=%s winner=%s t=%llu",
                 pStage->Id, Cec_SproveNetName(pStage->RoundNet), Cec_SproveResultName(RetValue),
                 RetEngine >= 0 ? Cec_SolveEngineName(RetEngine) : "none", Cec_SproveClockToMs( Cec_SproveTraceTime(&Trace) ) );
@@ -752,8 +852,18 @@ static int Cec_SproveExecutePlan( Gia_Man_t * p, Cec_SprovePlan_t * pPlan, Wlc_N
             }
         }
     }
+    if ( fUifStarted )
+    {
+        RetValue = Cec_GiaWaitThreads( UifData, 1, p, RetValue, &RetEngine );
+        Cec_SproveTakeSharedResult( &Share, &RetValue, &RetEngine );
+        Cec_SproveTraceWrite( &Trace, "STOP kind=ufar mode=persistent result=%s winner=%s t=%llu",
+            Cec_SproveResultName(RetValue), RetEngine == PAR_ENGINE_UFAR ? "ufar" : "other",
+            Cec_SproveClockToMs( Cec_SproveTraceTime(&Trace) ) );
+    }
     if ( fThreadsStarted )
-        Cec_GiaStopThreads( ThData, WorkerThread, pPlan->Stages[0].nRoundEngines > 0 ? pPlan->Stages[0].nRoundEngines : pPlan->nProcs + (pPlan->fUseUif ? 1 : 0) );
+        Cec_GiaStopThreads( ThData, WorkerThread, pPlan->Stages[0].nRoundEngines );
+    if ( fUifStarted )
+        Cec_GiaStopThreads( UifData, UifThread, 1 );
     Gia_ManStopP( &pScorr2 );
     Gia_ManStopP( &pScorr );
     if ( !fSilent )
@@ -920,7 +1030,7 @@ int Cec_GiaProveOne( Gia_Man_t * p, int iEngine, int nTimeOut, int fVerbose, Par
         if ( pThData && pThData->pWlc )
         {
             g_pUfarShare = pThData->pShare;
-            RetValue = Ufar_ProveWithTimeout( pThData->pWlc, pThData->nTimeOutU, fVerbose, Cec_SProveStopUfar, 0 );
+            RetValue = Ufar_ProveWithTimeout( pThData->pWlc, pThData->nTimeOutU, fVerbose, Cec_SProveStopUfar, 0, pThData->pUfarArgs );
             g_pUfarShare = NULL;
         }
     }
@@ -1072,7 +1182,7 @@ static void Cec_GiaStartThreads( Par_ThData_t * ThData, int nWorkers )
         assert( status == 0 );
     }
 }
-static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int nTimeOut, int nTimeOutU, Wlc_Ntk_t * pWlc, int fVerbose, pthread_t * WorkerThread, Par_Share_t * pShare, int * pEngines, int StageId, int NetId, Cec_SproveTrace_t * pTrace )
+static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int nTimeOut, int nTimeOutU, Wlc_Ntk_t * pWlc, const char * pUfarArgs, int fVerbose, pthread_t * WorkerThread, Par_Share_t * pShare, int * pEngines, int StageId, int NetId, Cec_SproveTrace_t * pTrace )
 {
     int i, status;
     assert( nWorkers <= PAR_THR_MAX );
@@ -1090,6 +1200,7 @@ static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t *
             ThData[i].fVerbose = fVerbose;
             ThData[i].nTimeOutU= nTimeOutU;
             ThData[i].pWlc     = pWlc;
+            ThData[i].pUfarArgs= pUfarArgs;
             ThData[i].WorkerId = i;
             ThData[i].StageId  = StageId;
             ThData[i].NetId    = NetId;
@@ -1117,6 +1228,7 @@ static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t *
         ThData[i].fVerbose = fVerbose;
         ThData[i].nTimeOutU= nTimeOutU;
         ThData[i].pWlc     = pWlc;
+        ThData[i].pUfarArgs= pUfarArgs;
         ThData[i].WorkerId = i;
         ThData[i].StageId  = StageId;
         ThData[i].NetId    = NetId;
@@ -1190,22 +1302,29 @@ int Cec_GiaReplayReadParams( char * pFileName, int * pnProcs, int * pnTimeOut, i
         *pnTimeOut3 = Plan.nTimeOut3;
     if ( pfUseUif )
         *pfUseUif = Plan.fUseUif;
+    Cec_SprovePlanFree( &Plan );
     return 1;
 }
-int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile )
+int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile, char * pUfarArgs )
 {
     Cec_SprovePlan_t Plan;
-    Cec_SprovePlanDefault( &Plan, nProcs, nTimeOut, nTimeOut2, nTimeOut3, fUseUif );
+    int RetValue;
+    Cec_SprovePlanDefault( &Plan, nProcs, nTimeOut, nTimeOut2, nTimeOut3, fUseUif, pUfarArgs );
     assert( nProcs >= 1 && nProcs <= 6 );
     assert( nProcs + (fUseUif ? 1 : 0) <= PAR_THR_MAX );
-    return Cec_SproveExecutePlan( p, &Plan, pWlc, fVerbose, fVeryVerbose, fSilent, pReplayFile );
+    RetValue = Cec_SproveExecutePlan( p, &Plan, pWlc, fVerbose, fVeryVerbose, fSilent, pReplayFile );
+    Cec_SprovePlanFree( &Plan );
+    return RetValue;
 }
 int Cec_GiaReplayTest( Gia_Man_t * p, Wlc_Ntk_t * pWlc, char * pFileName, int fVerbose, int fVeryVerbose, int fSilent )
 {
     Cec_SprovePlan_t Plan;
+    int RetValue;
     if ( !Cec_SproveReplayReadPlan( pFileName, &Plan ) )
         return -1;
-    return Cec_SproveExecutePlan( p, &Plan, pWlc, fVerbose, fVeryVerbose, fSilent, NULL );
+    RetValue = Cec_SproveExecutePlan( p, &Plan, pWlc, fVerbose, fVeryVerbose, fSilent, NULL );
+    Cec_SprovePlanFree( &Plan );
+    return RetValue;
 }
 
 #endif // pthreads are used

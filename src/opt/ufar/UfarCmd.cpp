@@ -17,6 +17,7 @@
 #include <regex>
 #include <cstdlib>
 #include <cstdio>
+#include <cctype>
 
 #include "base/wlc/wlc.h"
 #include "aig/gia/giaAig.h"
@@ -30,6 +31,22 @@ ABC_NAMESPACE_IMPL_START
 using namespace std;
 
 static UFAR::UfarManager ufar_manager;
+typedef struct Ufar_StopCtx_t_
+{
+    int (*pFuncStop)(int);
+    int nTimeOut;
+    int fActive;
+    timeval TimeStart;
+} Ufar_StopCtx_t;
+#if defined(_MSC_VER)
+__declspec(thread) static Ufar_StopCtx_t g_UfarStopCtx = { NULL, 0, 0, {0, 0} };
+#elif defined(__cplusplus) && __cplusplus >= 201103L
+static thread_local Ufar_StopCtx_t g_UfarStopCtx = { NULL, 0, 0, {0, 0} };
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+static _Thread_local Ufar_StopCtx_t g_UfarStopCtx = { NULL, 0, 0, {0, 0} };
+#else
+static __thread Ufar_StopCtx_t g_UfarStopCtx = { NULL, 0, 0, {0, 0} };
+#endif
 
 static int Abc_CommandTest( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAnalyzeCex( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -40,6 +57,38 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
 static inline Wlc_Ntk_t * Wlc_AbcGetNtk( Abc_Frame_t * pAbc )                       { return (Wlc_Ntk_t *)pAbc->pAbcWlc;                      }
 static inline void        Wlc_AbcFreeNtk( Abc_Frame_t * pAbc )                      { if ( pAbc->pAbcWlc ) Wlc_NtkFree(Wlc_AbcGetNtk(pAbc));  }
 static inline void        Wlc_AbcUpdateNtk( Abc_Frame_t * pAbc, Wlc_Ntk_t * pNtk )  { Wlc_AbcFreeNtk(pAbc); pAbc->pAbcWlc = pNtk;             }
+static inline long long   Ufar_ElapsedUsec( const timeval & Start, const timeval & Stop ) { return 1000000ll * (long long)(Stop.tv_sec - Start.tv_sec) + (long long)(Stop.tv_usec - Start.tv_usec); }
+
+static int Ufar_StopWithTimeout( int RunId )
+{
+    if ( g_UfarStopCtx.pFuncStop && g_UfarStopCtx.pFuncStop(RunId) )
+        return 1;
+    if ( g_UfarStopCtx.fActive && g_UfarStopCtx.nTimeOut > 0 )
+    {
+        timeval Now;
+        gettimeofday( &Now, NULL );
+        if ( Ufar_ElapsedUsec(g_UfarStopCtx.TimeStart, Now) >= 1000000ll * (long long)g_UfarStopCtx.nTimeOut )
+            return 1;
+    }
+    return 0;
+}
+
+struct Ufar_StopScope_t
+{
+    Ufar_StopCtx_t Saved;
+    Ufar_StopScope_t( int (*pFuncStop)(int), int nTimeOut )
+    {
+        Saved = g_UfarStopCtx;
+        g_UfarStopCtx.pFuncStop = pFuncStop;
+        g_UfarStopCtx.nTimeOut = nTimeOut;
+        g_UfarStopCtx.fActive = 1;
+        gettimeofday( &g_UfarStopCtx.TimeStart, NULL );
+    }
+    ~Ufar_StopScope_t()
+    {
+        g_UfarStopCtx = Saved;
+    }
+};
 
 static string Ufar_GetStatusName( Wlc_Ntk_t * pNtk )
 {
@@ -74,6 +123,292 @@ static void Ufar_DumpStatusLog( const string & FileName, int RetValue, const str
     fclose( pFile );
 }
 
+static void Ufar_SetDefaultParams( UFAR::UfarManager::Params & Params, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId )
+{
+    Params = UFAR::UfarManager::Params();
+    Params.RunId = RunId;
+    Params.pFuncStop = pFuncStop;
+    if ( nTimeOut > 0 )
+        Params.nTimeout = nTimeOut;
+    Params.iVerbosity = fVerbose ? 1 : 0;
+}
+static void Ufar_AddOptions( OptMgr & opt_mgr, const UFAR::UfarManager::Params & Params )
+{
+    opt_mgr.AddOpt("--norm", Params.fNorm ? "yes" : "no", "", "toggle using data type normalization");
+    opt_mgr.AddOpt("--adder", "no", "", "toggle including adders");
+    opt_mgr.AddOpt("--cexmin", Params.fCexMin ? "yes" : "no", "", "toggle using CEX minimization");
+    opt_mgr.AddOpt("--sim", "none", "str", "use simulation and specify its setting");
+    opt_mgr.AddOpt("-v", to_string(Params.iVerbosity), "num", "specify verbosity level");
+    opt_mgr.AddOpt("--seq", to_string(Params.nSeqLookBack), "num", "specify the number of look-back frames (0 = no sequential UIF)");
+    opt_mgr.AddOpt("--profile", "no", "", "dump time distribution");
+    opt_mgr.AddOpt("--pba_uif", Params.fPbaUif ? "yes" : "no", "", "toggle using proof-based refinement for UIF pairs");
+    opt_mgr.AddOpt("--lazysim", Params.fLazySim ? "yes" : "no", "", "toggle applying UIF pairs based on simulation");
+    opt_mgr.AddOpt("--pbasim", Params.fPbaSim ? "yes" : "no", "", "toggle combining pba and sim");
+    opt_mgr.AddOpt("--pbacex", Params.fPbaCex ? "yes" : "no", "", "toggle combining pba and cex");
+    opt_mgr.AddOpt("--satmin", Params.fSatMin ? "yes" : "no", "", "toggle using sat-min in pba");
+    opt_mgr.AddOpt("--cbawb", Params.fCbaWb ? "yes" : "no", "", "toggle using cex-based refinement for white boxing");
+    opt_mgr.AddOpt("--grey", Params.fGrey ? "yes" : "no", "", "toggle using grey-box constraints");
+    opt_mgr.AddOpt("--grey2", to_string(Params.nGrey), "float", "specify the greyness threshold");
+    opt_mgr.AddOpt("--allwb", Params.fAllWb ? "yes" : "no", "", "start with all operators white-boxed (no initial abstraction)");
+    opt_mgr.AddOpt("--crossonly", Params.fCrossOnly ? "yes" : "no", "", "allow UIF pairs only across LHS/RHS cones of the miter");
+    opt_mgr.AddOpt("--crossstats", "no", "", "print multiplier counts in LHS/RHS/shared cones and exit");
+    opt_mgr.AddOpt("--dump", "none", "str", "specify file name");
+    opt_mgr.AddOpt("--dump-log", "none", "str", "write status log");
+    opt_mgr.AddOpt("--dump-first-aig", "none", "str", "dump first internal bit-blasted AIG and exit");
+    opt_mgr.AddOpt("--dump-abs", "none", "str", "specify file name");
+    opt_mgr.AddOpt("--par", "none", "str", "use parallel solvers");
+    opt_mgr.AddOpt("--solver", "none", "str", "external solver command line");
+    opt_mgr.AddOpt("--dump_states", "none", "str", "specify the name for the states file");
+    opt_mgr.AddOpt("--read_states", "none", "str", "specify the name for the states file");
+    opt_mgr.AddOpt("--sp", Params.fSuper_prove ? "yes" : "no", "", "toggle using super_prove");
+    opt_mgr.AddOpt("--simp", Params.fSimple ? "yes" : "no", "", "toggle using simple (prove)");
+    opt_mgr.AddOpt("--syn", Params.fSyn ? "yes" : "no", "", "toggle using simple synthesis");
+    opt_mgr.AddOpt("--pth", Params.fPthread ? "yes" : "no", "", "toggle using pthreads");
+    opt_mgr.AddOpt("--onewb", to_string(Params.iOneWb), "int", "specify the mode for one-white-boxing");
+    opt_mgr.AddOpt("--initallpairs", to_string(Params.nInitAllPairsLimit), "num", "pre-seed all compatible UIF pairs when #ops <= this limit (0=off)");
+    opt_mgr.AddOpt("--initnear", to_string(Params.nInitNearMults), "num", "pre-seed UIF pairs among up to this many multipliers closest to output");
+    opt_mgr.AddOpt("--timeout", to_string(Params.nTimeout), "num", "specify the timeout (sec)");
+    opt_mgr.AddOpt("--exp", to_string(Params.iExp), "int", "specify the exp mode");
+    opt_mgr.AddOpt("--miter", "yes", "", "toggle mitering the problem");
+    opt_mgr.AddOpt("--under", "-1", "num", "try under-approximation with the given size");
+}
+static void Ufar_ApplyOptions( OptMgr & opt_mgr, UFAR::UfarManager::Params & Params, set<unsigned> & set_op_types, string & firstAigDumpFile, string & dumpLogFile, int & fNeedMiter, int & fCrossStats, int & UnderSize )
+{
+    firstAigDumpFile = "";
+    dumpLogFile = opt_mgr["--dump-log"] ? opt_mgr.GetOptVal("--dump-log") : "";
+    fNeedMiter = !opt_mgr["--miter"];
+    fCrossStats = opt_mgr["--crossstats"] ? 1 : 0;
+    UnderSize = opt_mgr["--under"] ? stoi(opt_mgr.GetOptVal("--under")) : -1;
+
+    if(opt_mgr["--norm"])
+        Params.fNorm ^= 1;
+    if(opt_mgr["--cexmin"])
+        Params.fCexMin ^= 1;
+    if(opt_mgr["--pba_uif"])
+        Params.fPbaUif ^= 1;
+    if(opt_mgr["--pbasim"])
+        Params.fPbaSim ^= 1;
+    if(opt_mgr["--pbacex"])
+        Params.fPbaCex ^= 1;
+    if(opt_mgr["--satmin"])
+        Params.fSatMin ^= 1;
+    if(opt_mgr["--cbawb"])
+        Params.fCbaWb ^= 1;
+    if(opt_mgr["--grey"])
+        Params.fGrey ^= 1;
+    if(opt_mgr["--allwb"])
+        Params.fAllWb ^= 1;
+    if(opt_mgr["--crossonly"])
+        Params.fCrossOnly ^= 1;
+    if(opt_mgr["--grey2"])
+        Params.nGrey = stof(opt_mgr.GetOptVal("--grey2"));
+    if(opt_mgr["--sp"])
+        Params.fSuper_prove ^= 1;
+    if(opt_mgr["--simp"])
+        Params.fSimple ^= 1;
+    if(opt_mgr["--syn"])
+        Params.fSyn ^= 1;
+    if(opt_mgr["--pth"])
+        Params.fPthread ^= 1;
+    if(opt_mgr["--onewb"])
+        Params.iOneWb = stoi(opt_mgr.GetOptVal("--onewb"));
+    if(opt_mgr["--initallpairs"])
+        Params.nInitAllPairsLimit = stoi(opt_mgr.GetOptVal("--initallpairs"));
+    if(opt_mgr["--initnear"])
+        Params.nInitNearMults = stoi(opt_mgr.GetOptVal("--initnear"));
+    if(opt_mgr["--exp"])
+        Params.iExp = stoi(opt_mgr.GetOptVal("--exp"));
+    if(opt_mgr["--par"])
+        Params.parSetting = opt_mgr.GetOptVal("--par");
+    if(opt_mgr["--solver"])
+        Params.solverSetting = opt_mgr.GetOptVal("--solver");
+    if(opt_mgr["--sim"])
+        Params.simSetting = opt_mgr.GetOptVal("--sim");
+    if(opt_mgr["--dump_states"]) {
+        smatch sub_match;
+        string option = opt_mgr.GetOptVal("--dump_states");
+        if(regex_search(option, sub_match, regex(R"(/?(\w+\.v)$)")))
+            Params.fileStatesOut = sub_match[1].str();
+        else
+            Params.fileStatesOut = opt_mgr.GetOptVal("--dump_states");
+    }
+    if(opt_mgr["--read_states"])
+        Params.fileStatesIn = opt_mgr.GetOptVal("--read_states");
+    if(opt_mgr["--lazysim"])
+        Params.fLazySim ^= 1;
+    if(opt_mgr["-v"])
+        Params.iVerbosity = stoi(opt_mgr.GetOptVal("-v"));
+    if(opt_mgr["--timeout"])
+        Params.nTimeout = stoi(opt_mgr.GetOptVal("--timeout"));
+    if(opt_mgr["--seq"])
+        Params.nSeqLookBack = stoi(opt_mgr.GetOptVal("--seq"));
+    if(opt_mgr["--dump-abs"]) {
+        smatch sub_match;
+        string option = opt_mgr.GetOptVal("--dump-abs");
+        if(regex_search(option, sub_match, regex(R"(/?(\w+)\.v$)")))
+            Params.fileAbs = sub_match[1].str();
+        else
+            Params.fileAbs = opt_mgr.GetOptVal("--dump-abs");
+    }
+    if(opt_mgr["--dump"]) {
+        smatch sub_match;
+        string option = opt_mgr.GetOptVal("--dump");
+        if(regex_search(option, sub_match, regex(R"(/?(\w+\.v)$)")))
+            Params.fileName = sub_match[1].str();
+        else
+            Params.fileName = opt_mgr.GetOptVal("--dump");
+    }
+    if ( opt_mgr["--dump-first-aig"] )
+        firstAigDumpFile = opt_mgr.GetOptVal("--dump-first-aig");
+    set_op_types.insert(WLC_OBJ_ARI_MULTI);
+    if (opt_mgr["--adder"])
+        set_op_types.insert(WLC_OBJ_ARI_ADD);
+}
+static bool Ufar_TokenizeArgs( const char * pArgs, vector<string> & Tokens )
+{
+    string Cur;
+    char Quote = 0;
+    if ( pArgs == NULL )
+        return true;
+    for ( ; *pArgs; ++pArgs )
+    {
+        unsigned char c = (unsigned char)*pArgs;
+        if ( Quote )
+        {
+            if ( c == (unsigned char)Quote )
+                Quote = 0;
+            else if ( c == '\\' && pArgs[1] )
+                Cur += *++pArgs;
+            else
+                Cur += (char)c;
+            continue;
+        }
+        if ( c == '"' || c == '\'' )
+        {
+            Quote = (char)c;
+            continue;
+        }
+        if ( isspace(c) )
+        {
+            if ( !Cur.empty() )
+            {
+                Tokens.push_back( Cur );
+                Cur.clear();
+            }
+            continue;
+        }
+        if ( c == '\\' && pArgs[1] )
+        {
+            Cur += *++pArgs;
+            continue;
+        }
+        Cur += (char)c;
+    }
+    if ( Quote )
+        return false;
+    if ( !Cur.empty() )
+        Tokens.push_back( Cur );
+    return true;
+}
+
+static inline void Ufar_TrimString( string & s )
+{
+    while ( !s.empty() && isspace((unsigned char)s.front()) )
+        s.erase( s.begin() );
+    while ( !s.empty() && isspace((unsigned char)s.back()) )
+        s.pop_back();
+}
+
+static bool Ufar_ExtractSolverArg( const char * pArgs, string & ArgsWithoutSolver, string & SolverArg )
+{
+    string Args = pArgs ? pArgs : "";
+    size_t i = 0, n = Args.size();
+    ArgsWithoutSolver = Args;
+    SolverArg.clear();
+    while ( i < n )
+    {
+        while ( i < n && isspace((unsigned char)Args[i]) )
+            i++;
+        if ( i == n )
+            break;
+        size_t TokenStart = i;
+        char Quote = 0;
+        string Token;
+        while ( i < n )
+        {
+            unsigned char c = (unsigned char)Args[i];
+            if ( Quote )
+            {
+                if ( c == (unsigned char)Quote )
+                    Quote = 0;
+                else if ( c == '\\' && i + 1 < n )
+                    Token += Args[++i];
+                else
+                    Token += (char)c;
+                i++;
+                continue;
+            }
+            if ( c == '"' || c == '\'' )
+            {
+                Quote = (char)c;
+                i++;
+                continue;
+            }
+            if ( isspace(c) )
+                break;
+            if ( c == '\\' && i + 1 < n )
+            {
+                Token += Args[++i];
+                i++;
+                continue;
+            }
+            Token += (char)c;
+            i++;
+        }
+        if ( Token == "--solver" )
+        {
+            size_t ValueStart = i;
+            while ( ValueStart < n && isspace((unsigned char)Args[ValueStart]) )
+                ValueStart++;
+            if ( ValueStart == n )
+                return false;
+            string Prefix = Args.substr( 0, TokenStart );
+            string Suffix;
+            if ( Args[ValueStart] == '"' || Args[ValueStart] == '\'' )
+            {
+                char ValueQuote = Args[ValueStart++];
+                size_t k = ValueStart;
+                while ( k < n )
+                {
+                    unsigned char c = (unsigned char)Args[k];
+                    if ( c == (unsigned char)ValueQuote )
+                    {
+                        k++;
+                        break;
+                    }
+                    if ( c == '\\' && k + 1 < n )
+                        SolverArg += Args[++k];
+                    else
+                        SolverArg += (char)c;
+                    k++;
+                }
+                Suffix = Args.substr( k );
+            }
+            else
+            {
+                SolverArg = Args.substr( ValueStart );
+            }
+            Ufar_TrimString( SolverArg );
+            ArgsWithoutSolver = Prefix + Suffix;
+            Ufar_TrimString( ArgsWithoutSolver );
+            return !SolverArg.empty();
+        }
+        while ( i < n && isspace((unsigned char)Args[i]) )
+            i++;
+    }
+    return false;
+}
+
 
 void Ufar_Init(Abc_Frame_t *pAbc)
 {
@@ -84,39 +419,169 @@ void Ufar_Init(Abc_Frame_t *pAbc)
     //Cmd_CommandAdd( pAbc, "Word level Prove", "%%miter",          Abc_CommandCreateMiter,     0 );
 }
 
-int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId )
+int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId, const char * pArgs )
 {
     UFAR::UfarManager manager;
     timeval t1;
+    vector<string> Tokens;
+    vector<char *> Argv;
     set<unsigned> set_op_types;
-    Wlc_Ntk_t * pUse = pNtk;
+    string ArgsWithoutSolver, SolverArg;
+    string firstAigDumpFile, dumpLogFile;
+    string statusName;
+    int fNeedMiter = 1, fCrossStats = 0, UnderSize = -1;
+    Wlc_Ntk_t * pUse = pNtk, * pNew = NULL;
     int RetValue = -1;
     if ( pNtk == NULL )
         return -1;
-    if ( Wlc_NtkPoNum(pUse) == 2 )
+    Ufar_SetDefaultParams( manager.params, nTimeOut, fVerbose, pFuncStop, RunId );
+    if ( pArgs && pArgs[0] )
     {
-        pUse = UFAR::CreateMiter( pUse, 0 );
-        if ( pUse == NULL )
+        const char * pParseArgs = pArgs;
+        if ( Ufar_ExtractSolverArg(pArgs, ArgsWithoutSolver, SolverArg) )
+            pParseArgs = ArgsWithoutSolver.c_str();
+        OptMgr opt_mgr("%ufar");
+        Ufar_AddOptions( opt_mgr, manager.params );
+        if ( !Ufar_TokenizeArgs(pParseArgs, Tokens) )
+        {
+            cout << "Cannot parse internal %ufar option string." << endl;
             return -1;
+        }
+        Argv.reserve( Tokens.size() + 1 );
+        Argv.push_back( (char *)"%ufar" );
+        for ( size_t i = 0; i < Tokens.size(); i++ )
+            Argv.push_back( (char *)Tokens[i].c_str() );
+        if ( !opt_mgr.Parse((int)Argv.size(), Argv.data()) )
+        {
+            opt_mgr.PrintUsage();
+            return -1;
+        }
+        Ufar_ApplyOptions( opt_mgr, manager.params, set_op_types, firstAigDumpFile, dumpLogFile, fNeedMiter, fCrossStats, UnderSize );
+        if ( !SolverArg.empty() )
+            manager.params.solverSetting = SolverArg;
+    }
+    else
+        set_op_types.insert( WLC_OBJ_ARI_MULTI );
+    Ufar_StopScope_t StopScope( manager.params.pFuncStop, (int)manager.params.nTimeout );
+    manager.params.pFuncStop = Ufar_StopWithTimeout;
+    if ( fNeedMiter )
+    {
+        if ( Wlc_NtkPoNum(pUse) == 2 )
+        {
+            pNew = UFAR::CreateMiter( pUse, 0 );
+            if ( pUse != pNtk )
+                Wlc_NtkFree( pUse );
+            pUse = pNew;
+            if ( pUse == NULL )
+                return -1;
+        }
+        else if ( Wlc_NtkPoNum(pUse) != 1 )
+        {
+            return -1;
+        }
     }
     else if ( Wlc_NtkPoNum(pUse) != 1 )
         return -1;
-    set_op_types.insert( WLC_OBJ_ARI_MULTI );
+    statusName = Ufar_GetStatusName( pUse );
+    if ( manager.params.fNorm )
+    {
+        pNew = UFAR::NormalizeDataTypes( pUse, set_op_types, true );
+        if ( pUse != pNtk )
+            Wlc_NtkFree( pUse );
+        pUse = pNew;
+    }
+    if ( fCrossStats )
+    {
+        Wlc_Ntk_t * pCur = pUse;
+        if ( Wlc_NtkPoNum(pCur) != 2 )
+        {
+            cout << "CrossStats requires dual outputs before mitering.\n";
+            if ( pUse != pNtk )
+                Wlc_NtkFree( pUse );
+            return -1;
+        }
+        int nObjs = Wlc_NtkObjNumMax(pCur);
+        vector<char> vConeL(nObjs, 0), vConeR(nObjs, 0);
+        auto mark_cone = [&]( int iStart, vector<char>& vMark )
+        {
+            if ( iStart < 0 || iStart >= nObjs )
+                return;
+            vector<int> stack(1, iStart);
+            while ( !stack.empty() )
+            {
+                int iObj = stack.back();
+                stack.pop_back();
+                if ( iObj < 0 || iObj >= nObjs || vMark[iObj] )
+                    continue;
+                vMark[iObj] = 1;
+                Wlc_Obj_t * pObjT = Wlc_NtkObj(pCur, iObj);
+                if ( pObjT->Type == WLC_OBJ_FO )
+                {
+                    Wlc_Obj_t * pFi = Wlc_ObjFo2Fi(pCur, pObjT);
+                    stack.push_back( Wlc_ObjId(pCur, pFi) );
+                }
+                int iFanin, k;
+                Wlc_ObjForEachFanin( pObjT, iFanin, k )
+                    stack.push_back(iFanin);
+            }
+        };
+        int iRootL = Wlc_ObjFaninId0( Wlc_NtkPo(pCur, 0) );
+        int iRootR = Wlc_ObjFaninId0( Wlc_NtkPo(pCur, 1) );
+        mark_cone(iRootL, vConeL);
+        mark_cone(iRootR, vConeR);
+
+        int nL = 0, nR = 0, nB = 0, nN = 0;
+        Wlc_Obj_t * pObjT; int iObj;
+        Wlc_NtkForEachObj( pCur, pObjT, iObj )
+        {
+            if ( pObjT->Type != WLC_OBJ_ARI_MULTI )
+                continue;
+            bool fL = vConeL[iObj] != 0;
+            bool fR = vConeR[iObj] != 0;
+            if ( fL && fR ) nB++;
+            else if ( fL )  nL++;
+            else if ( fR )  nR++;
+            else            nN++;
+        }
+        cout << "UIF_PROVE : CrossStats: L=" << nL
+             << " R=" << nR
+             << " BOTH=" << nB
+             << " NONE=" << nN
+             << " TOTAL=" << (nL + nR + nB + nN) << endl;
+        if ( pUse != pNtk )
+            Wlc_NtkFree( pUse );
+        return -1;
+    }
     if ( !UFAR::HasOperator( pUse, set_op_types ) )
     {
         if ( pUse != pNtk )
             Wlc_NtkFree( pUse );
         return -1;
     }
-    manager.params = UFAR::UfarManager::Params();
-    manager.params.RunId = RunId;
-    manager.params.pFuncStop = pFuncStop;
-    if ( nTimeOut > 0 )
-        manager.params.nTimeout = nTimeOut;
-    manager.params.iVerbosity = fVerbose ? 1 : 0;
+    if ( UnderSize >= 0 )
+    {
+        pNew = UFAR::MakeUnderApprox( pUse, UnderSize );
+        if ( pUse != pNtk )
+            Wlc_NtkFree( pUse );
+        pUse = pNew;
+        pNew = UFAR::MakeUnderApprox2( pUse, set_op_types, UnderSize );
+        if ( pUse != pNtk )
+            Wlc_NtkFree( pUse );
+        pUse = pNew;
+    }
+    if ( !firstAigDumpFile.empty() && firstAigDumpFile != "none" )
+    {
+        Gia_Man_t * pGia = UFAR::BitBlast( pUse );
+        Gia_AigerWriteSimple( pGia, (char *)firstAigDumpFile.c_str() );
+        Gia_ManStop( pGia );
+        if ( pUse != pNtk )
+            Wlc_NtkFree( pUse );
+        return -1;
+    }
     gettimeofday( &t1, NULL );
     manager.Initialize( pUse, set_op_types );
     RetValue = manager.PerformUIFProve( t1 );
+    Ufar_DumpStatusLog( dumpLogFile, RetValue, statusName );
     if ( pUse != pNtk )
         Wlc_NtkFree( pUse );
     return RetValue;
@@ -160,141 +625,22 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
     ufar_manager.params = UFAR::UfarManager::Params();
 
     OptMgr opt_mgr(argv[0]);
-    opt_mgr.AddOpt("--norm", ufar_manager.params.fNorm ? "yes" : "no", "", "toggle using data type normalization");
-    opt_mgr.AddOpt("--adder", "no", "", "toggle including adders");
-    opt_mgr.AddOpt("--cexmin", ufar_manager.params.fCexMin ? "yes" : "no", "", "toggle using CEX minimization");
-    opt_mgr.AddOpt("--sim", "none", "str", "use simulation and specify its setting");
-    opt_mgr.AddOpt("-v", to_string(ufar_manager.params.iVerbosity), "num", "specify verbosity level");
-    opt_mgr.AddOpt("--seq", to_string(ufar_manager.params.nSeqLookBack), "num", "specify the number of look-back frames (0 = no sequential UIF)");
-    opt_mgr.AddOpt("--profile", "no", "", "dump time distribution");
-    opt_mgr.AddOpt("--pba_uif", ufar_manager.params.fPbaUif ? "yes" : "no", "", "toggle using proof-based refinement for UIF pairs");
-    opt_mgr.AddOpt("--lazysim", ufar_manager.params.fLazySim ? "yes" : "no", "", "toggle applying UIF pairs based on simulation");
-    opt_mgr.AddOpt("--pbasim", ufar_manager.params.fPbaSim ? "yes" : "no", "", "toggle combining pba and sim");
-    opt_mgr.AddOpt("--pbacex", ufar_manager.params.fPbaCex ? "yes" : "no", "", "toggle combining pba and cex");
-    opt_mgr.AddOpt("--satmin", ufar_manager.params.fSatMin ? "yes" : "no", "", "toggle using sat-min in pba");
-    opt_mgr.AddOpt("--cbawb", ufar_manager.params.fCbaWb ? "yes" : "no", "", "toggle using cex-based refinement for white boxing");
-    opt_mgr.AddOpt("--grey", ufar_manager.params.fGrey ? "yes" : "no", "", "toggle using grey-box constraints");
-    opt_mgr.AddOpt("--grey2", to_string(ufar_manager.params.nGrey), "float", "specify the greyness threshold");
-    opt_mgr.AddOpt("--allwb", ufar_manager.params.fAllWb ? "yes" : "no", "", "start with all operators white-boxed (no initial abstraction)");
-    opt_mgr.AddOpt("--crossonly", ufar_manager.params.fCrossOnly ? "yes" : "no", "", "allow UIF pairs only across LHS/RHS cones of the miter");
-    opt_mgr.AddOpt("--crossstats", "no", "", "print multiplier counts in LHS/RHS/shared cones and exit");
-    opt_mgr.AddOpt("--dump", "none", "str", "specify file name");
-    opt_mgr.AddOpt("--dump-log", "none", "str", "write status log");
-    opt_mgr.AddOpt("--dump-first-aig", "none", "str", "dump first internal bit-blasted AIG and exit");
-    opt_mgr.AddOpt("--dump-abs", "none", "str", "specify file name");
-    opt_mgr.AddOpt("--par", "none", "str", "use parallel solvers");
-    opt_mgr.AddOpt("--solver", "none", "str", "external solver command line");
-    opt_mgr.AddOpt("--dump_states", "none", "str", "specify the name for the states file");
-    opt_mgr.AddOpt("--read_states", "none", "str", "specify the name for the states file");
-    opt_mgr.AddOpt("--sp", ufar_manager.params.fSuper_prove ? "yes" : "no", "", "toggle using super_prove");
-    opt_mgr.AddOpt("--simp", ufar_manager.params.fSimple ? "yes" : "no", "", "toggle using simple (prove)");
-    opt_mgr.AddOpt("--syn", ufar_manager.params.fSyn ? "yes" : "no", "", "toggle using simple synthesis");
-    opt_mgr.AddOpt("--pth", ufar_manager.params.fPthread ? "yes" : "no", "", "toggle using pthreads");
-    opt_mgr.AddOpt("--onewb", to_string(ufar_manager.params.iOneWb), "int", "specify the mode for one-white-boxing");
-    opt_mgr.AddOpt("--initallpairs", to_string(ufar_manager.params.nInitAllPairsLimit), "num", "pre-seed all compatible UIF pairs when #ops <= this limit (0=off)");
-    opt_mgr.AddOpt("--initnear", to_string(ufar_manager.params.nInitNearMults), "num", "pre-seed UIF pairs among up to this many multipliers closest to output");
-    opt_mgr.AddOpt("--timeout", to_string(ufar_manager.params.nTimeout), "num", "specify the timeout (sec)");
-    opt_mgr.AddOpt("--exp", to_string(ufar_manager.params.iExp), "int", "specify the exp mode");
-    opt_mgr.AddOpt("--miter", "yes", "", "toggle mitering the problem");
-    opt_mgr.AddOpt("--under", "-1", "num", "try under-approximation with the given size");
+    set<unsigned> set_op_types;
+    string firstAigDumpFile = "";
+    string dumpLogFile = "";
+    int fNeedMiter = 1, fCrossStats = 0, UnderSize = -1;
+    Ufar_AddOptions( opt_mgr, ufar_manager.params );
     if(!opt_mgr.Parse(argc, argv)) {
         opt_mgr.PrintUsage();
         cout << "\n       This command was developed by Yen-Sheng Ho at UC Berkeley in 2015.\n";
         cout << "       https://people.eecs.berkeley.edu/~alanmi/publications/2016/fmcad16_uif.pdf \n"; 
         return 0;
     }
-
-    if(opt_mgr["--norm"])
-        ufar_manager.params.fNorm ^= 1;
-    if(opt_mgr["--cexmin"])
-        ufar_manager.params.fCexMin ^= 1;
-    if(opt_mgr["--pba_uif"])
-        ufar_manager.params.fPbaUif ^= 1;
-    if(opt_mgr["--pbasim"])
-        ufar_manager.params.fPbaSim ^= 1;
-    if(opt_mgr["--pbacex"])
-        ufar_manager.params.fPbaCex ^= 1;
-    if(opt_mgr["--satmin"])
-        ufar_manager.params.fSatMin ^= 1;
-    if(opt_mgr["--cbawb"])
-        ufar_manager.params.fCbaWb ^= 1;
-    if(opt_mgr["--grey"])
-        ufar_manager.params.fGrey ^= 1;
-    if(opt_mgr["--allwb"])
-        ufar_manager.params.fAllWb ^= 1;
-    if(opt_mgr["--crossonly"])
-        ufar_manager.params.fCrossOnly ^= 1;
-    if(opt_mgr["--grey2"])
-        ufar_manager.params.nGrey = stof(opt_mgr.GetOptVal("--grey2"));
-    if(opt_mgr["--sp"])
-        ufar_manager.params.fSuper_prove ^= 1;
-    if(opt_mgr["--simp"])
-        ufar_manager.params.fSimple ^= 1;
-    if(opt_mgr["--syn"])
-        ufar_manager.params.fSyn ^= 1;
-    if(opt_mgr["--pth"])
-        ufar_manager.params.fPthread ^= 1;
-    if(opt_mgr["--onewb"])
-        ufar_manager.params.iOneWb = stoi(opt_mgr.GetOptVal("--onewb"));
-    if(opt_mgr["--initallpairs"])
-        ufar_manager.params.nInitAllPairsLimit = stoi(opt_mgr.GetOptVal("--initallpairs"));
-    if(opt_mgr["--initnear"])
-        ufar_manager.params.nInitNearMults = stoi(opt_mgr.GetOptVal("--initnear"));
-    if(opt_mgr["--exp"])
-        ufar_manager.params.iExp = stoi(opt_mgr.GetOptVal("--exp"));
-    if(opt_mgr["--par"])
-        ufar_manager.params.parSetting = opt_mgr.GetOptVal("--par");
-    if(opt_mgr["--solver"])
-        ufar_manager.params.solverSetting = opt_mgr.GetOptVal("--solver");
-    if(opt_mgr["--sim"])
-        ufar_manager.params.simSetting = opt_mgr.GetOptVal("--sim");
-    if(opt_mgr["--dump_states"]) {
-        smatch sub_match;
-        string option = opt_mgr.GetOptVal("--dump_states");
-        if(regex_search(option, sub_match, regex(R"(/?(\w+\.v)$)")))
-            ufar_manager.params.fileStatesOut = sub_match[1].str();
-        else
-            ufar_manager.params.fileStatesOut = opt_mgr.GetOptVal("--dump_states");
-    }
-    if(opt_mgr["--read_states"])
-        ufar_manager.params.fileStatesIn = opt_mgr.GetOptVal("--read_states");
-    if(opt_mgr["--lazysim"])
-        ufar_manager.params.fLazySim ^= 1;
-    if(opt_mgr["-v"])
-        ufar_manager.params.iVerbosity = stoi(opt_mgr.GetOptVal("-v"));
-    if(opt_mgr["--timeout"])
-        ufar_manager.params.nTimeout = stoi(opt_mgr.GetOptVal("--timeout"));
-    if(opt_mgr["--seq"])
-        ufar_manager.params.nSeqLookBack = stoi(opt_mgr.GetOptVal("--seq"));
-    if(opt_mgr["--dump-abs"]) {
-        smatch sub_match;
-        string option = opt_mgr.GetOptVal("--dump-abs");
-        if(regex_search(option, sub_match, regex(R"(/?(\w+)\.v$)")))
-            ufar_manager.params.fileAbs = sub_match[1].str();
-        else
-            ufar_manager.params.fileAbs = opt_mgr.GetOptVal("--dump-abs");
-    }
-    if(opt_mgr["--dump"]) {
-        smatch sub_match;
-        string option = opt_mgr.GetOptVal("--dump");
-        if(regex_search(option, sub_match, regex(R"(/?(\w+\.v)$)")))
-            ufar_manager.params.fileName = sub_match[1].str();
-        else
-            ufar_manager.params.fileName = opt_mgr.GetOptVal("--dump");
-    }
-    string firstAigDumpFile = "";
-    if ( opt_mgr["--dump-first-aig"] )
-        firstAigDumpFile = opt_mgr.GetOptVal("--dump-first-aig");
+    Ufar_ApplyOptions( opt_mgr, ufar_manager.params, set_op_types, firstAigDumpFile, dumpLogFile, fNeedMiter, fCrossStats, UnderSize );
 
     // ufar_manager.DumpParams();
     LogT::prefix = "UIF_PROVE";
-    string dumpLogFile = opt_mgr["--dump-log"] ? opt_mgr.GetOptVal("--dump-log") : "";
     string statusName = Ufar_GetStatusName( Wlc_AbcGetNtk(pAbc) );
-
-    set<unsigned> set_op_types;
-    set_op_types.insert(WLC_OBJ_ARI_MULTI);
-    if (opt_mgr["--adder"])
-        set_op_types.insert(WLC_OBJ_ARI_ADD);
     if (!UFAR::HasOperator(Wlc_AbcGetNtk(pAbc), set_op_types)) {
         cout << "There is no operator for UIF.\n";
         return 0;
@@ -304,7 +650,7 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
     timeval t1, t2;
     gettimeofday(&t1, NULL);
 
-    if (!opt_mgr["--miter"]) {
+    if (fNeedMiter) {
         if (Wlc_NtkPoNum(Wlc_AbcGetNtk(pAbc)) != 2) {
             cout << "The current design doesn't have dual outputs.\n";
             return 0;
@@ -318,7 +664,7 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
         Wlc_AbcUpdateNtk(pAbc, pNew);
     }
 
-    if ( opt_mgr["--crossstats"] )
+    if ( fCrossStats )
     {
         Wlc_Ntk_t * pCur = Wlc_AbcGetNtk(pAbc);
         if ( Wlc_NtkPoNum(pCur) != 2 )
@@ -380,10 +726,10 @@ static int Abc_CommandProveUsingUif( Abc_Frame_t * pAbc, int argc, char ** argv 
         return 0;
     }
 
-    if (opt_mgr["--under"]) {
-        pNew = UFAR::MakeUnderApprox(Wlc_AbcGetNtk(pAbc), stoi(opt_mgr.GetOptVal("--under")));
+    if ( UnderSize >= 0 ) {
+        pNew = UFAR::MakeUnderApprox(Wlc_AbcGetNtk(pAbc), UnderSize);
         Wlc_AbcUpdateNtk(pAbc, pNew);
-        pNew = UFAR::MakeUnderApprox2(Wlc_AbcGetNtk(pAbc), set_op_types, stoi(opt_mgr.GetOptVal("--under")));
+        pNew = UFAR::MakeUnderApprox2(Wlc_AbcGetNtk(pAbc), set_op_types, UnderSize);
         Wlc_AbcUpdateNtk(pAbc, pNew);
         Wlc_WriteVer(Wlc_AbcGetNtk(pAbc), "UND.v", 0, 0);
     }

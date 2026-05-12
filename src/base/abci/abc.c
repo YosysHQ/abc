@@ -662,6 +662,9 @@ static int Abc_CommandAbc9BsFind             ( Abc_Frame_t * pAbc, int argc, cha
 static int Abc_CommandAbc9AndCare            ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Cuts               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Divide             ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9Pipeline           ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9Unpipeline         ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9Regio              ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 static int Abc_CommandAbc9Test               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
@@ -687,7 +690,7 @@ extern void Extra_BitMatrixTransposeP( Vec_Wrd_t * vSimsIn, int nWordsIn, Vec_Wr
 typedef struct Wlc_Ntk_t_    Wlc_Ntk_t;
 typedef struct Wlc_BstPar_t_ Wlc_BstPar_t;
 extern Gia_Man_t * Wlc_NtkBitBlast( Wlc_Ntk_t * p, Wlc_BstPar_t * pPars );
-extern int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile );
+extern int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile, char * pUfarArgs );
 extern int Cec_GiaReplayReadParams( char * pFileName, int * pnProcs, int * pnTimeOut, int * pnTimeOut2, int * pnTimeOut3, int * pfUseUif );
 extern int Cec_GiaReplayTest( Gia_Man_t * p, Wlc_Ntk_t * pWlc, char * pFileName, int fVerbose, int fVeryVerbose, int fSilent );
 
@@ -1515,6 +1518,9 @@ void Abc_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "ABC9",         "&andcare",      Abc_CommandAbc9AndCare,                0 );   
     Cmd_CommandAdd( pAbc, "ABC9",         "&cuts",         Abc_CommandAbc9Cuts,                   0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&divide",       Abc_CommandAbc9Divide,                 0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&pipe",         Abc_CommandAbc9Pipeline,               0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&unpipe",       Abc_CommandAbc9Unpipeline,             0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&regio",        Abc_CommandAbc9Regio,                  0 );
 
     Cmd_CommandAdd( pAbc, "ABC9",         "&test",         Abc_CommandAbc9Test,                   0 );
 
@@ -35155,18 +35161,19 @@ usage:
 ***********************************************************************/
 int Abc_CommandAbc9WriteVer( Abc_Frame_t * pAbc, int argc, char ** argv )
 {
-    extern void Gia_WriteVerilog( char * pFileName, Gia_Man_t * pGia, int fUseGates, int fVerbose );
+    extern void Gia_WriteVerilogInt( char * pFileName, Gia_Man_t * pGia, int fUseGates, int fVerbose, int fUseCtrlPis );
     extern void Gia_WriteMappedVerilog( char * pFileName, Gia_Man_t * pGia, int fVerbose );
     char * pFileSpec = NULL;
     Abc_Ntk_t * pNtkSpec = NULL;
     char * pFileName;
     char ** pArgvNew;
     int c, nArgcNew;
+    int fUseCtrlPis = 0;
     int fUseGates = 0;
     int fUseLuts = 0;
     int fVerbose = 0;
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "Sglvh" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "Scglvh" ) ) != EOF )
     {
         switch ( c )
         {
@@ -35178,6 +35185,9 @@ int Abc_CommandAbc9WriteVer( Abc_Frame_t * pAbc, int argc, char ** argv )
             }
             pFileSpec = argv[globalUtilOptind];
             globalUtilOptind++;
+            break;
+        case 'c':
+            fUseCtrlPis ^= 1;
             break;
         case 'g':
             fUseGates ^= 1;
@@ -35222,7 +35232,7 @@ int Abc_CommandAbc9WriteVer( Abc_Frame_t * pAbc, int argc, char ** argv )
         }
         else
         {
-            Gia_WriteVerilog( pFileName, pAbc->pGia, fUseGates, fVerbose );
+            Gia_WriteVerilogInt( pFileName, pAbc->pGia, fUseGates, fVerbose, fUseCtrlPis );
         }
     }
     else
@@ -35245,9 +35255,10 @@ int Abc_CommandAbc9WriteVer( Abc_Frame_t * pAbc, int argc, char ** argv )
     return 0;
 
 usage:
-    Abc_Print( -2, "usage: &write_ver [-S <file>] [-glvh] <file>\n" );
+    Abc_Print( -2, "usage: &write_ver [-S <file>] [-cglvh] <file>\n" );
     Abc_Print( -2, "\t          writes hierarchical Verilog\n" );
     Abc_Print( -2, "\t-S file : file name for the original design (required when hierarchy is present)\n" );
+    Abc_Print( -2, "\t-c      : add clk/rst ports for seq AIGs [default = %s]\n", fUseCtrlPis? "no": "yes" );
     Abc_Print( -2, "\t-g      : toggle output gates vs assign-statements [default = %s]\n", fUseGates? "gates": "assigns" );
     Abc_Print( -2, "\t-l      : write LUT6-based Verilog for mapped AIGs [default = %s]\n", fUseLuts? "yes": "no" );
     Abc_Print( -2, "\t-v      : toggle verbose output [default = %s]\n", fVerbose? "yes": "no" );
@@ -41171,7 +41182,7 @@ int Abc_CommandAbc9Scorr( Abc_Frame_t * pAbc, int argc, char ** argv )
     Cec_ManCorSetDefaultParams( pPars );
     pPars->nProcs = 1;
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "FCGXPSZpkrecqowvh" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "FCGXPSZpkrecqiowvh" ) ) != EOF )
     {
         switch ( c )
         {
@@ -41270,6 +41281,9 @@ int Abc_CommandAbc9Scorr( Abc_Frame_t * pAbc, int argc, char ** argv )
         case 'q':
             pPars->fStopWhenGone ^= 1;
             break;
+        case 'i':
+            pPars->fIncremental ^= 1;
+            break;
         case 'o':
             fUseOld ^= 1;
             break;
@@ -41343,7 +41357,7 @@ int Abc_CommandAbc9Scorr( Abc_Frame_t * pAbc, int argc, char ** argv )
     return 0;
 
 usage:
-    Abc_Print( -2, "usage: &scorr [-FCGXPSZ num] [-pkrecqowvh]\n" );
+    Abc_Print( -2, "usage: &scorr [-FCGXPSZ num] [-pkrecqiowvh]\n" );
     Abc_Print( -2, "\t         performs signal correpondence computation\n" );
     Abc_Print( -2, "\t-C num : the max number of conflicts at a node [default = %d]\n", pPars->nBTLimit );
     Abc_Print( -2, "\t-F num : the number of timeframes in inductive case [default = %d]\n", pPars->nFrames );
@@ -41358,6 +41372,7 @@ usage:
     Abc_Print( -2, "\t-e     : toggle using equivalences as choices [default = %s]\n", pPars->fMakeChoices? "yes": "no" );
     Abc_Print( -2, "\t-c     : toggle using circuit-based SAT solver [default = %s]\n", pPars->fUseCSat? "yes": "no" );
     Abc_Print( -2, "\t-q     : toggle quitting when PO is not a constant candidate [default = %s]\n", pPars->fStopWhenGone? "yes": "no" );
+    Abc_Print( -2, "\t-i     : toggle incremental TFO-triggered re-proof in main loop [default = %s] by Xiran ZHao at University of Chinese Academy of Sciences\n", pPars->fIncremental? "yes": "no" );
     Abc_Print( -2, "\t-o     : toggle calling old engine [default = %s]\n", fUseOld? "yes": "no" );
     Abc_Print( -2, "\t-w     : toggle printing verbose info about equivalent flops [default = %s]\n", pPars->fVerboseFlops? "yes": "no" );
     Abc_Print( -2, "\t-v     : toggle printing verbose information [default = %s]\n", pPars->fVerbose? "yes": "no" );
@@ -51574,10 +51589,10 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
 {
     Gia_Man_t * pGiaUse = pAbc->pGia, * pGiaTemp = NULL;
     Wlc_Ntk_t * pWlc = (Wlc_Ntk_t *)pAbc->pAbcWlc;
-    char * pReplayFile = NULL;
+    char * pReplayFile = NULL, * pUfarArgs = NULL, * pUfarArgsAlloc = NULL;
     int c, nProcs = 6, nProcsNew = 0, nTimeOut = 3, nTimeOut2 = 10, nTimeOut3 = 100, fUseUif = 0, fVerbose = 0, fVeryVerbose = 0, fSilent = 0;
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "PTUWRusvwh" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "PTUCWRusvwh" ) ) != EOF )
     {
         switch ( c )
         {
@@ -51614,7 +51629,30 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
             globalUtilOptind++;
             if ( nTimeOut2 <= 0 )
                 goto usage;
-            break;    
+            break;
+        case 'C':
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-C\" should be followed by a string.\n" );
+                goto usage;
+            }
+            {
+                int iArg, nChars = 0;
+                ABC_FREE( pUfarArgsAlloc );
+                for ( iArg = globalUtilOptind; iArg < argc; iArg++ )
+                    nChars += (int)strlen(argv[iArg]) + 1;
+                pUfarArgsAlloc = ABC_ALLOC( char, nChars + 1 );
+                pUfarArgsAlloc[0] = 0;
+                for ( iArg = globalUtilOptind; iArg < argc; iArg++ )
+                {
+                    if ( iArg > globalUtilOptind )
+                        strcat( pUfarArgsAlloc, " " );
+                    strcat( pUfarArgsAlloc, argv[iArg] );
+                }
+                pUfarArgs = pUfarArgsAlloc;
+                globalUtilOptind = argc;
+            }
+            break;
         case 'W':
             if ( globalUtilOptind >= argc )
             {
@@ -51659,27 +51697,37 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
         if ( pWlc == NULL )
         {
             Abc_Print( -1, "Abc_CommandAbc9SProve(): There is no word-level design for option \"-u\".\n" );
+            ABC_FREE( pUfarArgsAlloc );
             return 1;
         }
         pGiaTemp = Wlc_NtkBitBlast( pWlc, NULL );
         if ( pGiaTemp == NULL )
         {
             Abc_Print( -1, "Abc_CommandAbc9SProve(): Word-level bit-blasting has failed.\n" );
+            ABC_FREE( pUfarArgsAlloc );
             return 1;
         }
         if ( (Gia_ManPoNum(pGiaTemp) & 1) == 1 )
         {
             Abc_Print( -1, "Abc_CommandAbc9SProve(): Internal \"&miter -x\" requires even number of bit-level outputs.\n" );
             Gia_ManStop( pGiaTemp );
+            ABC_FREE( pUfarArgsAlloc );
             return 1;
         }
         pGiaUse = Gia_ManTransformMiter2( pGiaTemp );
         Gia_ManStop( pGiaTemp );
         pGiaTemp = NULL;
     }
+    else if ( pUfarArgs != NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9SProve(): Option \"-C\" requires \"-u\".\n" );
+        ABC_FREE( pUfarArgsAlloc );
+        return 1;
+    }
     if ( pGiaUse == NULL )
     {
         Abc_Print( -1, "Abc_CommandAbc9SProve(): There is no AIG.\n" );
+        ABC_FREE( pUfarArgsAlloc );
         return 1;
     }
     if ( Gia_ManRegNum(pGiaUse) == 0 )
@@ -51687,20 +51735,23 @@ int Abc_CommandAbc9SProve( Abc_Frame_t * pAbc, int argc, char ** argv )
         Abc_Print( -1, "Abc_CommandAbc9SProve(): The problem is combinational.\n" );
         if ( fUseUif )
             Gia_ManStop( pGiaUse );
+        ABC_FREE( pUfarArgsAlloc );
         return 1;
     }
-    pAbc->Status = Cec_GiaProveTest( pGiaUse, nProcs, nTimeOut, nTimeOut2, nTimeOut3, fUseUif, pWlc, fVerbose, fVeryVerbose, fSilent, pReplayFile );
+    pAbc->Status = Cec_GiaProveTest( pGiaUse, nProcs, nTimeOut, nTimeOut2, nTimeOut3, fUseUif, pWlc, fVerbose, fVeryVerbose, fSilent, pReplayFile, pUfarArgs );
     Abc_FrameReplaceCex( pAbc, &pGiaUse->pCexSeq ); 
     if ( fUseUif )
         Gia_ManStop( pGiaUse );
+    ABC_FREE( pUfarArgsAlloc );
     return 0;
 
 usage:
-    Abc_Print( -2, "usage: &sprove [-PTUW num] [-R file] [-usvwh]\n" );
+    Abc_Print( -2, "usage: &sprove [-PTUW num] [-C str] [-R file] [-usvwh]\n" );
     Abc_Print( -2, "\t         proves CEC problem by case-splitting\n" );
     Abc_Print( -2, "\t-P num : the number of concurrent processes (1 <= num <= 6) [default = %d]\n", nProcs );
     Abc_Print( -2, "\t-T num : runtime limit in seconds per subproblem [default = %d]\n",     nTimeOut );
-    Abc_Print( -2, "\t-U num : runtime limit in seconds per subproblem [default = %d]\n",     nTimeOut2 );
+    Abc_Print( -2, "\t-U num : second-stage timeout in seconds [default = %d]\n", nTimeOut2 );
+    Abc_Print( -2, "\t-C str : with -u, pass this option string to internal %%ufar\n" );
     Abc_Print( -2, "\t-W num : runtime limit in seconds per subproblem [default = %d]\n",     nTimeOut3 );
     Abc_Print( -2, "\t-R str : dump replay/trace file for later execution by &sprove2\n" );
     Abc_Print( -2, "\t-u     : enable concurrent UFAR on word-level design (uses internal %%blast + &miter -x)\n" );
@@ -51708,6 +51759,7 @@ usage:
     Abc_Print( -2, "\t-v     : toggle printing verbose information [default = %s]\n",         fVerbose? "yes": "no" );
     Abc_Print( -2, "\t-w     : toggle printing more verbose information [default = %s]\n",    fVeryVerbose? "yes": "no" );
     Abc_Print( -2, "\t-h     : print the command usage\n");
+    ABC_FREE( pUfarArgsAlloc );
     return 1;
 }
 
@@ -59865,6 +59917,213 @@ usage:
     Abc_Print( -2, "\t-P num : number of parts to divide into [default = %d]\n", nParts );
     Abc_Print( -2, "\t-L num : cut level (0 = automatic middle level) [default = %d]\n", nCutLevel );
     Abc_Print( -2, "\t-v     : toggle printing verbose information [default = no]\n" );
+    Abc_Print( -2, "\t-h     : print the command usage\n");
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9Pipeline( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    extern Gia_Man_t * Gia_ManDupPipeline( Gia_Man_t * p, int nLevels, int fVerbose );
+    Gia_Man_t * pGiaNew;
+    int nLevels = 20;
+    int nDelayMax, c, fVerbose = 0;
+
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "Dvh" ) ) != EOF )
+    {
+        switch ( c )
+        {
+        case 'D':
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-D\" should be followed by a positive integer.\n" );
+                goto usage;
+            }
+            nLevels = atoi(argv[globalUtilOptind]);
+            globalUtilOptind++;
+            if ( nLevels <= 0 )
+                goto usage;
+            break;
+        case 'v':
+            fVerbose ^= 1;
+            break;
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+    if ( pAbc->pGia == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Pipeline(): There is no AIG.\n" );
+        return 1;
+    }
+    if ( Gia_ManRegNum(pAbc->pGia) > 0 )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Pipeline(): This command expects a combinational AIG.\n" );
+        return 1;
+    }
+
+    pGiaNew = Gia_ManDupPipeline( pAbc->pGia, nLevels, fVerbose );
+    if ( pGiaNew == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Pipeline(): Pipelining has failed.\n" );
+        return 1;
+    }
+    nDelayMax = Gia_ManLevelNum( pGiaNew );
+    if ( nDelayMax > nLevels )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Pipeline(): Seed pipeline delay (%d) exceeds target D = %d.\n", nDelayMax, nLevels );
+        Gia_ManStop( pGiaNew );
+        return 1;
+    }
+    Abc_FrameUpdateGia( pAbc, pGiaNew );
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: &pipe [-D num] [-vh]\n" );
+    Abc_Print( -2, "\t         inserts pipeline stages\n" );
+    Abc_Print( -2, "\t-D num : max AIG levels between the flops [default = %d]\n", nLevels );
+    Abc_Print( -2, "\t-v     : toggle verbose output [default = %s]\n", fVerbose ? "yes" : "no" );
+    Abc_Print( -2, "\t-h     : print the command usage\n");
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9Unpipeline( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    extern Gia_Man_t * Gia_ManDupUnpipeline( Gia_Man_t * p, int fVerbose );
+    Gia_Man_t * pGiaNew;
+    int c, fVerbose = 0;
+
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "vh" ) ) != EOF )
+    {
+        switch ( c )
+        {
+        case 'v':
+            fVerbose ^= 1;
+            break;
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+    if ( pAbc->pGia == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Unpipeline(): There is no AIG.\n" );
+        return 1;
+    }
+    if ( Gia_ManRegNum(pAbc->pGia) == 0 )
+    {
+        if ( fVerbose )
+            Abc_Print( 1, "Abc_CommandAbc9Unpipeline(): The current AIG is already combinational.\n" );
+        return 0;
+    }
+
+    pGiaNew = Gia_ManDupUnpipeline( pAbc->pGia, fVerbose );
+    if ( pGiaNew == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Unpipeline(): Removing pipeline flops has failed.\n" );
+        return 1;
+    }
+    Abc_FrameUpdateGia( pAbc, pGiaNew );
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: &unpipe [-vh]\n" );
+    Abc_Print( -2, "\t         removes the flops to derive a combinational AIG\n" );
+    Abc_Print( -2, "\t-v     : toggle verbose output [default = %s]\n", fVerbose ? "yes" : "no" );
+    Abc_Print( -2, "\t-h     : print the command usage\n");
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9Regio( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    extern Gia_Man_t * Gia_ManDupRegio( Gia_Man_t * p, int fRegIns, int fRegOuts, int fVerbose );
+    Gia_Man_t * pGiaNew;
+    int c, fRegIns = 1, fRegOuts = 1, fVerbose = 0;
+
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "iovh" ) ) != EOF )
+    {
+        switch ( c )
+        {
+        case 'i':
+            fRegIns ^= 1;
+            break;
+        case 'o':
+            fRegOuts ^= 1;
+            break;
+        case 'v':
+            fVerbose ^= 1;
+            break;
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+    if ( pAbc->pGia == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Regio(): There is no AIG.\n" );
+        return 1;
+    }
+    if ( !fRegIns && !fRegOuts )
+    {
+        if ( fVerbose )
+            Abc_Print( 1, "Abc_CommandAbc9Regio(): No boundary flops are requested.\n" );
+        return 0;
+    }
+
+    pGiaNew = Gia_ManDupRegio( pAbc->pGia, fRegIns, fRegOuts, fVerbose );
+    if ( pGiaNew == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Regio(): Adding boundary flops has failed.\n" );
+        return 1;
+    }
+    Abc_FrameUpdateGia( pAbc, pGiaNew );
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: &regio [-iovh]\n" );
+    Abc_Print( -2, "\t         adds PI/PO flops while preserving the current AIG\n" );
+    Abc_Print( -2, "\t-i     : toggle adding PI flops [default = %s]\n", fRegIns ? "yes" : "no" );
+    Abc_Print( -2, "\t-o     : toggle adding PO flops [default = %s]\n", fRegOuts ? "yes" : "no" );
+    Abc_Print( -2, "\t-v     : toggle verbose output [default = %s]\n", fVerbose ? "yes" : "no" );
     Abc_Print( -2, "\t-h     : print the command usage\n");
     return 1;
 }

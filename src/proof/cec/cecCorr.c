@@ -34,7 +34,10 @@ static inline int Cec_ParCorShouldStop( Cec_ParCor_t * pPars )
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-static void Gia_ManCorrSpecReduce_rec( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix );
+// Shared with cecCorrIncr.c (declared in cecInt.h).
+extern void Gia_ManCorrSpecReduce_rec( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix );
+extern int  Gia_ManCorrSpecReal( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix );
+
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -45,13 +48,13 @@ static void Gia_ManCorrSpecReduce_rec( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_
   Synopsis    [Computes the real value of the literal w/o spec reduction.]
 
   Description []
-               
+
   SideEffects []
 
   SeeAlso     []
 
 ***********************************************************************/
-static inline int Gia_ManCorrSpecReal( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix )
+int Gia_ManCorrSpecReal( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix )
 {
     if ( Gia_ObjIsAnd(pObj) )
     {
@@ -762,6 +765,7 @@ void Cec_ManRefinedClassPrintStats( Gia_Man_t * p, Vec_Str_t * vStatus, int iIte
     Abc_Print( 1, "p =%6d  d =%6d  f =%6d  ", nProve, nDispr, nFail );
     Abc_Print( 1, "%c  ", Gia_ObjIsConst( p, Gia_ObjFaninId0p(p, Gia_ManPo(p, 0)) ) ? '+' : '-' );
     Abc_PrintTime( 1, "T", Time );
+    fflush( stdout );
 }
 int Cec_ManCountLits( Gia_Man_t * p )
 { 
@@ -791,7 +795,7 @@ int Cec_ManCountLits( Gia_Man_t * p )
 
 ***********************************************************************/
 void Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPrefs )
-{  
+{
     Cec_ParSim_t ParsSim, * pParsSim = &ParsSim;
     Cec_ParSat_t ParsSat, * pParsSat = &ParsSat;
     Vec_Str_t * vStatus;
@@ -800,6 +804,7 @@ void Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPr
     Cec_ManSim_t * pSim;
     Gia_Man_t * pSrm;
     int fChanges, RetValue, i;
+    Cec_IncrMgr_t * pBmcMgr = NULL;
     // prepare simulation manager
     Cec_ManSimSetDefaultParams( pParsSim );
     pParsSim->nWords     = pPars->nWords;
@@ -812,20 +817,44 @@ void Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPr
     Cec_ManSatSetDefaultParams( pParsSat );
     pParsSat->nBTLimit = pPars->nBTLimit;
     pParsSat->fVerbose = pPars->fVerbose;
+    if ( pPars->fIncremental )
+    {
+        pBmcMgr = Cec_IncrMgrAlloc( pAig, pPars->nFrames + nPrefs );
+        Cec_IncrMgrSnapshotClasses( pBmcMgr );
+    }
     fChanges = 1;
     for ( i = 0; fChanges && (!pPars->nLimitMax || i < pPars->nLimitMax); i++ )
     {
+        int * pTfoMask = NULL;
+        int nReprSeeds = 0, nTotalPairs = 0, nActivePairs = 0, fConverged = 0;
         if ( Cec_ParCorShouldStop( pPars ) )
             break;
         abctime clkBmc = Abc_Clock();
         fChanges = 0;
-        pSrm = Gia_ManCorrSpecReduceInit( pAig, pPars->nFrames, nPrefs, !pPars->fLatchCorr, &vOutputs, pPars->fUseRings );
+        // BMC SRM is non-ring (Gia_ManCorrSpecReduceInit ignores fRings);
+        // the incremental mask filters on pReprs-derived endpoints only.
+        if ( pBmcMgr && i > 0 )
+        {
+            pTfoMask = Cec_IncrMgrDecideMask( pBmcMgr, 0, &fConverged,
+                                              &nReprSeeds, NULL, &nTotalPairs, &nActivePairs );
+            if ( fConverged )
+                break;
+        }
+        if ( pTfoMask )
+            pSrm = Gia_ManCorrSpecReduceInit_Active( pAig, pPars->nFrames, nPrefs, !pPars->fLatchCorr, &vOutputs, pTfoMask );
+        else
+            pSrm = Gia_ManCorrSpecReduceInit( pAig, pPars->nFrames, nPrefs, !pPars->fLatchCorr, &vOutputs, pPars->fUseRings );
+        if ( pTfoMask && pPars->fVeryVerbose )
+            Abc_Print( 1, "  [bmc-incr i=%d repr=%d active=%d/%d POs=%d]\n",
+                       i, nReprSeeds, nActivePairs, nTotalPairs, Gia_ManCoNum(pSrm) );
+        if ( pBmcMgr )
+            Cec_IncrMgrSnapshotClasses( pBmcMgr );
         if ( Gia_ManPoNum(pSrm) == 0 )
         {
             Gia_ManStop( pSrm );
             Vec_IntFree( vOutputs );
             break;
-        } 
+        }
         pParsSat->nBTLimit *= 10;
         if ( pPars->fUseCSat )
             vCexStore = Tas_ManSolveMiterNc( pSrm, pPars->nBTLimit, &vStatus, 0 );
@@ -848,6 +877,7 @@ void Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPr
         if ( Cec_ParCorShouldStop( pPars ) )
             break;
     }
+    Cec_IncrMgrFree( pBmcMgr );
     Cec_ManSimStop( pSim );
 }
 
@@ -948,6 +978,9 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     abctime clkTotal = Abc_Clock();
     abctime clkSat = 0, clkSim = 0, clkSrm = 0;
     abctime clk2, clk = Abc_Clock();
+    Cec_IncrMgr_t * pMgr = NULL;     // incremental manager (NULL when -i is off)
+    abctime clkIncr = 0;
+    int nIncrSkipped = 0, nIncrFallback = 0;
     if ( Gia_ManRegNum(pAig) == 0 )
     {
         Abc_Print( 1, "Cec_ManLatchCorrespondence(): Not a sequential AIG.\n" );
@@ -994,27 +1027,69 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     if ( pPars->nStepsMax == 0 )
     {
         Abc_Print( 1, "Stopped signal correspondence after BMC.\n" );
+        fflush( stdout );
         Cec_ManSimStop( pSim );
         return 1;
     }
+    if ( pPars->fIncremental )
+    {
+        pMgr = Cec_IncrMgrAlloc( pAig, pPars->nFrames );
+        Cec_IncrMgrSnapshotClasses( pMgr );
+    }
     // perform refinement of equivalence classes
     for ( r = 0; r < nIterMax; r++ )
-    { 
+    {
         if ( Cec_ParCorShouldStop( pPars ) )
         {
             Cec_ManSimStop( pSim );
+            Cec_IncrMgrFree( pMgr );
             return 1;
         }
         if ( pPars->nStepsMax == r )
         {
             Cec_ManSimStop( pSim );
+            Cec_IncrMgrFree( pMgr );
             Abc_Print( 1, "Stopped signal correspondence after %d refiment iterations.\n", r );
+            fflush( stdout );
             return 1;
         }
         clk = Abc_Clock();
-        // perform speculative reduction
+        // perform speculative reduction (with optional active-list filter)
         clk2 = Abc_Clock();
-        pSrm = Gia_ManCorrSpecReduce( pAig, pPars->nFrames, !pPars->fLatchCorr, &vOutputs, pPars->fUseRings );
+        {
+            int * pTfoMask = NULL;
+            int nReprSeeds = 0, nNextChanges = 0, nTotalPairs = 0, nActivePairs = 0;
+            int fConverged = 0;
+            if ( pMgr && r > 0 )
+            {
+                abctime clkI = Abc_Clock();
+                pTfoMask = Cec_IncrMgrDecideMask( pMgr, pPars->fUseRings, &fConverged,
+                                                  &nReprSeeds, &nNextChanges,
+                                                  &nTotalPairs, &nActivePairs );
+                clkIncr += Abc_Clock() - clkI;
+                if ( fConverged )
+                {
+                    clkSrm += Abc_Clock() - clk2;
+                    break;
+                }
+                if ( pTfoMask == NULL )
+                    nIncrFallback++;
+                else
+                    nIncrSkipped += nTotalPairs - nActivePairs;
+            }
+            if ( pTfoMask )
+                pSrm = Gia_ManCorrSpecReduce_Active( pAig, pPars->nFrames, !pPars->fLatchCorr, &vOutputs, pPars->fUseRings, pTfoMask, pMgr );
+            else
+                pSrm = Gia_ManCorrSpecReduce( pAig, pPars->nFrames, !pPars->fLatchCorr, &vOutputs, pPars->fUseRings );
+            if ( pTfoMask && pPars->fVeryVerbose )
+                Abc_Print( 1, "  [incr r=%d repr=%d next=%d tfo=%d active=%d/%d POs=%d]\n",
+                           r, nReprSeeds, nNextChanges, Vec_IntSize(pMgr->vTfoNodes),
+                           nActivePairs, nTotalPairs, Gia_ManCoNum(pSrm) );
+            // Snapshot AFTER SRM build: the active builder still reads the
+            // previous pNexts to recognise newly-created ring edges.
+            if ( pMgr )
+                Cec_IncrMgrSnapshotClasses( pMgr );
+        }
         assert( Gia_ManRegNum(pSrm) == 0 && Gia_ManPiNum(pSrm) == Gia_ManRegNum(pAig)+(pPars->nFrames+!pPars->fLatchCorr)*Gia_ManPiNum(pAig) );
         clkSrm += Abc_Clock() - clk2;
         if ( Gia_ManCoNum(pSrm) == 0 )
@@ -1055,6 +1130,7 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
         if ( Cec_ParCorShouldStop( pPars ) )
         {
             Cec_ManSimStop( pSim );
+            Cec_IncrMgrFree( pMgr );
             return 1;
         }
         // quit if const is no longer there
@@ -1062,7 +1138,9 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
         {
             printf( "Iterative refinement is stopped after iteration %d\n", r );
             printf( "because the property output is no longer a candidate constant.\n" );
+            fflush( stdout );
             Cec_ManSimStop( pSim );
+            Cec_IncrMgrFree( pMgr );
             return 0;
         }
         if ( pPars->nLimitMax )
@@ -1072,7 +1150,9 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
             {
                 printf( "Iterative refinement is stopped after iteration %d\n", r );
                 printf( "because refinement does not proceed quickly.\n" );
+                fflush( stdout );
                 Cec_ManSimStop( pSim );
+                Cec_IncrMgrFree( pMgr );
                 ABC_FREE( pAig->pReprs );
                 ABC_FREE( pAig->pNexts );
                 return 0;
@@ -1100,10 +1180,17 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
         ABC_PRTP( "Sat  ", clkSat,                        clkTotal );
         ABC_PRTP( "Sim  ", clkSim,                        clkTotal );
         ABC_PRTP( "Other", clkTotal-clkSat-clkSrm-clkSim, clkTotal );
+        if ( pMgr )
+        {
+            ABC_PRTP( "Incr ", clkIncr, clkTotal );
+            Abc_Print( 1, "Incr: fallback rounds = %d, skipped candidate pairs = %d\n", nIncrFallback, nIncrSkipped );
+        }
         Abc_PrintTime( 1, "TOTAL",  clkTotal );
+        fflush( stdout );
     }
+    Cec_IncrMgrFree( pMgr );
     return 1;
-}    
+}
 
 /**Function*************************************************************
 
@@ -1299,42 +1386,107 @@ Gia_Man_t * Cec_ManLSCorrespondence( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
   SeeAlso     []
 
 ***********************************************************************/
-Vec_Wec_t * Gia_ManCreateRegSupps( Gia_Man_t * p, int fVerbose )
+static inline void Gia_ManStopFlopSuppAdd( int * pReg0, int * pReg1, int * pnRegs, int Reg )
 {
-    abctime clk = Abc_Clock();
-    Gia_Obj_t * pObj; int i, Id;
-    Vec_Wec_t * vSuppsR = Vec_WecStart( Gia_ManRegNum(p) );
-    Vec_Wec_t * vSupps  = Vec_WecStart( Gia_ManObjNum(p) );
-    Gia_ManForEachRo( p, pObj, i )
-        Vec_IntPush( Vec_WecEntry(vSupps, Gia_ObjId(p, pObj)), i );
-    Gia_ManForEachAnd( p, pObj, Id )
-        Vec_IntTwoMerge2( Vec_WecEntry(vSupps, Gia_ObjFaninId0(pObj, Id)), 
-                          Vec_WecEntry(vSupps, Gia_ObjFaninId1(pObj, Id)), 
-                          Vec_WecEntry(vSupps, Id) ); 
-    Gia_ManForEachRi( p, pObj, i )
-        Vec_IntAppend( Vec_WecEntry(vSuppsR, i), Vec_WecEntry(vSupps, Gia_ObjFaninId0p(p, pObj)) );
-    Vec_WecFree( vSupps );
-    if ( fVerbose )
-        Abc_PrintTime( 1, "Support computation", Abc_Clock() - clk );
-    return vSuppsR;
+    if ( *pnRegs == 3 )
+        return;
+    if ( *pnRegs == 0 )
+    {
+        *pReg0 = Reg;
+        *pnRegs = 1;
+        return;
+    }
+    if ( *pnRegs == 1 )
+    {
+        if ( *pReg0 == Reg )
+            return;
+        *pReg1 = Reg;
+        *pnRegs = 2;
+        return;
+    }
+    assert( *pnRegs == 2 );
+    if ( *pReg0 == Reg || *pReg1 == Reg )
+        return;
+    *pnRegs = 3;
 }
 Vec_Int_t * Gia_ManFindStopFlops( Gia_Man_t * p, int nFlopIncFreq, int fVerbose )
 {
-    Vec_Int_t * vRes = NULL, * vTemp;  int i, k, Spot, Temp, nItems = 0;
-    Vec_Wec_t * vSupps = Gia_ManCreateRegSupps( p, fVerbose );
+    abctime clk = Abc_Clock();
+    Gia_Obj_t * pObj;
+    Vec_Int_t * vRes = NULL;
     Vec_Int_t * vNexts = Vec_IntStartFull( Gia_ManRegNum(p) );
     Vec_Int_t * vAvail = Vec_IntStart( Gia_ManRegNum(p) );
     Vec_Int_t * vHeads = Vec_IntAlloc( 10 );
-    Vec_WecForEachLevel( vSupps, vTemp, i ) {
-        if ( Vec_IntSize(vTemp) > 2 )
-            continue;
-        if ( (Spot = Vec_IntFind(vTemp, i)) >= 0 )
-            Vec_IntDrop( vTemp, Spot );
-        if ( Vec_IntSize(vTemp) != 1 )
-            continue;
-        Vec_IntWriteEntry( vNexts, i, Vec_IntEntry(vTemp, 0) );
-        Vec_IntWriteEntry( vAvail, Vec_IntEntry(vTemp, 0), 1 );
+    unsigned char * pSuppN = ABC_CALLOC( unsigned char, Gia_ManObjNum(p) );
+    int * pSupp0 = ABC_ALLOC( int, Gia_ManObjNum(p) );
+    int * pSupp1 = ABC_ALLOC( int, Gia_ManObjNum(p) );
+    int i, k, Id, Fan0, Fan1, Count, Next, Spot, Temp, nItems = 0;
+
+    // Track at most two distinct flop supports per node; value 3 means "many".
+    Gia_ManForEachRo( p, pObj, i )
+    {
+        Id = Gia_ObjId( p, pObj );
+        pSuppN[Id] = 1;
+        pSupp0[Id] = i;
     }
+    Gia_ManForEachAnd( p, pObj, Id )
+    {
+        int Reg0 = -1, Reg1 = -1, nRegs = 0;
+        Fan0 = Gia_ObjFaninId0( pObj, Id );
+        Fan1 = Gia_ObjFaninId1( pObj, Id );
+        if ( pSuppN[Fan0] == 3 || pSuppN[Fan1] == 3 )
+        {
+            pSuppN[Id] = 3;
+            continue;
+        }
+        if ( pSuppN[Fan0] > 0 )
+        {
+            Gia_ManStopFlopSuppAdd( &Reg0, &Reg1, &nRegs, pSupp0[Fan0] );
+            if ( pSuppN[Fan0] > 1 )
+                Gia_ManStopFlopSuppAdd( &Reg0, &Reg1, &nRegs, pSupp1[Fan0] );
+        }
+        if ( pSuppN[Fan1] > 0 )
+        {
+            Gia_ManStopFlopSuppAdd( &Reg0, &Reg1, &nRegs, pSupp0[Fan1] );
+            if ( pSuppN[Fan1] > 1 )
+                Gia_ManStopFlopSuppAdd( &Reg0, &Reg1, &nRegs, pSupp1[Fan1] );
+        }
+        pSuppN[Id] = nRegs;
+        if ( nRegs > 0 )
+            pSupp0[Id] = Reg0;
+        if ( nRegs > 1 )
+            pSupp1[Id] = Reg1;
+    }
+    if ( fVerbose )
+    {
+        Abc_PrintTime( 1, "Support computation", Abc_Clock() - clk );
+        fflush( stdout );
+    }
+
+    Gia_ManForEachRi( p, pObj, i )
+    {
+        Id = Gia_ObjFaninId0p( p, pObj );
+        Count = pSuppN[Id];
+        Next = -1;
+        if ( Count == 1 )
+            Next = pSupp0[Id] == i ? -1 : pSupp0[Id];
+        else if ( Count == 2 )
+        {
+            if ( pSupp0[Id] == i && pSupp1[Id] != i )
+                Next = pSupp1[Id];
+            else if ( pSupp1[Id] == i && pSupp0[Id] != i )
+                Next = pSupp0[Id];
+        }
+        if ( Next >= 0 )
+        {
+            Vec_IntWriteEntry( vNexts, i, Next );
+            Vec_IntWriteEntry( vAvail, Next, 1 );
+        }
+    }
+    ABC_FREE( pSuppN );
+    ABC_FREE( pSupp0 );
+    ABC_FREE( pSupp1 );
+
     Vec_IntForEachEntry( vNexts, Spot, i )
         if ( Spot >= 0 && Vec_IntEntry(vAvail, i) == 0 )
             Vec_IntPush( vHeads, i );
@@ -1366,11 +1518,13 @@ Vec_Int_t * Gia_ManFindStopFlops( Gia_Man_t * p, int nFlopIncFreq, int fVerbose 
         }
     }
     if ( fVerbose && vRes ) 
+    {
         printf( "Detected %d sequence%s containing %d flops.\n", nItems, nItems > 1 ? "s":"", Vec_IntSize(vRes) );
+        fflush( stdout );
+    }
     Vec_IntFree( vNexts );
     Vec_IntFree( vAvail );
     Vec_IntFree( vHeads );
-    Vec_WecFree( vSupps );
     return vRes;
 }
 Gia_Man_t * Gia_ManDupStopsAdd( Gia_Man_t * p, Vec_Int_t * vStops )

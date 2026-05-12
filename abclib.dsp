@@ -4801,6 +4801,22 @@ SOURCE=.\src\map\mpm\mpmTruth.c
 SOURCE=.\src\map\mpm\mpmUtil.c
 # End Source File
 # End Group
+# Begin Group "emap"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\map\emap\emap.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\map\emap\emap.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\map\emap\emapCore.c
+# End Source File
+# End Group
 # End Group
 # Begin Group "misc"
 
@@ -6662,6 +6678,10 @@ SOURCE=.\src\proof\cec\cecCore.c
 # Begin Source File
 
 SOURCE=.\src\proof\cec\cecCorr.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\cec\cecCorrIncr.c
 # End Source File
 # Begin Source File
 

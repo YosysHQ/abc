@@ -362,6 +362,8 @@ int Bmcg_ManPerformOne( Gia_Man_t * pGia, Bmc_AndPar_t * pPars )
     Abc_CexFreeP( &pGia->pCexSeq );
     for ( f = 0; !pPars->nFramesMax || f < pPars->nFramesMax; f += pPars->nFramesAdd )
     {
+        if ( pPars->pFuncProgress && pPars->pFuncProgress( pPars->pProgress, 0, 0 ) )
+            break;
         Cnf_Dat_t * pCnf = Bmcg_ManAddNewCnf( p, f, pPars->nFramesAdd );
         if ( pCnf == NULL )
         {
@@ -378,15 +380,21 @@ int Bmcg_ManPerformOne( Gia_Man_t * pGia, Bmc_AndPar_t * pPars )
         assert( Gia_ManPoNum(p->pFrames) == (f + pPars->nFramesAdd) * Gia_ManPoNum(pGia) );
         for ( k = 0; k < pPars->nFramesAdd; k++ )
         {
+            if ( pPars->pFuncProgress && pPars->pFuncProgress( pPars->pProgress, 0, 0 ) )
+                break;
             for ( i = 0; i < Gia_ManPoNum(pGia); i++ )
             {
                 abctime clk = Abc_Clock();
                 int iObj = Gia_ObjId( p->pFrames, Gia_ManCo(p->pFrames, (f+k) * Gia_ManPoNum(pGia) + i) );
                 int iLit = Abc_Var2Lit( Vec_IntEntry(&p->vFr2Sat, iObj), 0 );
+                if ( pPars->pFuncProgress && pPars->pFuncProgress( pPars->pProgress, 0, 0 ) )
+                    break;
                 if ( pPars->nTimeOut && (Abc_Clock() - clkStart)/CLOCKS_PER_SEC >= pPars->nTimeOut )
                     break;
                 status = bmcg_sat_solver_solve( p->pSats[0], &iLit, 1 );
                 p->timeSat += Abc_Clock() - clk;
+                if ( pPars->pFuncProgress && pPars->pFuncProgress( pPars->pProgress, 0, 0 ) )
+                    break;
                 if ( status == -1 ) // unsat
                 {
                     if ( i == Gia_ManPoNum(pGia)-1 )

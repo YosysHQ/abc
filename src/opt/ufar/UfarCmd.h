@@ -15,7 +15,7 @@ ABC_NAMESPACE_HEADER_START
 void Ufar_Init(Abc_Frame_t *pAbc);
 
 typedef struct Wlc_Ntk_t_ Wlc_Ntk_t;
-extern int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId );
+extern int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId, const char * pArgs );
 
 ABC_NAMESPACE_HEADER_END
 

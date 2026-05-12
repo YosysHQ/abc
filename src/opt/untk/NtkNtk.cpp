@@ -805,7 +805,8 @@ Wlc_Ntk_t * AddConstFlops( Wlc_Ntk_t * pNtk, const set<unsigned>& types )
     Wlc_Ntk_t * p = Wlc_NtkDupDfsSimple(pNtk);
     Wlc_NtkCleanCopy( p );
     int nOrigObjNum = Wlc_NtkObjNumMax(p);
-    Wlc_NtkTransferNames( p, pNtk );
+    if ( !Wlc_NtkHasNameId(p) && Wlc_NtkHasNameId(pNtk) )
+        Wlc_NtkTransferNames( p, pNtk );
 
     Wlc_Obj_t * pObj;
     int i, iObjConst0;
@@ -872,7 +873,8 @@ Wlc_Ntk_t * AddConstFlops( Wlc_Ntk_t * pNtk, const set<unsigned>& types )
     ModifyMarkedNodes(p, nOrigObjNum, create_ff_and_mux);
 
     Wlc_Ntk_t * pNew = Wlc_NtkDupDfsSimple( p );
-    Wlc_NtkTransferNames( pNew, p );
+    if ( !Wlc_NtkHasNameId(pNew) && Wlc_NtkHasNameId(p) )
+        Wlc_NtkTransferNames( pNew, p );
 
     Wlc_NtkFree( p );
 
@@ -1058,7 +1060,8 @@ Wlc_Ntk_t * NormalizeDataTypes(Wlc_Ntk_t * p, const set<unsigned>& types, bool f
     Wlc_Ntk_t *pNtk, *pNew;
 
     pNtk = Wlc_NtkDupDfsSimple(p);
-    Wlc_NtkTransferNames( pNtk, p );
+    if ( !Wlc_NtkHasNameId(pNtk) && Wlc_NtkHasNameId(p) )
+        Wlc_NtkTransferNames( pNtk, p );
 
     Wlc_Obj_t *pObj;
     int i, iFanin0, iFanin1;
@@ -1117,7 +1120,8 @@ Wlc_Ntk_t * NormalizeDataTypes(Wlc_Ntk_t * p, const set<unsigned>& types, bool f
     Vec_IntFree(vFanins);
 
     pNew = Wlc_NtkDupDfsSimple(pNtk);
-    Wlc_NtkTransferNames( pNew, pNtk );
+    if ( !Wlc_NtkHasNameId(pNew) && Wlc_NtkHasNameId(pNtk) )
+        Wlc_NtkTransferNames( pNew, pNtk );
     Wlc_NtkFree(pNtk);
 
     return pNew;
@@ -1266,11 +1270,15 @@ static inline int run_external_solver_on_aig( Abc_Ntk_t * pAbcNtk, const string&
     Io_Write( pAbcNtk, (char *)pAigFile, IO_FILE_AIGER );
     std::remove( "status.txt" );
     std::remove( "log.txt" );
-    string command = solverCmd;
-    if ( command.find(pAigFile) == string::npos )
-        command += string(" ") + pAigFile;
+    string solverCall = solverCmd;
+    string command;
+    if ( solverCall.find(pAigFile) == string::npos )
+        solverCall += string(" ") + pAigFile;
     if ( nRuntimeLimitSec > 0 )
-        command += " " + to_string(nRuntimeLimitSec);
+        solverCall += " " + to_string(nRuntimeLimitSec);
+    command = solverCall;
+    if ( nRuntimeLimitSec > 0 )
+        command = "timeout " + to_string(nRuntimeLimitSec) + " " + command;
     command += " > log.txt 2>&1";
     LOG(1) << "UFAR external solver: launching command instead of PDR: " << command;
 #ifdef __wasm
