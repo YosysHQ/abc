@@ -477,7 +477,26 @@ void If_ManComputeRequired( If_Man_t * p )
             return;
         // set the required times for the POs
         Tim_ManIncrementTravId( p->pManTim );
-        if ( p->vCoAttrs )
+        if ( p->pPars->pTimesReq )
+        {
+            Counter = 0;
+            If_ManForEachCo( p, pObj, i )
+            {
+                reqTime = p->pPars->pTimesReq[i];
+                if ( If_ObjArrTime(If_ObjFanin0(pObj)) > reqTime + p->fEpsilon )
+                {
+                    reqTime = If_ObjArrTime(If_ObjFanin0(pObj));
+                    Counter++;
+                }
+                Tim_ManSetCoRequired( p->pManTim, i, reqTime );
+            }
+            if ( Counter && !p->fReqTimeWarn )
+            {
+                Abc_Print( 0, "Required times are exceeded at %d output%s. The earliest arrival times are used.\n", Counter, Counter > 1 ? "s":"" );
+                p->fReqTimeWarn = 1;
+            }
+        }
+        else if ( p->vCoAttrs )
         {
             assert( If_ManCoNum(p) == Vec_IntSize(p->vCoAttrs) );
             If_ManForEachCo( p, pObj, i )

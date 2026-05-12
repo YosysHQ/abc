@@ -3000,6 +3000,20 @@ Gia_Man_t * Gia_ManPerformMappingInt( Gia_Man_t * p, If_Par_t * pPars )
             pPars->pTimesReq[i] = EntryF;
     }
 */
+    if ( p->pManTime && pPars->pTimesArr == NULL )
+    {
+        Tim_Man_t * pManTime = (Tim_Man_t *)p->pManTime;
+        pPars->pTimesArr = ABC_CALLOC( float, Gia_ManCiNum(p) );
+        for ( i = 0; i < Gia_ManCiNum(p); i++ )
+            pPars->pTimesArr[i] = Tim_ManGetCiArrival( pManTime, i );
+    }
+    if ( p->pManTime && pPars->pTimesReq == NULL )
+    {
+        Tim_Man_t * pManTime = (Tim_Man_t *)p->pManTime;
+        pPars->pTimesReq = ABC_CALLOC( float, Gia_ManCoNum(p) );
+        for ( i = 0; i < Gia_ManCoNum(p); i++ )
+            pPars->pTimesReq[i] = Tim_ManGetCoRequired( pManTime, i );
+    }
     ABC_FREE( p->pCellStr );
     Vec_IntFreeP( &p->vConfigs );
     Vec_StrFreeP( &p->vConfigs2 );
