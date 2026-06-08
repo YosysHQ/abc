@@ -18,6 +18,12 @@
 
 ***********************************************************************/
 
+#ifdef WIN32
+#include <process.h> 
+#else
+#include <unistd.h>
+#endif
+
 #include "base/abc/abc.h"
 #include "mainInt.h"
 
@@ -91,7 +97,13 @@ char * Abc_UtilsGetUsersInput( Abc_Frame_t * pAbc )
     {
     char * pRetValue;
     fprintf( pAbc->Out, "%s", Prompt );
+    fflush( pAbc->Out );
     pRetValue = fgets( Prompt, 5000, stdin );
+    if ( pRetValue == NULL ) { exit(0); }
+    if ( !isatty( fileno(stdin) ) ) {
+        fputs( Prompt, pAbc->Out );
+        fflush( pAbc->Out );
+    }
     return Prompt;
     }
 #endif

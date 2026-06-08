@@ -82,6 +82,8 @@ struct Bmc_EsPar_t_
     char *     pSymStr;
     char *     pPermStr;
     char *     pGuide;
+    int *      pPermFans;
+    int *      pSolFans;
     Vec_Wrd_t* vTruths;
 };
 
@@ -134,6 +136,7 @@ struct Saig_ParBmc_t_
     int         fNoRestarts;    // disables periodic restarts
     int         fUseSatoko;     // enables using Satoko
     int         fUseGlucose;    // enables using Glucose 3.0
+    int         fUseCadical;    // enables using CaDiCaL
     int         nLearnedStart;  // starting learned clause limit
     int         nLearnedDelta;  // delta of learned clause limit
     int         nLearnedPerce;  // ratio of learned clause limit

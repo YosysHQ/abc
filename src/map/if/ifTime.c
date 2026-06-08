@@ -131,7 +131,7 @@ float If_CutDelay( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut )
     }
     else
     {
-        if ( p->pPars->fEnableCheck07 && p->pPars->fDelayOptCell && p->pPars->pCellLib )
+        if ( p->pPars->fEnableCheck07 && p->pPars->pCellLib )
         {
             int Intrinsic[IF_MAX_LUTSIZE];
             if ( pCut->nLeaves == 0 )
@@ -233,7 +233,7 @@ void If_CutPropagateRequired( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut, fl
     }
     else
     {
-        if ( p->pPars->fEnableCheck07 && p->pPars->fDelayOptCell && p->pPars->pCellLib )
+        if ( p->pPars->fEnableCheck07 && p->pPars->pCellLib )
         {
             int Intrinsic[IF_MAX_LUTSIZE];
             if ( pCut->nLeaves == 0 )
@@ -338,7 +338,7 @@ float If_ManDelayMax( If_Man_t * p, int fSeq )
 void If_ManComputeRequired( If_Man_t * p )
 {
     If_Obj_t * pObj;
-    int i, Counter;
+    int i, iBox, Counter;
     float reqTime;
 
     // compute area, clean required times, collect nodes used in the mapping
@@ -480,7 +480,7 @@ void If_ManComputeRequired( If_Man_t * p )
         if ( p->pPars->pTimesReq )
         {
             Counter = 0;
-            If_ManForEachCo( p, pObj, i )
+            If_ManForEachPo( p, pObj, i )
             {
                 reqTime = p->pPars->pTimesReq[i];
                 if ( If_ObjArrTime(If_ObjFanin0(pObj)) > reqTime + p->fEpsilon )
@@ -551,6 +551,9 @@ void If_ManComputeRequired( If_Man_t * p )
             {
                 reqTime = pObj->Required;
                 Tim_ManSetCiRequired( p->pManTim, pObj->IdPio, reqTime );
+                iBox = Tim_ManBoxForCi( p->pManTim, pObj->IdPio );
+                if ( iBox >= 0 )
+                    Tim_ManSetPreviousTravIdBoxInputs( p->pManTim, iBox );
             }
             else if ( If_ObjIsCo(pObj) )
             {
