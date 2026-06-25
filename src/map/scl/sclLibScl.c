@@ -89,6 +89,7 @@ static int Abc_SclReadLibraryGenlib( SC_Lib * p, Mio_Library_t * pLib )
     p->unit_time             = 12;
     p->unit_cap_fst          = 1.0;
     p->unit_cap_snd          = 15;
+    p->nom_voltage           = 1.0;
 
     Mio_LibraryForEachGate( pLib, pGate )
     {
@@ -251,6 +252,7 @@ static int Abc_SclReadLibrary( Vec_Str_t * vOut, int * pPos, SC_Lib * p )
     p->unit_time             = Vec_StrGetI(vOut, pPos);
     p->unit_cap_fst          = Vec_StrGetF(vOut, pPos);
     p->unit_cap_snd          = Vec_StrGetI(vOut, pPos);
+    p->nom_voltage           = Vec_StrGetF(vOut, pPos);
 
     // Read 'wire_load' vector:
     for ( i = Vec_StrGetI(vOut, pPos); i != 0; i-- )
@@ -392,6 +394,8 @@ static int Abc_SclReadLibrary( Vec_Str_t * vOut, int * pPos, SC_Lib * p )
                     Abc_SclReadSurface( vOut, pPos, &pTime->pCellFall );
                     Abc_SclReadSurface( vOut, pPos, &pTime->pRiseTrans );
                     Abc_SclReadSurface( vOut, pPos, &pTime->pFallTrans );
+                    Abc_SclReadSurface( vOut, pPos, &pTime->pRisePower );
+                    Abc_SclReadSurface( vOut, pPos, &pTime->pFallPower );
                 }
                 else
                     assert( Vec_PtrSize(&pRTime->vTimings) == 0 );
@@ -554,6 +558,8 @@ static void Abc_SclWriteLibraryCellsOnly( Vec_Str_t * vOut, SC_Lib * p, int fAdd
                     Abc_SclWriteSurface( vOut, &pTime->pCellFall );
                     Abc_SclWriteSurface( vOut, &pTime->pRiseTrans );
                     Abc_SclWriteSurface( vOut, &pTime->pFallTrans );
+                    Abc_SclWriteSurface( vOut, &pTime->pRisePower );
+                    Abc_SclWriteSurface( vOut, &pTime->pFallPower );
                 }
                 else
                     assert( Vec_PtrSize(&pRTime->vTimings) == 0 );
@@ -590,6 +596,7 @@ static void Abc_SclWriteLibrary( Vec_Str_t * vOut, SC_Lib * p, int nExtra, int f
     Vec_StrPutI( vOut, p->unit_time );
     Vec_StrPutF( vOut, p->unit_cap_fst );
     Vec_StrPutI( vOut, p->unit_cap_snd );
+    Vec_StrPutF( vOut, p->nom_voltage );
 
     // Write 'wire_load' vector:
     Vec_StrPutI( vOut, Vec_PtrSize(&p->vWireLoads) );
@@ -731,6 +738,7 @@ static void Abc_SclWriteLibraryText( FILE * s, SC_Lib * p )
     else if ( p->unit_time == 12 )
     fprintf( s, "  time_unit : \"1ps\";\n" );
     else assert( 0 );
+    fprintf( s, "  nom_voltage : %f;\n",                      p->nom_voltage );
     fprintf( s, "  capacitive_load_unit(%.1f,%s);\n",        p->unit_cap_fst, p->unit_cap_snd == 12 ? "pf" : "ff" );
     fprintf( s, "\n" );
 
@@ -831,6 +839,19 @@ static void Abc_SclWriteLibraryText( FILE * s, SC_Lib * p )
                     fprintf( s, "        fall_transition() {\n" );
                     Abc_SclWriteSurfaceText( s, &pTime->pFallTrans );
                     fprintf( s, "        }\n" );
+
+                    if ( Vec_FltSize(&pTime->pRisePower.vIndex0) )
+                    {
+                        fprintf( s, "        rise_power() {\n" );
+                        Abc_SclWriteSurfaceText( s, &pTime->pRisePower );
+                        fprintf( s, "        }\n" );
+                    }
+                    if ( Vec_FltSize(&pTime->pFallPower.vIndex0) )
+                    {
+                        fprintf( s, "        fall_power() {\n" );
+                        Abc_SclWriteSurfaceText( s, &pTime->pFallPower );
+                        fprintf( s, "        }\n" );
+                    }
                     fprintf( s, "      }\n" );
                 }
                 else
@@ -887,4 +908,3 @@ SC_Lib * Abc_SclMergeLibraries( SC_Lib * pLib1, SC_Lib * pLib2, int fUsePrefix )
 
 
 ABC_NAMESPACE_IMPL_END
-

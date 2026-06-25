@@ -150,6 +150,7 @@ static int Abc_CommandRunEco                 ( Abc_Frame_t * pAbc, int argc, cha
 static int Abc_CommandRunGen                 ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandRunScript              ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandRunTest                ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandRmInverter             ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 static int Abc_CommandRewrite                ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandRefactor               ( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -1009,6 +1010,7 @@ void Abc_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "Synthesis",    "resub_unate",   Abc_CommandResubUnate,       1 );
     Cmd_CommandAdd( pAbc, "Synthesis",    "resub_core",    Abc_CommandResubCore,        1 );
     Cmd_CommandAdd( pAbc, "Synthesis",    "resub_check",   Abc_CommandResubCheck,       0 );
+    Cmd_CommandAdd( pAbc, "Synthesis",    "rd_inv",        Abc_CommandRmInverter,       1 );
 //    Cmd_CommandAdd( pAbc, "Synthesis",    "rr",            Abc_CommandRr,               1 );
     Cmd_CommandAdd( pAbc, "Synthesis",    "cascade",       Abc_CommandCascade,          1 );
     Cmd_CommandAdd( pAbc, "Synthesis",    "lutcasdec",     Abc_CommandLutCasDec,        1 );
@@ -7996,7 +7998,58 @@ usage:
 
   Synopsis    []
 
-  Description [Orchestration synthesis]
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandRmInverter( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Abc_Ntk_t * pNtk = Abc_FrameReadNtk(pAbc);
+    Extra_UtilGetoptReset();
+    int iVerbose = 0;
+    int c;
+    while ( ( c = Extra_UtilGetopt( argc, argv, "vh" ) ) != EOF )
+    {
+        switch ( c )
+        {
+        case 'v':
+            iVerbose ^= 1;
+            break;
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+    if ( pNtk == NULL )
+    {
+        Abc_Print( -1, "Empty network.\n" );
+        return 1;
+    }
+    if ( !Abc_NtkHasAig(pNtk) || !Abc_NtkIsStrash(pNtk) )
+    {
+        Abc_Print( -1, "This command only works on AIG network.\n" );
+        return 1;
+    }
+    Abc_NtkRmInverter(pNtk, iVerbose);
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: rd_inv\n" );
+    Abc_Print( -2, "\t            redistribute inverters on self-dual and self-anti-dual functions in network\n" );
+    Abc_Print( -2, "\t-v        : verbose output\n");
+    Abc_Print( -2, "\t-h        : print the command usage\n");
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
 
   SideEffects []
 
@@ -60995,7 +61048,7 @@ int Abc_CommandAbc9eSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
           }
           params.synthesis_approach = atoi(argv[globalUtilOptind]);
           globalUtilOptind++;
-          if ( params.synthesis_approach < 0 ||  params.synthesis_approach > 2)
+          if ( params.synthesis_approach < 0 ||  params.synthesis_approach > 3)
               goto usage;
           break;
         case 'I':
@@ -61211,7 +61264,7 @@ int Abc_CommandAbc9elSLIM( Abc_Frame_t * pAbc, int argc, char ** argv ) {
           }
           params.synthesis_approach = atoi(argv[globalUtilOptind]);
           globalUtilOptind++;
-          if ( params.synthesis_approach < 0 ||  params.synthesis_approach > 2)
+          if ( params.synthesis_approach < 0 ||  params.synthesis_approach > 3)
               goto usage;
           break;
         case 'I':

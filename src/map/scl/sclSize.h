@@ -634,6 +634,7 @@ extern int           Abc_SclTimeIncUpdate( SC_Man * p );
 extern void          Abc_SclTimeIncInsert( SC_Man * p, Abc_Obj_t * pObj );
 extern void          Abc_SclTimeIncUpdateLevel( Abc_Obj_t * pObj );
 extern void          Abc_SclTimePerform( SC_Lib * pLib, Abc_Ntk_t * pNtk, int nTreeCRatio, int fUseWireLoads, int fShowAll, int fPrintPath, int fDumpStats );
+extern void          Abc_SclPowerPerform( SC_Lib * pLib, Abc_Ntk_t * pNtk, int nTreeCRatio, int fUseWireLoads, int nFrames, int nPref );
 extern void          Abc_SclPrintBuffers( SC_Lib * pLib, Abc_Ntk_t * pNtk, int fVerbose );
 /*=== sclUpsize.c ===============================================================*/
 extern int           Abc_SclCountNearCriticalNodes( SC_Man * p );
@@ -645,6 +646,7 @@ extern void          Abc_SclTransferGates( Abc_Ntk_t * pOld, Abc_Ntk_t * pNew );
 extern void          Abc_SclPrintGateSizes( SC_Lib * pLib, Abc_Ntk_t * p );
 extern void          Abc_SclMinsizePerform( SC_Lib * pLib, Abc_Ntk_t * p, int fUseMax, int fVerbose );
 extern int           Abc_SclCountMinSize( SC_Lib * pLib, Abc_Ntk_t * p, int fUseMax );
+extern Vec_Flt_t *   Abc_SclComputeSwitching( Abc_Ntk_t * pNtk, int nFrames, int nPref );
 extern Vec_Int_t *   Abc_SclExtractBarBufs( Abc_Ntk_t * pNtk );
 extern void          Abc_SclInsertBarBufs( Abc_Ntk_t * pNtk, Vec_Int_t * vBufs );
 
