@@ -50,6 +50,8 @@ Cec_IncrMgr_t * Cec_IncrMgrAlloc( Gia_Man_t * pAig, int nFrames )
     p->vSeeds    = Vec_IntAlloc( 64 );
     p->vTfoNodes = Vec_IntAlloc( 1024 );
     p->pTfoMark  = ABC_CALLOC( int, p->nObjs );
+    p->vAliasHeads = Vec_IntStartFull( p->nObjs );
+    p->vAliasNext  = Vec_IntStartFull( p->nObjs );
     p->vBfsCur   = Vec_IntAlloc( 1024 );
     p->vBfsNext  = Vec_IntAlloc( 1024 );
     if ( pAig->vFanout == NULL )
@@ -82,6 +84,8 @@ void Cec_IncrMgrFree( Cec_IncrMgr_t * p )
     Vec_IntFree( p->vNextPrev );
     Vec_IntFree( p->vSeeds );
     Vec_IntFree( p->vTfoNodes );
+    Vec_IntFree( p->vAliasHeads );
+    Vec_IntFree( p->vAliasNext );
     Vec_IntFree( p->vBfsCur );
     Vec_IntFree( p->vBfsNext );
     ABC_FREE( p->pTfoMark );
@@ -120,12 +124,13 @@ void Cec_IncrMgrSnapshotClasses( Cec_IncrMgr_t * p )
   Synopsis    [Computes the seed set for the next TFO BFS.]
 
   Description [Returns the number of nodes whose representative changed
-  since the last snapshot; the seeds themselves are stored in vSeeds and
-  consumed by Cec_IncrMgrComputeTfo.  Does not update the snapshot --
-  the caller decides when to snapshot.  pNexts changes are intentionally
-  excluded here: a ring-link rewrite is an edge-local event that creates
-  a new ring edge to reprove, not a new fanout cone, so it is handled by
-  Cec_IncrMgrRingEdgeChanged at SRM emission time.]
+  since the last snapshot and stores them in vSeeds.  Does not update
+  the snapshot.
+
+  pNexts changes are intentionally excluded here: a ring-link rewrite is
+  an edge-local event that creates a new ring edge to reprove, not a new
+  fanout cone, so it is handled by Cec_IncrMgrRingEdgeChanged at SRM
+  emission time.]
 
   SideEffects []
 
@@ -231,7 +236,7 @@ int Cec_IncrMgrRingEdgeChanged( Cec_IncrMgr_t * p, int iPrev, int iObj )
 
   SideEffects []
 
-  SeeAlso     [Gia_ManCorrSpecReduce_Active]
+  SeeAlso     [Gia_ManCorrSpecReduce_Emit]
 
 ***********************************************************************/
 void Cec_IncrMgrCountActivePairs( Cec_IncrMgr_t * p, int fRings, int * pTfoMark,
@@ -287,12 +292,17 @@ void Cec_IncrMgrCountActivePairs( Cec_IncrMgr_t * p, int fRings, int * pTfoMark,
 
   Synopsis    [Forward TFO BFS from seeds across nFrames unrollings.]
 
-  Description [Marks pTfoMark[id]=1 for every AIG node reachable from
-  any seed within nFrames combinational+sequential steps.  Each frame
-  performs a combinational fanout BFS; RI fanouts cross to the next
-  frame by following Gia_ObjRiToRo to the corresponding register output.
-  After nFrames cross-frame jumps the search stops, since pairs deeper
-  than that cannot depend on the seeds within an nFrames-deep SRM.
+  Description [Marks pTfoMark[id]=1 for every SRM node reachable from
+  any seed within nFrames combinational+sequential steps.  Besides AIG
+  fanouts, the walk follows representative-to-member alias edges because
+  Gia_ManCorrSpecReduce_rec(member) uses repr(member) directly.  Missing
+  these edges can reuse an obsolete UNSAT result when a representative's
+  reduced value changes through another member's fanout cone.
+
+  Each frame performs a combinational fanout BFS; RI fanouts cross to the
+  next frame by following Gia_ObjRiToRo to the corresponding register
+  output.  After nFrames cross-frame jumps the search stops, since pairs
+  deeper than that cannot depend on the seeds within an nFrames-deep SRM.
 
   RI nodes themselves are intentionally not marked: SRM emission is
   keyed on AIG candidate nodes (ANDs and CIs) and never on COs, so
@@ -313,13 +323,24 @@ void Cec_IncrMgrComputeTfo( Cec_IncrMgr_t * p )
 {
     Gia_Man_t * pAig = p->pAig;
     int * pMark = p->pTfoMark;
-    int f, i, k, Id, FanId, RoId;
+    int f, i, k, Id, FanId, RoId, ReprId, AliasId;
 
     Vec_IntForEachEntry( p->vTfoNodes, Id, i )
         pMark[Id] = 0;
     Vec_IntClear( p->vTfoNodes );
     Vec_IntClear( p->vBfsCur );
     Vec_IntClear( p->vBfsNext );
+
+    Vec_IntFill( p->vAliasHeads, p->nObjs, -1 );
+    Vec_IntFill( p->vAliasNext,  p->nObjs, -1 );
+    for ( Id = 1; Id < p->nObjs; Id++ )
+    {
+        ReprId = Gia_ObjRepr( pAig, Id );
+        if ( ReprId <= 0 || ReprId == GIA_VOID )
+            continue;
+        Vec_IntWriteEntry( p->vAliasNext, Id, Vec_IntEntry(p->vAliasHeads, ReprId) );
+        Vec_IntWriteEntry( p->vAliasHeads, ReprId, Id );
+    }
 
     Vec_IntForEachEntry( p->vSeeds, Id, i )
     {
@@ -338,6 +359,16 @@ void Cec_IncrMgrComputeTfo( Cec_IncrMgr_t * p )
         {
             Gia_Obj_t * pFan;
             Id = Vec_IntEntry( p->vBfsCur, head++ );
+            for ( AliasId = Vec_IntEntry(p->vAliasHeads, Id);
+                  AliasId >= 0;
+                  AliasId = Vec_IntEntry(p->vAliasNext, AliasId) )
+            {
+                if ( pMark[AliasId] )
+                    continue;
+                pMark[AliasId] = 1;
+                Vec_IntPush( p->vTfoNodes, AliasId );
+                Vec_IntPush( p->vBfsCur, AliasId );
+            }
             int nFan = Gia_ObjFanoutNumId( pAig, Id );
             for ( k = 0; k < nFan; k++ )
             {
@@ -381,39 +412,37 @@ void Cec_IncrMgrComputeTfo( Cec_IncrMgr_t * p )
 
 /**Function*************************************************************
 
-  Synopsis    [Active-filter variant of Gia_ManCorrSpecReduce.]
+  Synopsis    [Emission-filtered variant of Gia_ManCorrSpecReduce.]
 
   Description [Identical to Gia_ManCorrSpecReduce in its SRM topology
-  and speculative reduction; the only difference is the PO emission
-  filter.  A candidate pair (a, b) is emitted iff pTfoMark[a] is set
-  or pTfoMark[b] is set, i.e. at least one endpoint lies in the TFO of
-  a recently-changed representative.  In ring mode, a ring edge that is
-  new or rewired since the last snapshot (Cec_IncrMgrRingEdgeChanged)
-  is also emitted even if neither endpoint is in the TFO -- the edge
-  has no prior UNSAT result to reuse and must be reproved on its own.
+  and speculative reduction; the only difference is PO emission.
+  CEC_EMIT_ACTIVE emits pairs selected by the incremental TFO filter.
+  CEC_EMIT_SKIPPED emits the exact complement for shadow validation.
+  A new or rewired ring edge is always active and can never be emitted
+  as skipped because it has no prior UNSAT result to reuse.
 
   Walking the full ring is required (rather than skipping unmarked
   members) so iPrev stays aligned with the live class order; the active
-  filter only suppresses the resulting PO when the edge is provably
-  not new and neither endpoint is reachable from a seed.  Passing
-  pTfoMark == NULL falls back to the unfiltered baseline behaviour.]
+  predicate is evaluated only after the edge endpoints are known.]
 
   SideEffects []
 
-  SeeAlso     [Gia_ManCorrSpecReduce]
+  SeeAlso     [Gia_ManCorrSpecReduce Cec_IncrMgrCountActivePairs]
 
 ***********************************************************************/
-Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr,
-                                          Vec_Int_t ** pvOutputs, int fRings,
-                                          int * pTfoMark, Cec_IncrMgr_t * pIncr )
+Gia_Man_t * Gia_ManCorrSpecReduce_Emit( Gia_Man_t * p, int nFrames, int fScorr,
+                                        Vec_Int_t ** pvOutputs, int fRings,
+                                        int * pTfoMark, Cec_IncrMgr_t * pIncr,
+                                        Cec_IncrEmitMode_t Mode, Vec_Int_t ** pvOutLits )
 {
     Gia_Man_t * pNew, * pTemp;
     Gia_Obj_t * pObj, * pRepr;
     Vec_Int_t * vXorLits;
-    int f, i, iPrev, iObj, iPrevNew, iObjNew;
+    int f, i, iPrev, iObj, iPrevNew, iObjNew, iPrevRaw, iObjRaw;
     assert( nFrames > 0 );
     assert( Gia_ManRegNum(p) > 0 );
     assert( p->pReprs != NULL );
+    assert( Mode == CEC_EMIT_ALL || pTfoMark != NULL );
     Vec_IntFill( &p->vCopies, (nFrames+fScorr)*Gia_ManObjNum(p), -1 );
     Gia_ManSetPhase( p );
     pNew = Gia_ManStart( nFrames * Gia_ManObjNum(p) );
@@ -433,6 +462,8 @@ Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr
             Gia_ObjSetCopyF( p, f, pObj, Gia_ManAppendCi(pNew) );
     }
     *pvOutputs = Vec_IntAlloc( 1000 );
+    if ( pvOutLits )
+        *pvOutLits = Vec_IntAlloc( 1000 );
     vXorLits = Vec_IntAlloc( 1000 );
     if ( fRings )
     {
@@ -440,14 +471,23 @@ Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr
         {
             if ( Gia_ObjIsConst( p, i ) )
             {
-                if ( pTfoMark && !pTfoMark[i] )
+                int fActive = pTfoMark != NULL && pTfoMark[i];
+                int fEmit = Mode == CEC_EMIT_ALL ||
+                            (Mode == CEC_EMIT_ACTIVE  &&  fActive) ||
+                            (Mode == CEC_EMIT_SKIPPED && !fActive);
+                if ( !fEmit )
                     continue;
-                iObjNew = Gia_ManCorrSpecReal( pNew, p, pObj, nFrames, 0 );
-                iObjNew = Abc_LitNotCond( iObjNew, Gia_ObjPhase(pObj) );
+                iObjRaw = Gia_ManCorrSpecReal( pNew, p, pObj, nFrames, 0 );
+                iObjNew = Abc_LitNotCond( iObjRaw, Gia_ObjPhase(pObj) );
                 if ( iObjNew != 0 )
                 {
                     Vec_IntPush( *pvOutputs, 0 );
                     Vec_IntPush( *pvOutputs, i );
+                    if ( pvOutLits )
+                    {
+                        Vec_IntPush( *pvOutLits, 0 );
+                        Vec_IntPush( *pvOutLits, iObjRaw );
+                    }
                     Vec_IntPush( vXorLits, iObjNew );
                 }
             }
@@ -459,18 +499,27 @@ Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr
                 iPrev = i;
                 Gia_ClassForEachObj1( p, i, iObj )
                 {
-                    int fEmit = (pTfoMark == NULL) || pTfoMark[iPrev] || pTfoMark[iObj] ||
-                                Cec_IncrMgrRingEdgeChanged( pIncr, iPrev, iObj );
+                    int fActive = pTfoMark != NULL &&
+                                  (pTfoMark[iPrev] || pTfoMark[iObj] ||
+                                   Cec_IncrMgrRingEdgeChanged( pIncr, iPrev, iObj ));
+                    int fEmit = Mode == CEC_EMIT_ALL ||
+                                (Mode == CEC_EMIT_ACTIVE  &&  fActive) ||
+                                (Mode == CEC_EMIT_SKIPPED && !fActive);
                     if ( fEmit )
                     {
-                        iPrevNew = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iPrev), nFrames, 0 );
-                        iObjNew  = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iObj), nFrames, 0 );
-                        iPrevNew = Abc_LitNotCond( iPrevNew, Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iPrev)) );
-                        iObjNew  = Abc_LitNotCond( iObjNew,  Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iObj)) );
+                        iPrevRaw = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iPrev), nFrames, 0 );
+                        iObjRaw  = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iObj), nFrames, 0 );
+                        iPrevNew = Abc_LitNotCond( iPrevRaw, Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iPrev)) );
+                        iObjNew  = Abc_LitNotCond( iObjRaw,  Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iObj)) );
                         if ( iPrevNew != iObjNew && iPrevNew != 0 && iObjNew != 1 )
                         {
                             Vec_IntPush( *pvOutputs, iPrev );
                             Vec_IntPush( *pvOutputs, iObj );
+                            if ( pvOutLits )
+                            {
+                                Vec_IntPush( *pvOutLits, iPrevRaw );
+                                Vec_IntPush( *pvOutLits, iObjRaw );
+                            }
                             Vec_IntPush( vXorLits, Gia_ManHashAnd(pNew, iPrevNew, Abc_LitNot(iObjNew)) );
                         }
                     }
@@ -479,18 +528,27 @@ Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr
                 // Closing edge tail -> head
                 iObj = i;
                 {
-                    int fEmit = (pTfoMark == NULL) || pTfoMark[iPrev] || pTfoMark[iObj] ||
-                                Cec_IncrMgrRingEdgeChanged( pIncr, iPrev, iObj );
+                    int fActive = pTfoMark != NULL &&
+                                  (pTfoMark[iPrev] || pTfoMark[iObj] ||
+                                   Cec_IncrMgrRingEdgeChanged( pIncr, iPrev, iObj ));
+                    int fEmit = Mode == CEC_EMIT_ALL ||
+                                (Mode == CEC_EMIT_ACTIVE  &&  fActive) ||
+                                (Mode == CEC_EMIT_SKIPPED && !fActive);
                     if ( fEmit )
                     {
-                        iPrevNew = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iPrev), nFrames, 0 );
-                        iObjNew  = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iObj), nFrames, 0 );
-                        iPrevNew = Abc_LitNotCond( iPrevNew, Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iPrev)) );
-                        iObjNew  = Abc_LitNotCond( iObjNew,  Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iObj)) );
+                        iPrevRaw = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iPrev), nFrames, 0 );
+                        iObjRaw  = Gia_ManCorrSpecReal( pNew, p, Gia_ManObj(p, iObj), nFrames, 0 );
+                        iPrevNew = Abc_LitNotCond( iPrevRaw, Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iPrev)) );
+                        iObjNew  = Abc_LitNotCond( iObjRaw,  Gia_ObjPhase(pObj) ^ Gia_ObjPhase(Gia_ManObj(p, iObj)) );
                         if ( iPrevNew != iObjNew && iPrevNew != 0 && iObjNew != 1 )
                         {
                             Vec_IntPush( *pvOutputs, iPrev );
                             Vec_IntPush( *pvOutputs, iObj );
+                            if ( pvOutLits )
+                            {
+                                Vec_IntPush( *pvOutLits, iPrevRaw );
+                                Vec_IntPush( *pvOutLits, iObjRaw );
+                            }
                             Vec_IntPush( vXorLits, Gia_ManHashAnd(pNew, iPrevNew, Abc_LitNot(iObjNew)) );
                         }
                     }
@@ -505,19 +563,28 @@ Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr
             pRepr = Gia_ObjReprObj( p, Gia_ObjId(p,pObj) );
             if ( pRepr == NULL )
                 continue;
-            if ( pTfoMark )
             {
                 int idR = Gia_ObjId(p, pRepr);
-                if ( !pTfoMark[i] && !pTfoMark[idR] )
+                int fActive = pTfoMark != NULL && (pTfoMark[i] || pTfoMark[idR]);
+                int fEmit = Mode == CEC_EMIT_ALL ||
+                            (Mode == CEC_EMIT_ACTIVE  &&  fActive) ||
+                            (Mode == CEC_EMIT_SKIPPED && !fActive);
+                if ( !fEmit )
                     continue;
             }
-            iPrevNew = Gia_ObjIsConst(p, i)? 0 : Gia_ManCorrSpecReal( pNew, p, pRepr, nFrames, 0 );
-            iObjNew  = Gia_ManCorrSpecReal( pNew, p, pObj, nFrames, 0 );
-            iObjNew  = Abc_LitNotCond( iObjNew, Gia_ObjPhase(pRepr) ^ Gia_ObjPhase(pObj) );
+            iPrevRaw = Gia_ObjIsConst(p, i)? 0 : Gia_ManCorrSpecReal( pNew, p, pRepr, nFrames, 0 );
+            iObjRaw  = Gia_ManCorrSpecReal( pNew, p, pObj, nFrames, 0 );
+            iPrevNew = iPrevRaw;
+            iObjNew  = Abc_LitNotCond( iObjRaw, Gia_ObjPhase(pRepr) ^ Gia_ObjPhase(pObj) );
             if ( iPrevNew != iObjNew )
             {
                 Vec_IntPush( *pvOutputs, Gia_ObjId(p, pRepr) );
                 Vec_IntPush( *pvOutputs, Gia_ObjId(p, pObj) );
+                if ( pvOutLits )
+                {
+                    Vec_IntPush( *pvOutLits, iPrevRaw );
+                    Vec_IntPush( *pvOutLits, iObjRaw );
+                }
                 Vec_IntPush( vXorLits, Gia_ManHashXor(pNew, iPrevNew, iObjNew) );
             }
         }
@@ -528,6 +595,8 @@ Gia_Man_t * Gia_ManCorrSpecReduce_Active( Gia_Man_t * p, int nFrames, int fScorr
     Gia_ManHashStop( pNew );
     Vec_IntErase( &p->vCopies );
     pNew = Gia_ManCleanup( pTemp = pNew );
+    if ( pvOutLits )
+        Gia_ManDupRemapLiterals( *pvOutLits, pTemp );
     Gia_ManStop( pTemp );
     return pNew;
 }
@@ -612,59 +681,6 @@ Gia_Man_t * Gia_ManCorrSpecReduceInit_Active( Gia_Man_t * p, int nFrames, int nP
     pNew = Gia_ManCleanup( pTemp = pNew );
     Gia_ManStop( pTemp );
     return pNew;
-}
-
-/**Function*************************************************************
-
-  Synopsis    [One-shot incremental decision for the refinement loop.]
-
-  Description [Computes seeds, runs the TFO BFS, counts active candidate
-  pairs, and applies the fallback heuristic.  Returns the TFO mask to
-  pass to the active SRM builder, or NULL when either (a) classes have
-  converged since the last snapshot (in which case *pfConverged is set
-  to 1 and the caller should break the refinement loop), or (b) the
-  active-pair ratio is high enough that the full SRM is cheaper.  The
-  out parameters pnReprSeeds / pnNextChanges / pnTotalPairs /
-  pnActivePairs are filled when non-NULL and are useful for verbose
-  printing and progress counters.  fUseRings tells the helper whether
-  to track pNexts changes; the BMC SRM is non-ring and passes 0.]
-
-  SideEffects []
-
-  SeeAlso     [Cec_IncrMgrComputeSeeds Cec_IncrMgrComputeTfo
-               Cec_IncrMgrCountActivePairs]
-
-***********************************************************************/
-int * Cec_IncrMgrDecideMask( Cec_IncrMgr_t * p, int fUseRings, int * pfConverged,
-                             int * pnReprSeeds, int * pnNextChanges,
-                             int * pnTotalPairs, int * pnActivePairs )
-{
-    int nReprSeeds, nNextChanges = 0, nTotalPairs = 0, nActivePairs = 0;
-    *pfConverged = 0;
-    nReprSeeds = Cec_IncrMgrComputeSeeds( p );
-    if ( fUseRings )
-        nNextChanges = Cec_IncrMgrCountNextChanges( p );
-    if ( pnReprSeeds )   *pnReprSeeds   = nReprSeeds;
-    if ( pnNextChanges ) *pnNextChanges = nNextChanges;
-    if ( nReprSeeds == 0 && nNextChanges == 0 )
-    {
-        *pfConverged = 1;
-        return NULL;
-    }
-    Cec_IncrMgrComputeTfo( p );
-    Cec_IncrMgrCountActivePairs( p, fUseRings, p->pTfoMark, &nTotalPairs, &nActivePairs );
-    if ( pnTotalPairs )  *pnTotalPairs  = nTotalPairs;
-    if ( pnActivePairs ) *pnActivePairs = nActivePairs;
-    if ( nActivePairs == 0 )
-    {
-        *pfConverged = 1;
-        return NULL;
-    }
-    // Above ~70% active pairs, the mask plus emission filter costs more
-    // than just rebuilding the full SRM.  Return NULL to signal fallback.
-    if ( nTotalPairs > 0 && (ABC_INT64_T)10 * nActivePairs > (ABC_INT64_T)7 * nTotalPairs )
-        return NULL;
-    return p->pTfoMark;
 }
 
 ABC_NAMESPACE_IMPL_END

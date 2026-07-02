@@ -6685,7 +6685,15 @@ SOURCE=.\src\proof\cec\cecCorr.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\proof\cec\cecCorrDyn.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\proof\cec\cecCorrIncr.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\cec\cecCorrIncrSim.c
 # End Source File
 # Begin Source File
 
