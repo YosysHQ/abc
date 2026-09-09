@@ -76,8 +76,6 @@ struct Res_Man_t_
 
 extern Hop_Obj_t * Kit_GraphToHop( Hop_Man_t * pMan, Kit_Graph_t * pGraph );
 
-extern abctime s_ResynTime;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -408,7 +406,6 @@ p->timeSatTotal = p->timeSatSat + p->timeSatUnsat + p->timeSatSim;
 p->timeTotal = Abc_Clock() - clkTotal;
     Res_ManFree( p );
 
-s_ResynTime += Abc_Clock() - clkTotal;
     // check the resulting network
     if ( !Abc_NtkCheck( pNtk ) )
     {
@@ -424,4 +421,3 @@ s_ResynTime += Abc_Clock() - clkTotal;
 
 
 ABC_NAMESPACE_IMPL_END
-

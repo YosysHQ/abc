@@ -205,7 +205,7 @@ int If_CutPerformCheck75__( If_Man_t * p, unsigned * pTruth, int nVars, int nLea
 {
     char pDsdStr[1000];
     int nSizeNonDec, nDecExists, nDecAndExists;
-    static int Counter = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
     Counter++;
     if ( nLeaves < 6 )
         return 1;
@@ -338,4 +338,3 @@ int If_CutPerformCheck75( If_Man_t * p, unsigned * pTruth0, int nVars, int nLeav
 
 
 ABC_NAMESPACE_IMPL_END
-

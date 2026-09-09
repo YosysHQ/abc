@@ -96,7 +96,7 @@ static char rcsid[] DD_UNUSED = "$Id: cuddExact.c,v 1.28 2009/02/19 16:19:19 fab
 #endif
 
 #ifdef DD_STATS
-static int ddTotalShuffles;
+static ABC_THREAD_LOCAL int ddTotalShuffles;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -1025,4 +1025,3 @@ checkSymmInfo(
 
 
 ABC_NAMESPACE_IMPL_END
-

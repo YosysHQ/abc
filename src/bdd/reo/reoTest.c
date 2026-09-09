@@ -108,10 +108,10 @@ printf( "Initial = %d. Final = %d.\n", Cudd_SharingSize(Funcs,nFuncs), Cudd_Shar
 ***********************************************************************/
 DdNode * Extra_ReorderCudd( DdManager * dd, DdNode * aFunc, int pPermuteReo[] )
 {
-    static DdManager * ddReorder = NULL;
-    static int * Permute     = NULL;
-    static int * PermuteReo1 = NULL;
-    static int * PermuteReo2 = NULL;
+    static ABC_THREAD_LOCAL DdManager * ddReorder = NULL;
+    static ABC_THREAD_LOCAL int * Permute     = NULL;
+    static ABC_THREAD_LOCAL int * PermuteReo1 = NULL;
+    static ABC_THREAD_LOCAL int * PermuteReo2 = NULL;
     DdNode * aFuncReorder, * aFuncNew;
     int lev, var;
 
@@ -179,7 +179,7 @@ printf( "Nodes before = %d.\n", Cudd_DagSize(aFuncReorder) );
 ***********************************************************************/
 int Extra_bddReorderTest( DdManager * dd, DdNode * bF )
 {
-    static DdManager * s_ddmin;
+    static ABC_THREAD_LOCAL DdManager * s_ddmin;
     DdNode * bFmin;
     int  nNodes;
 //    abctime clk1;
@@ -216,7 +216,7 @@ int Extra_bddReorderTest( DdManager * dd, DdNode * bF )
 ***********************************************************************/
 int Extra_addReorderTest( DdManager * dd, DdNode * aF )
 {
-    static DdManager * s_ddmin;
+    static ABC_THREAD_LOCAL DdManager * s_ddmin;
     DdNode * bF;
     DdNode * bFmin;
     DdNode * aFmin;
@@ -253,4 +253,3 @@ int Extra_addReorderTest( DdManager * dd, DdNode * aF )
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-

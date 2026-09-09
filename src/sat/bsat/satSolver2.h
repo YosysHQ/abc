@@ -120,6 +120,10 @@ struct sat_solver2_t
     int             nLearntDelta;   // delta of learned clause limit
     int             nLearntRatio;   // ratio percentage of learned clauses
     int             nDBreduces;     // number of DB reductions
+#ifdef USE_FLOAT_ACTIVITY2
+    abctime         timeActRescale; // runtime of clause activity rescaling
+#endif
+    abctime         timeReduceDb;   // runtime of DB reductions
     int             fNotUseRandom;  // do not allow random decisions with a fixed probability
     int             fSkipSimplify;  // set to one to skip simplification of the clause database
     int             fProofLogging;  // enable proof-logging

@@ -206,7 +206,7 @@ Vec_Int_t * Rnm_ManFilterSelected( Rnm_Man_t * p, Vec_Int_t * vOldPPis )
 ***********************************************************************/
 Vec_Int_t * Rnm_ManFilterSelectedNew( Rnm_Man_t * p, Vec_Int_t * vOldPPis )
 {
-    static int Counter = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
     int fVerbose = 0;
     Vec_Int_t * vNewPPis, * vFanins, * vFanins2;
     Gia_Obj_t * pObj, * pFanin, * pFanin2;
@@ -306,4 +306,3 @@ Vec_Int_t * Rnm_ManFilterSelectedNew( Rnm_Man_t * p, Vec_Int_t * vOldPPis )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -143,7 +143,7 @@ static inline int Bal_CutCreateUnit( Bal_Cut_t * p, int i, int Delay )
 }
 static inline int Bal_ManPrepareSet( Bal_Man_t * p, int iObj, int Index, int fUnit, Bal_Cut_t ** ppCutSet )
 {
-    static Bal_Cut_t CutTemp[3]; int i;
+    static ABC_THREAD_LOCAL Bal_Cut_t CutTemp[3]; int i;
     if ( Vec_PtrEntry(p->vCutSets, iObj) == NULL || fUnit )
         return Bal_CutCreateUnit( (*ppCutSet = CutTemp + Index), iObj, Bal_ObjDelay(p, iObj)+1 );
     *ppCutSet = (Bal_Cut_t *)Vec_PtrEntry(p->vCutSets, iObj);
@@ -979,4 +979,3 @@ Gia_Man_t * Gia_ManBalanceLut( Gia_Man_t * p, int nLutSize, int nCutNum, int fVe
 
 
 ABC_NAMESPACE_IMPL_END
-

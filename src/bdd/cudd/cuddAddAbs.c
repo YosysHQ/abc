@@ -89,7 +89,7 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddAddAbs.c,v 1.15 2004/08/13 18:04:45 fabio Exp $";
 #endif
 
-static  DdNode  *two;
+static ABC_THREAD_LOCAL DdNode *two;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -583,6 +583,5 @@ addCheckPositiveCube(
 
 
 ABC_NAMESPACE_IMPL_END
-
 
 

@@ -379,7 +379,7 @@ void Ssw_ManDumpEquivMiter( Aig_Man_t * p, Vec_Int_t * vPairs, int Num, int fAdd
 ***********************************************************************/
 int Ssw_ManSweep( Ssw_Man_t * p )
 {
-    static int Counter;
+    static ABC_THREAD_LOCAL int Counter;
     Bar_Progress_t * pProgress = NULL;
     Aig_Obj_t * pObj, * pObj2, * pObjNew;
     int nConstrPairs, i, f;

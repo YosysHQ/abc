@@ -661,7 +661,7 @@ static const char * Jsonc_GetPortName( Abc_Obj_t * pObj )
 }
 static const char * Jsonc_GetNodeOutName( Abc_Obj_t * pObj )
 {
-    static char Buffer[1024];
+    static ABC_THREAD_LOCAL char Buffer[1024];
     if ( Abc_ObjFanoutNum(pObj) )
     {
         Abc_Obj_t * pFan0 = Abc_ObjFanout0(pObj);

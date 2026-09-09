@@ -4123,10 +4123,6 @@ void Abc_NtkInterFast( Abc_Ntk_t * pNtkOn, Abc_Ntk_t * pNtkOff, int fVerbose )
     Aig_ManStop( pManOff );
 }
 
-abctime timeCnf;
-abctime timeSat;
-abctime timeInt;
-
 /**Function*************************************************************
 
   Synopsis    [Interplates two networks.]
@@ -4142,7 +4138,7 @@ Abc_Ntk_t * Abc_NtkInter( Abc_Ntk_t * pNtkOn, Abc_Ntk_t * pNtkOff, int fRelation
 {
     Abc_Ntk_t * pNtkOn1, * pNtkOff1, * pNtkInter1, * pNtkInter;
     Abc_Obj_t * pObj;
-    int i; //, clk = Abc_Clock();
+    int i;
     if ( Abc_NtkCoNum(pNtkOn) != Abc_NtkCoNum(pNtkOff) )
     {
         Abc_Print( 1, "Currently works only for networks with equal number of POs.\n" );
@@ -4159,9 +4155,6 @@ Abc_Ntk_t * Abc_NtkInter( Abc_Ntk_t * pNtkOn, Abc_Ntk_t * pNtkOff, int fRelation
     Abc_NtkForEachPi( pNtkOn, pObj, i )
         Abc_NtkDupObj( pNtkInter, pObj, 1 );
     // process each POs separately
-timeCnf = 0;
-timeSat = 0;
-timeInt = 0;
     Abc_NtkForEachCo( pNtkOn, pObj, i )
     {
         pNtkOn1 = Abc_NtkCreateCone( pNtkOn, Abc_ObjFanin0(pObj), Abc_ObjName(pObj), 1 );
@@ -4191,11 +4184,6 @@ timeInt = 0;
         Abc_NtkDelete( pNtkOn1 );
         Abc_NtkDelete( pNtkOff1 );
     }
-//    ABC_PRT( "CNF", timeCnf );
-//    ABC_PRT( "SAT", timeSat );
-//    ABC_PRT( "Int", timeInt );
-//    ABC_PRT( "Slow interpolation time", Abc_Clock() - clk );
-
     // return the network
     if ( !Abc_NtkCheck( pNtkInter ) )
         Abc_Print( 1, "Abc_NtkAttachBottom(): Network check has failed.\n" );

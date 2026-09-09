@@ -174,7 +174,7 @@ int Amap_LibertyPrintLiberty( Amap_Tree_t * p, char * pFileName )
 ***********************************************************************/
 char * Amap_LibertyTimeStamp()
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     char * TimeStamp;
     time_t ltime;
     // get the current time
@@ -346,7 +346,7 @@ int Amap_LibertyCellCountOutputs( Amap_Tree_t * p, Amap_Item_t * pCell )
 ***********************************************************************/
 char * Amap_LibertyGetString( Amap_Tree_t * p, Amap_Pair_t Pair )   
 { 
-    static char Buffer[ABC_MAX_LIB_STR_LEN]; 
+    static ABC_THREAD_LOCAL char Buffer[ABC_MAX_LIB_STR_LEN];
     assert( Pair.End-Pair.Beg < ABC_MAX_LIB_STR_LEN );
     strncpy( Buffer, p->pContents+Pair.Beg, Pair.End-Pair.Beg ); 
     Buffer[Pair.End-Pair.Beg] = 0;
@@ -366,7 +366,7 @@ char * Amap_LibertyGetString( Amap_Tree_t * p, Amap_Pair_t Pair )
 ***********************************************************************/
 char * Amap_LibertyGetStringFormula( Amap_Tree_t * p, Amap_Pair_t Pair )   
 { 
-    static char Buffer[ABC_MAX_LIB_STR_LEN]; 
+    static ABC_THREAD_LOCAL char Buffer[ABC_MAX_LIB_STR_LEN];
     assert( Pair.End-Pair.Beg-2 < ABC_MAX_LIB_STR_LEN );
     strncpy( Buffer, p->pContents+Pair.Beg+1, Pair.End-Pair.Beg-2 ); 
     Buffer[Pair.End-Pair.Beg-2] = 0;
@@ -1132,4 +1132,3 @@ Vec_Str_t * Amap_LibertyParseStr( char * pFileName, int fVerbose )
 
 
 ABC_NAMESPACE_IMPL_END
-

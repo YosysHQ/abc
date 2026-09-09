@@ -112,6 +112,7 @@ struct xSAT_Stats_t_
 
     iword nClauseLits;
     iword nLearntLits;
+    abctime timeReduceDb;
 };
 
 struct xSAT_Solver_t_

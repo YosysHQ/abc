@@ -174,7 +174,7 @@ void Nm_ManDeleteIdName( Nm_Man_t * p, int ObjId )
 ***********************************************************************/
 char * Nm_ManCreateUniqueName( Nm_Man_t * p, int ObjId )
 {
-    static char NameStr[1000];
+    static ABC_THREAD_LOCAL char NameStr[1000];
     Nm_Entry_t * pEntry;
     int i;
     if ( (pEntry = Nm_ManTableLookupId(p, ObjId)) )
@@ -275,4 +275,3 @@ Vec_Int_t * Nm_ManReturnNameIds( Nm_Man_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

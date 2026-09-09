@@ -907,7 +907,7 @@ void If_ManConfigPrint( unsigned char * pConfigData, int nLeaves )
 {
     unsigned char CellId = pConfigData[0];
     int i;
-    static int Count = 0;
+    static ABC_THREAD_LOCAL int Count = 0;
     printf( "[%4d] ", Count++ );  // Print instance number
     if ( CellId == 0 )
     {

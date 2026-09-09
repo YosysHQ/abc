@@ -27,7 +27,7 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-static char * Msat_TimeStamp();
+static void Msat_TimeStamp( char * Buffer );
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -119,6 +119,7 @@ void Msat_SolverWriteDimacs( Msat_Solver_t * p, char * pFileName )
 {
     FILE * pFile;
     Msat_Clause_t ** pClauses;
+    char Buffer[100];
     int nClauses, i;
 
     nClauses = Msat_ClauseVecReadSize(p->vClauses) + Msat_ClauseVecReadSize(p->vLearned);
@@ -126,7 +127,8 @@ void Msat_SolverWriteDimacs( Msat_Solver_t * p, char * pFileName )
         nClauses += ( p->pLevel[i] == 0 );
 
     pFile = fopen( pFileName, "wb" );
-    fprintf( pFile, "c Produced by Msat_SolverWriteDimacs() on %s\n", Msat_TimeStamp() );
+    Msat_TimeStamp( Buffer );
+    fprintf( pFile, "c Produced by Msat_SolverWriteDimacs() on %s\n", Buffer );
     fprintf( pFile, "p cnf %d %d\n", p->nVars, nClauses );
 
     nClauses = Msat_ClauseVecReadSize( p->vClauses );
@@ -160,17 +162,20 @@ void Msat_SolverWriteDimacs( Msat_Solver_t * p, char * pFileName )
   SeeAlso     []
 
 ***********************************************************************/
-char * Msat_TimeStamp()
+void Msat_TimeStamp( char * Buffer )
 {
-    static char Buffer[100];
     time_t ltime;
-    char * TimeStamp;
+    struct tm Time;
     // get the current time
     time( &ltime );
-    TimeStamp = asctime( localtime( &ltime ) );
-    TimeStamp[ strlen(TimeStamp) - 1 ] = 0;
-    strcpy( Buffer, TimeStamp );
-    return Buffer;
+#ifdef _MSC_VER
+    localtime_s( &Time, &ltime );
+#else
+    localtime_r( &ltime, &Time );
+#endif
+    strftime( Buffer, 100, "%a %b %d %H:%M:%S %Y", &Time );
+    if ( Buffer[8] == '0' )
+        Buffer[8] = ' ';
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -179,4 +184,3 @@ char * Msat_TimeStamp()
 
 
 ABC_NAMESPACE_IMPL_END
-

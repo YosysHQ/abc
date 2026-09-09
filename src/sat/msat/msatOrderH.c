@@ -58,8 +58,6 @@ static void Msat_HeapIncrease( Msat_Order_t * p, int n );
 static void Msat_HeapPercolateUp( Msat_Order_t * p, int i );
 static void Msat_HeapPercolateDown( Msat_Order_t * p, int i );
 
-extern abctime timeSelect;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -191,15 +189,12 @@ int Msat_OrderVarSelect( Msat_Order_t * p )
 //    return var_Undef;
 
     int Var;
-    abctime clk = Abc_Clock();
-
     while ( !HEMPTY(p) )
     {
         Var = Msat_HeapGetTop(p);
         if ( (p)->pSat->pAssigns[Var] == MSAT_VAR_UNASSIGNED )
         {
 //assert( Msat_OrderCheck(p) );
-timeSelect += Abc_Clock() - clk;
             return Var;
         }
     }
@@ -237,10 +232,8 @@ void Msat_OrderVarUnassigned( Msat_Order_t * p, int Var )
 //    if (!heap.inHeap(x))
 //        heap.insert(x);
 
-    abctime clk = Abc_Clock();
     if ( !HINHEAP(p,Var) )
         Msat_HeapInsert( p, Var );
-timeSelect += Abc_Clock() - clk;
 }
 
 /**Function*************************************************************
@@ -259,10 +252,8 @@ void Msat_OrderUpdate( Msat_Order_t * p, int Var )
 //    if (heap.inHeap(x))
 //        heap.increase(x);
 
-    abctime clk = Abc_Clock();
     if ( HINHEAP(p,Var) )
         Msat_HeapIncrease( p, Var );
-timeSelect += Abc_Clock() - clk;
 }
 
 
@@ -412,4 +403,3 @@ void Msat_HeapPercolateDown( Msat_Order_t * p, int i )
 
 
 ABC_NAMESPACE_IMPL_END
-

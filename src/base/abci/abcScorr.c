@@ -193,7 +193,7 @@ int Abc_NtkTestScorrWriteEquivConst( Abc_Ntk_t * pNetlist, Vec_Int_t * vId2Name,
 ***********************************************************************/
 char * Abc_NtkBmcFileName( char * pName )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     char * pNameGeneric = Extra_FileNameGeneric( pName );
     sprintf( Buffer, "%s_bmc%s", pNameGeneric, pName + strlen(pNameGeneric) );
     ABC_FREE( pNameGeneric );
@@ -481,4 +481,3 @@ Gia_Man_t * Cec_ManScorrCorrespondence( Gia_Man_t * p, Cec_ParCor_t * pCorPars )
 
 
 ABC_NAMESPACE_IMPL_END
-

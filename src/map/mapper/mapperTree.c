@@ -54,7 +54,7 @@ static const int s_MapFanoutLimits[10] = { 1/*0*/, 10/*1*/, 5/*2*/, 2/*3*/, 1/*4
 Map_Super_t * Map_LibraryReadGateTree( Map_SuperLib_t * pLib, char * pBuffer, int Number, int nVarsMax )
 {
     Map_Super_t * pGate;
-    char * pTemp;
+    char * pTemp, * pSave = NULL;
     int i, Num;
 
     // start and clean the gate
@@ -65,11 +65,11 @@ Map_Super_t * Map_LibraryReadGateTree( Map_SuperLib_t * pLib, char * pBuffer, in
     pGate->Num = Number;
 
     // read the mark
-    pTemp = strtok( pBuffer, " " );
+    pTemp = Abc_UtilStrtok( pBuffer, " ", &pSave );
     if ( pTemp[0] == '*' )
     {
         pGate->fSuper = 1;
-        pTemp = strtok( NULL, " " );
+        pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
     }
 
     // read the root gate
@@ -83,7 +83,7 @@ Map_Super_t * Map_LibraryReadGateTree( Map_SuperLib_t * pLib, char * pBuffer, in
     pGate->nFanLimit = s_MapFanoutLimits[ Mio_GateReadPinNum(pGate->pRoot) ];
 
     // read the pin-to-pin delay
-    for ( i = 0; ( pTemp = strtok( NULL, " \n\0" ) ); i++ )
+    for ( i = 0; ( pTemp = Abc_UtilStrtok( NULL, " \n\0", &pSave ) ); i++ )
     {
         if ( pTemp[0] == '#' )
             break;
@@ -117,7 +117,7 @@ Map_Super_t * Map_LibraryReadGateTree( Map_SuperLib_t * pLib, char * pBuffer, in
     if ( pTemp && pTemp[0] == '#' )
     {
         if ( pTemp[1] == 0 )
-            pTemp = strtok( NULL, " \n\0" );
+            pTemp = Abc_UtilStrtok( NULL, " \n\0", &pSave );
         else // skip spaces
             for ( pTemp++; *pTemp == ' '; pTemp++ );
         // save the formula
@@ -125,7 +125,7 @@ Map_Super_t * Map_LibraryReadGateTree( Map_SuperLib_t * pLib, char * pBuffer, in
         strcpy( pGate->pFormula, pTemp );
     }
     // check the rest of the string
-    pTemp = strtok( NULL, " \n\0" );
+    pTemp = Abc_UtilStrtok( NULL, " \n\0", &pSave );
     if ( pTemp != NULL )
         printf( "The following trailing symbols found \"%s\".\n", pTemp );
     return pGate;
@@ -393,7 +393,7 @@ int Map_LibraryReadFileTreeStr( Map_SuperLib_t * pLib, Mio_Library_t * pGenlib, 
     ProgressBar * pProgress;
     char pBuffer[5000];
     Map_Super_t * pGate;
-    char * pTemp = 0, * pLibName;
+    char * pTemp = 0, * pLibName, * pSave = NULL;
     int nCounter, k, i;
     int RetValue, nPos = 0;
 
@@ -411,7 +411,7 @@ int Map_LibraryReadFileTreeStr( Map_SuperLib_t * pLib, Mio_Library_t * pGenlib, 
             break;
     }
 
-    pLibName = strtok( pTemp, " \t\r\n" );
+    pLibName = Abc_UtilStrtok( pTemp, " \t\r\n", &pSave );
 //    pLib->pGenlib = (Mio_Library_t *)Abc_FrameReadLibGen();
     pLib->pGenlib = pGenlib;
 //    if ( pLib->pGenlib == NULL || strcmp( , pLibName ) )
@@ -1039,4 +1039,3 @@ void Map_LibraryPrintTree( Map_SuperLib_t * pLib )
 
 
 ABC_NAMESPACE_IMPL_END
-

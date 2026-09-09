@@ -28,6 +28,7 @@
 #include "misc/vec/vecHsh.h"
 #include "misc/util/utilTruth.h"
 #include "bool/rsb/rsb.h"
+#include "base/main/main.h"
 
 ABC_NAMESPACE_IMPL_START
 
@@ -47,7 +48,7 @@ struct Sdm_Dsd_t_
 
 #define DSD_CLASS_NUM 595
 
-static Sdm_Dsd_t s_DsdClass6[DSD_CLASS_NUM] = { 
+static const Sdm_Dsd_t s_DsdClass6[DSD_CLASS_NUM] = {
     { 0,  0,  1, ABC_CONST(0x0000000000000000), "0" },   //    0
     { 1,  0,  2, ABC_CONST(0xAAAAAAAAAAAAAAAA), "a" },   //    1
     { 2,  1,  3, ABC_CONST(0x8888888888888888), "(ab)" },   //    2
@@ -647,7 +648,7 @@ static Sdm_Dsd_t s_DsdClass6[DSD_CLASS_NUM] = {
 
 struct Sdm_Man_t_
 {
-    Sdm_Dsd_t *      pDsd6;                    // NPN class information
+    const Sdm_Dsd_t * pDsd6;                   // NPN class information
     Hsh_IntMan_t *   pHash;                    // maps DSD functions into NPN classes
     Vec_Int_t *      vConfgRes;                // configurations
     Vec_Wrd_t *      vPerm6;                   // permutations of DSD classes
@@ -1063,11 +1064,26 @@ void Sdm_ManFree( Sdm_Man_t * p )
   SeeAlso     []
 
 ***********************************************************************/
-static Sdm_Man_t * s_SdmMan = NULL;
+static ABC_THREAD_LOCAL Sdm_Man_t * s_SdmManStandalone = NULL;
+
+static Sdm_Man_t * Sdm_ManCurrent()
+{
+    return Abc_FrameReadGlobalFrame() ? (Sdm_Man_t *)Abc_FrameReadManSdm() : s_SdmManStandalone;
+}
+static void Sdm_ManSetCurrent( Sdm_Man_t * pMan )
+{
+    if ( Abc_FrameReadGlobalFrame() )
+        Abc_FrameSetManSdm( pMan );
+    else
+        s_SdmManStandalone = pMan;
+}
+
+#define s_SdmMan Sdm_ManCurrent()
+
 Sdm_Man_t * Sdm_ManRead()
 {
     if ( s_SdmMan == NULL )
-        s_SdmMan = Sdm_ManAlloc();
+        Sdm_ManSetCurrent( Sdm_ManAlloc() );
     memset( s_SdmMan->nCountDsd, 0, sizeof(int) * DSD_CLASS_NUM );
     return s_SdmMan;
 }
@@ -1075,7 +1091,7 @@ void Sdm_ManQuit()
 {
     if ( s_SdmMan != NULL )
         Sdm_ManFree( s_SdmMan );
-    s_SdmMan = NULL;
+    Sdm_ManSetCurrent( NULL );
 }
 int Sdm_ManCanRead()
 {
@@ -1268,4 +1284,3 @@ void Sdm_ManNodeGenTest()
 
 
 ABC_NAMESPACE_IMPL_END
-

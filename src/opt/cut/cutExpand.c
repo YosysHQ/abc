@@ -80,9 +80,9 @@ static inline unsigned Cut_TruthPhase( Cut_Cut_t * pCut, Cut_Cut_t * pCut1 )
 ***********************************************************************/
 void Cut_TruthCompose( Cut_Cut_t * pCutF, int Node, Cut_Cut_t * pCutT, Cut_Cut_t * pCutRes )
 {
-    static unsigned uCof0[1<<(CUT_CELL_MVAR-5)];
-    static unsigned uCof1[1<<(CUT_CELL_MVAR-5)];
-    static unsigned uTemp[1<<(CUT_CELL_MVAR-5)];
+    static ABC_THREAD_LOCAL unsigned uCof0[1<<(CUT_CELL_MVAR-5)];
+    static ABC_THREAD_LOCAL unsigned uCof1[1<<(CUT_CELL_MVAR-5)];
+    static ABC_THREAD_LOCAL unsigned uTemp[1<<(CUT_CELL_MVAR-5)];
     unsigned * pIn, * pOut, * pTemp;
     unsigned uPhase;
     int NodeIndex, i, k;
@@ -186,4 +186,3 @@ void Cut_TruthCompose( Cut_Cut_t * pCutF, int Node, Cut_Cut_t * pCutT, Cut_Cut_t
 
 
 ABC_NAMESPACE_IMPL_END
-

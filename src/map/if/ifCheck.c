@@ -143,10 +143,10 @@ int If_ManCutTruthCheck( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut, If_Obj_
 ***********************************************************************/
 void If_ManCutCheck( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut )
 {
-    static int nDecCalls    = 0;
-    static int nDecStruct   = 0;
-    static int nDecStruct2  = 0;
-    static int nDecFunction = 0;
+    static ABC_THREAD_LOCAL int nDecCalls    = 0;
+    static ABC_THREAD_LOCAL int nDecStruct   = 0;
+    static ABC_THREAD_LOCAL int nDecStruct2  = 0;
+    static ABC_THREAD_LOCAL int nDecFunction = 0;
     word * pTruths;
     If_Obj_t * pLeaf, * pPath;
     int i;
@@ -201,4 +201,3 @@ void If_ManCutCheck( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut )
 
 
 ABC_NAMESPACE_IMPL_END
-

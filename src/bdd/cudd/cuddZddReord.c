@@ -105,11 +105,11 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddZddReord.c,v 1.47 2004/08/13 18:04:53 fabio Exp $";
 #endif
 
-int     *zdd_entry;
+ABC_THREAD_LOCAL int *zdd_entry;
 
-int     zddTotalNumberSwapping;
+ABC_THREAD_LOCAL int zddTotalNumberSwapping;
 
-static  DdNode  *empty;
+static ABC_THREAD_LOCAL DdNode *empty;
 
 
 /*---------------------------------------------------------------------------*/
@@ -1448,7 +1448,7 @@ zddReorderPostprocess(
     DdNodePtr *nodelist, *oldnodelist;
     DdNode *node, *next;
     unsigned int slots, oldslots;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
 #ifdef DD_VERBOSE
@@ -1669,4 +1669,3 @@ zddFixTree(
 
 
 ABC_NAMESPACE_IMPL_END
-

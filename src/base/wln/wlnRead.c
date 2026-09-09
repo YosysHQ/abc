@@ -1904,7 +1904,7 @@ void Rtl_NtkBlastOperator( Gia_Man_t * pNew, Rtl_Ntk_t * p, int * pCell )
 }
 char * Rtl_ShortenName( char * pName, int nSize )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     if ( (int)strlen(pName) <= nSize )
         return pName;
     Buffer[0] = 0;
@@ -2945,4 +2945,3 @@ void Wln_LibMarkHierarchy( Rtl_Lib_t * p, char ** ppModule, int nModules, int fV
 
 
 ABC_NAMESPACE_IMPL_END
-

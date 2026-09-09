@@ -44,7 +44,7 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 char * Wln_ObjName( Wln_Ntk_t * p, int iObj )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     if ( Wln_NtkHasNameId(p) && Wln_ObjNameId(p, iObj) )
         return Abc_NamStr( p->pManName, Wln_ObjNameId(p, iObj) );
     sprintf( Buffer, "n%d", iObj );
@@ -148,4 +148,3 @@ void Wln_ObjPrint( Wln_Ntk_t * p, int iObj )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -90,8 +90,8 @@ void If_CutSortInputPins( If_Man_t * p, If_Cut_t * pCut, int * pPinPerm, float *
 ***********************************************************************/
 float If_CutDelay( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut )
 {
-    static int pPinPerm[IF_MAX_LUTSIZE];
-    static float pPinDelays[IF_MAX_LUTSIZE];
+    static ABC_THREAD_LOCAL int pPinPerm[IF_MAX_LUTSIZE];
+    static ABC_THREAD_LOCAL float pPinDelays[IF_MAX_LUTSIZE];
     char * pPerm = If_CutPerm( pCut );
     If_Obj_t * pLeaf;
     float Delay, DelayCur;
@@ -191,8 +191,8 @@ float If_CutDelay( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut )
 ***********************************************************************/
 void If_CutPropagateRequired( If_Man_t * p, If_Obj_t * pObj, If_Cut_t * pCut, float ObjRequired )
 {
-    static int pPinPerm[IF_MAX_LUTSIZE];
-    static float pPinDelays[IF_MAX_LUTSIZE];
+    static ABC_THREAD_LOCAL int pPinPerm[IF_MAX_LUTSIZE];
+    static ABC_THREAD_LOCAL float pPinDelays[IF_MAX_LUTSIZE];
     If_Obj_t * pLeaf;
     float * pLutDelays;
     float Required;

@@ -49,7 +49,8 @@ static void Ivy_NodeFindCutsMerge( Vec_Ptr_t * vCuts0, Vec_Ptr_t * vCuts1, Vec_P
 Ivy_Store_t * Ivy_NodeFindCutsTravAll( Ivy_Man_t * p, Ivy_Obj_t * pObj, int nLeaves, int nNodeLimit, 
                                       Vec_Ptr_t * vNodes, Vec_Ptr_t * vFront, Vec_Int_t * vStore, Vec_Vec_t * vBitCuts )
 {
-    static Ivy_Store_t CutStore, * pCutStore = &CutStore;
+    static ABC_THREAD_LOCAL Ivy_Store_t CutStore;
+    Ivy_Store_t * pCutStore = &CutStore;
     Vec_Ptr_t * vCuts, * vCuts0, * vCuts1;
     unsigned * pBitCut;
     Ivy_Obj_t * pLeaf;
@@ -475,4 +476,3 @@ void Ivy_ManTestCutsTravAll( Ivy_Man_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

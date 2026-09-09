@@ -552,7 +552,7 @@ int Cut_CellTableLookup( Cut_CMan_t * p, Cut_Cell_t * pCell )
 ***********************************************************************/
 void Cut_CellSuppMin( Cut_Cell_t * pCell )
 {
-    static unsigned uTemp[1<<(CUT_CELL_MVAR-5)];
+    static ABC_THREAD_LOCAL unsigned uTemp[1<<(CUT_CELL_MVAR-5)];
     unsigned * pIn, * pOut, * pTemp;
     int i, k, Counter, Temp;
 
@@ -595,8 +595,8 @@ void Cut_CellSuppMin( Cut_Cell_t * pCell )
 ***********************************************************************/
 void Cut_CellCrossBar( Cut_Cell_t * pCell )
 {
-    static unsigned uTemp0[1<<(CUT_CELL_MVAR-5)];
-    static unsigned uTemp1[1<<(CUT_CELL_MVAR-5)];
+    static ABC_THREAD_LOCAL unsigned uTemp0[1<<(CUT_CELL_MVAR-5)];
+    static ABC_THREAD_LOCAL unsigned uTemp1[1<<(CUT_CELL_MVAR-5)];
     Extra_TruthCopy( uTemp0, pCell->uTruth, pCell->nVars );
     Extra_TruthCopy( uTemp1, pCell->uTruth, pCell->nVars );
     if ( pCell->CanonPhase == 0 )
@@ -991,4 +991,3 @@ int Cut_CellTruthLookup( unsigned * pTruth, int nVars )
 
 
 ABC_NAMESPACE_IMPL_END
-

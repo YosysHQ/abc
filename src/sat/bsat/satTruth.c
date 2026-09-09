@@ -70,7 +70,7 @@ static inline Tru_One_t * Tru_ManReadOne( Tru_Man_t * p, int h ) { return h ? (T
   SeeAlso     []
 
 ***********************************************************************/
-static inline unsigned Tru_ManHash( word * pTruth, int nWords, int nBins, int * pPrimes )
+static inline unsigned Tru_ManHash( word * pTruth, int nWords, int nBins, const int * pPrimes )
 {
     int i;
     unsigned uHash = 0;
@@ -92,7 +92,7 @@ static inline unsigned Tru_ManHash( word * pTruth, int nWords, int nBins, int * 
 ***********************************************************************/
 int * Tru_ManLookup( Tru_Man_t * p, word * pTruth )
 {
-    static int s_Primes[10] = { 1291, 1699, 2357, 4177, 5147, 5647, 6343, 7103, 7873, 8147 };
+    static const int s_Primes[10] = { 1291, 1699, 2357, 4177, 5147, 5647, 6343, 7103, 7873, 8147 };
     Tru_One_t * pEntry;
     int * pSpot;
     assert( (pTruth[0] & 1) == 0 );
@@ -296,4 +296,3 @@ word * Tru_ManFunc( Tru_Man_t * p, int h )
 
 
 ABC_NAMESPACE_IMPL_END
-

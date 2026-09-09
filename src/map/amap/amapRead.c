@@ -188,17 +188,17 @@ void Amap_RemoveComments( char * pBuffer, int * pnDots, int * pnLines )
 Vec_Ptr_t * Amap_DeriveTokens( char * pBuffer )
 {
     Vec_Ptr_t * vTokens;
-    char * pToken;
+    char * pToken, * pSave = NULL;
     vTokens = Vec_PtrAlloc( 1000 );
-    pToken = strtok( pBuffer, " =\t\r\n" );
+    pToken = Abc_UtilStrtok( pBuffer, " =\t\r\n", &pSave );
     while ( pToken )
     {
         Vec_PtrPush( vTokens, pToken );
-        pToken = strtok( NULL, " =\t\r\n" );
+        pToken = Abc_UtilStrtok( NULL, " =\t\r\n", &pSave );
         // skip latches
         if ( pToken && strcmp( pToken, "LATCH" ) == 0 )
             while ( pToken && strcmp( pToken, "GATE" ) != 0 )
-                pToken = strtok( NULL, " =\t\r\n" );
+                pToken = Abc_UtilStrtok( NULL, " =\t\r\n", &pSave );
     }
     return vTokens;
 }
@@ -240,7 +240,7 @@ int Amap_ParseCountPins( Vec_Ptr_t * vTokens, int iPos )
 int Amap_GateCollectNames( Aig_MmFlex_t * pMem, char * pForm, char * pPinNames[] )
 {
     char Buffer[1000];
-    char * pTemp;
+    char * pTemp, * pSave = NULL;
     int nPins, i;
     // save the formula as it was
     strcpy( Buffer, pForm );
@@ -252,7 +252,7 @@ int Amap_GateCollectNames( Aig_MmFlex_t * pMem, char * pForm, char * pPinNames[]
             *pTemp = ' ';
     // save the names
     nPins = 0;
-    pTemp = strtok( Buffer, " " );
+    pTemp = Abc_UtilStrtok( Buffer, " ", &pSave );
     while ( pTemp )
     {
         for ( i = 0; i < nPins; i++ )
@@ -263,7 +263,7 @@ int Amap_GateCollectNames( Aig_MmFlex_t * pMem, char * pForm, char * pPinNames[]
             pPinNames[nPins++] = Amap_ParseStrsav( pMem, pTemp );
         }
         // get the next name
-        pTemp = strtok( NULL, " " );
+        pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
     }
     return nPins;
 }

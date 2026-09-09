@@ -1485,7 +1485,6 @@ int sat_solver3_simplify(sat_solver3* s)
 
 void sat_solver3_reducedb(sat_solver3* s)
 {
-    static abctime TimeTotal = 0;
     abctime clk = Abc_Clock();
     Sat_Mem_t * pMem = &s->Mem;
     int nLearnedOld = veci_size(&s->act_clas);
@@ -1592,12 +1591,12 @@ void sat_solver3_reducedb(sat_solver3* s)
     assert( Counter == (int)s->stats.learnts );
 
     // report the results
-    TimeTotal += Abc_Clock() - clk;
+    s->timeReduceDb += Abc_Clock() - clk;
     if ( s->fVerbose )
     {
     Abc_Print(1, "reduceDB: Keeping %7d out of %7d clauses (%5.2f %%)  ",
         s->stats.learnts, nLearnedOld, 100.0 * s->stats.learnts / nLearnedOld );
-    Abc_PrintTime( 1, "Time", TimeTotal );
+    Abc_PrintTime( 1, "Time", s->timeReduceDb );
     }
 }
 
@@ -1607,8 +1606,6 @@ void sat_solver3_rollback( sat_solver3* s )
 {
     Sat_Mem_t * pMem = &s->Mem;
     int i, k, j;
-    static int Count = 0;
-    Count++;
     assert( s->iVarPivot >= 0 && s->iVarPivot <= s->size );
     assert( s->iTrailPivot >= 0 && s->iTrailPivot <= s->qtail );
     // reset implication queue
@@ -2296,4 +2293,3 @@ int sat_solver3_nconflicts(sat_solver3* s)
 
 
 ABC_NAMESPACE_IMPL_END
-

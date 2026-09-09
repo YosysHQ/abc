@@ -44,7 +44,7 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 char * Dau_EnumLift( char * pName, int Shift )
 {
-    static char pBuffer[64];
+    static ABC_THREAD_LOCAL char pBuffer[64];
     char * pTemp;
     for ( pTemp = pBuffer; *pName; pTemp++, pName++ )
         *pTemp = (*pName >= 'a' && *pName <= 'z') ? *pName + Shift : *pName;
@@ -53,7 +53,7 @@ char * Dau_EnumLift( char * pName, int Shift )
 }
 char * Dau_EnumLift2( char * pName, int Shift )
 {
-    static char pBuffer[64];
+    static ABC_THREAD_LOCAL char pBuffer[64];
     char * pTemp;
     for ( pTemp = pBuffer; *pName; pTemp++, pName++ )
         *pTemp = (*pName >= 'a' && *pName <= 'z') ? *pName + Shift : *pName;
@@ -74,7 +74,7 @@ char * Dau_EnumLift2( char * pName, int Shift )
 ***********************************************************************/
 void Dau_EnumCombineTwo( Vec_Ptr_t * vOne, int fStar, int fXor, char * pName1, char * pName2, int Shift2, int fCompl1, int fCompl2 )
 {
-    static char pBuffer[256];
+    static ABC_THREAD_LOCAL char pBuffer[256];
     pName2 = Dau_EnumLift( pName2, Shift2 );
     sprintf( pBuffer, "%s%c%s%s%s%s%c", 
         fStar?"*":"", 
@@ -87,7 +87,7 @@ void Dau_EnumCombineTwo( Vec_Ptr_t * vOne, int fStar, int fXor, char * pName1, c
 }
 void Dau_EnumCombineThree( Vec_Ptr_t * vOne, int fStar, char * pNameC, char * pName1, char * pName2, int Shift1, int Shift2, int fComplC, int fCompl1, int fCompl2 )
 {
-    static char pBuffer[256];
+    static ABC_THREAD_LOCAL char pBuffer[256];
     pName1 = Dau_EnumLift( pName1, Shift1 );
     pName2 = Dau_EnumLift2( pName2, Shift2 );
     sprintf( pBuffer, "%s%c%s%s%s%s%s%s%c", 
@@ -250,4 +250,3 @@ void Dau_EnumTest()
 
 
 ABC_NAMESPACE_IMPL_END
-

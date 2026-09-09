@@ -339,7 +339,7 @@ Cudd_DelayedDerefBdd(
 #if 0
     if (table->nextDead == table->deathRowDepth) {
         if (table->deathRowDepth < table->looseUpTo / 2) {
-            extern void (*MMoutOfMemory)(long);
+            extern ABC_THREAD_LOCAL void (*MMoutOfMemory)(long);
             void (*saveHandler)(long) = MMoutOfMemory;
             DdNodePtr *newRow;
             MMoutOfMemory = Cudd_OutOfMem;
@@ -813,4 +813,3 @@ cuddTimesInDeathRow(
 
 
 ABC_NAMESPACE_IMPL_END
-

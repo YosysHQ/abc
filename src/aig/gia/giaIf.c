@@ -612,8 +612,8 @@ void Gia_ManPrintMappingStats( Gia_Man_t * p, char * pDumpFile )
     //return;
     if ( pDumpFile )
     {
-        static char FileNameOld[1000] = {0};
-        static abctime clk = 0;
+        static ABC_THREAD_LOCAL char FileNameOld[1000] = {0};
+        static ABC_THREAD_LOCAL abctime clk = 0;
         FILE * pTable = fopen( pDumpFile, "a+" );
         if ( strcmp( FileNameOld, p->pName ) )
         {
@@ -1371,7 +1371,7 @@ int Gia_ManFromIfLogicNode( void * pIfMan, Gia_Man_t * pNew, int iObj, Vec_Int_t
     {
         extern int If_CluMinimumBase( word * t, int * pSupp, int nVarsAll, int * pnVars );
 
-        static word TruthStore[16][1<<10] = {{0}}, * pTruths[16];
+        static ABC_THREAD_LOCAL word TruthStore[16][1<<10] = {{0}}, * pTruths[16];
         word Func0, Func1, Func2;
         char pLut0[32], pLut1[32], pLut2[32] = {0};
 
@@ -1911,7 +1911,7 @@ void Gia_ManFromIfGetConfig( Vec_Int_t * vConfigs, If_Man_t * pIfMan, If_Cut_t *
 ***********************************************************************/
 void Gia_ManConfigPrint( word Truth4, word z, int nLeaves )
 {
-    static int Count = 0;
+    static ABC_THREAD_LOCAL int Count = 0;
     int i;
     printf( "[%4d] Encoding (nLeaves=%d): ", Count++, nLeaves );
     // Simple LUT4 case (Truth4 != 0, z == 0)
@@ -2018,7 +2018,7 @@ void Gia_ManConfigPrint2( unsigned char * pConfigData, int nLeaves )
 {
     unsigned char CellId = pConfigData[0];
     int i;
-    static int Count = 0;
+    static ABC_THREAD_LOCAL int Count = 0;
     printf( "%6d : ", Count++ );  // Print instance number
     printf( "[Cell %d with %d leaves]  ", CellId, nLeaves );
     if ( CellId == 0 )

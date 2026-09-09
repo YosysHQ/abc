@@ -124,18 +124,34 @@ int Abc_TruthNpnCountUnique( Abc_TtStore_t * p )
   SeeAlso     []
 
 ***********************************************************************/
-int nWords = 0; // unfortunate global variable
-int Abc_TruthCompare( word ** p1, word ** p2 ) { return memcmp(*p1, *p2, sizeof(word) * nWords); }
+static void Abc_TruthSort_rec( word ** pFuncs, word ** pTemp, int nFuncs, int nWords )
+{
+    int i, k, m, nFuncs0;
+    if ( nFuncs < 2 )
+        return;
+    nFuncs0 = nFuncs / 2;
+    Abc_TruthSort_rec( pFuncs,           pTemp, nFuncs0,          nWords );
+    Abc_TruthSort_rec( pFuncs + nFuncs0, pTemp, nFuncs - nFuncs0, nWords );
+    for ( i = 0, k = nFuncs0, m = 0; i < nFuncs0 && k < nFuncs; m++ )
+        pTemp[m] = memcmp( pFuncs[i], pFuncs[k], sizeof(word) * nWords ) <= 0 ? pFuncs[i++] : pFuncs[k++];
+    while ( i < nFuncs0 )
+        pTemp[m++] = pFuncs[i++];
+    while ( k < nFuncs )
+        pTemp[m++] = pFuncs[k++];
+    memcpy( pFuncs, pTemp, sizeof(word *) * nFuncs );
+}
 int Abc_TruthNpnCountUniqueSort( Abc_TtStore_t * p )
 {
+    word ** pTemp;
     int i, k;
     // sort them by value
-    nWords = p->nWords;
-    assert( nWords > 0 );
-    qsort( (void *)p->pFuncs, (size_t)p->nFuncs, sizeof(word *), (int(*)(const void *,const void *))Abc_TruthCompare );
+    assert( p->nWords > 0 );
+    pTemp = ABC_ALLOC( word *, p->nFuncs );
+    Abc_TruthSort_rec( p->pFuncs, pTemp, p->nFuncs, p->nWords );
+    ABC_FREE( pTemp );
     // count the number of unqiue functions
     for ( i = k = 1; i < p->nFuncs; i++ )
-        if ( memcmp( p->pFuncs[i-1], p->pFuncs[i], sizeof(word) * nWords ) )
+        if ( memcmp( p->pFuncs[i-1], p->pFuncs[i], sizeof(word) * p->nWords ) )
             p->pFuncs[k++] = p->pFuncs[i];
     return (p->nFuncs = k);
 }
@@ -437,4 +453,3 @@ int Abc_NpnTest( char * pFileName, int NpnType, int nVarNum, int fDumpRes, int f
 
 
 ABC_NAMESPACE_IMPL_END
-

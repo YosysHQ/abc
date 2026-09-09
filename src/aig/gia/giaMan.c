@@ -572,8 +572,8 @@ void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
         printf( "\nXOR/MUX " ), Gia_ManPrintMuxStats( p );
     if ( pPars && pPars->fSwitch )
     {
-        static int nPiPo = 0;
-        static float PrevSwiTotal = 0;
+        static ABC_THREAD_LOCAL int nPiPo = 0;
+        static ABC_THREAD_LOCAL float PrevSwiTotal = 0;
         float SwiTotal = Gia_ManComputeSwitching( p, 48, 16, 0 );
         Abc_Print( 1, "  power =%8.1f", SwiTotal );
         if ( PrevSwiTotal > 0 && nPiPo == Gia_ManCiNum(p) + Gia_ManCoNum(p) )
@@ -1403,7 +1403,7 @@ int Gia_ManNameIsLegalInVerilog( char * pName )
 }
 char * Gia_ObjGetDumpName( Vec_Ptr_t * vNames, char c, int i, int d )
 {
-    static char pBuffer[10000];
+    static ABC_THREAD_LOCAL char pBuffer[10000];
     if ( vNames )
     {
         char * pName = (char *)Vec_PtrEntry(vNames, i);

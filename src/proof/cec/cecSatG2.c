@@ -1053,7 +1053,7 @@ void Cec4_ManPrintTfiConeStats( Gia_Man_t * p )
 }
 void Cec4_ManPrintStats( Gia_Man_t * p, Cec_ParFra_t * pPars, Cec4_Man_t * pMan, int fSim )
 {
-    static abctime clk = 0;
+    static ABC_THREAD_LOCAL abctime clk = 0;
     abctime clkThis = 0;
     int i, nLits, Counter = 0, Counter0 = 0, CounterX = 0;
     if ( !pPars->fVerbose )
@@ -4480,4 +4480,3 @@ Gia_Man_t * Cec_SimGenRun( Gia_Man_t * p, Cec_ParSimGen_t * pPars ){
 
 
 ABC_NAMESPACE_IMPL_END
-

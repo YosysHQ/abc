@@ -116,11 +116,10 @@ int Aig_ObjRequiredLevel( Aig_Man_t * p, Aig_Obj_t * pObj )
 ***********************************************************************/
 int Aig_ObjReverseLevelNew( Aig_Man_t * p, Aig_Obj_t * pObj )
 {
-    Aig_Obj_t * pFanout;
-    int i, iFanout = -1, LevelCur, Level = 0;
-    Aig_ObjForEachFanout( p, pObj, pFanout, iFanout, i )
+    int i, iFanout = -1, FanoutId, LevelCur, Level = 0;
+    Aig_ObjForEachFanoutId( p, pObj, FanoutId, iFanout, i )
     {
-        LevelCur = Aig_ObjReverseLevel( p, pFanout );
+        LevelCur = Vec_IntGetEntry( p->vLevelR, FanoutId );
         Level = Abc_MaxInt( Level, LevelCur );
     }
     return Level + 1;
@@ -250,6 +249,8 @@ void Aig_ManUpdateReverseLevel( Aig_Man_t * p, Aig_Obj_t * pObjNew )
     int LevelOld, LevFanin, Lev, k;
     assert( p->vLevelR != NULL );
     assert( Aig_ObjIsNode(pObjNew) );
+    // ensure reverse levels array is large enough for all objects
+    Vec_IntFillExtra( p->vLevelR, Aig_ManObjNumMax(p), 0 );
     // allocate level if needed
     if ( p->vLevels == NULL )
         p->vLevels = Vec_VecAlloc( Aig_ManLevels(p) + 8 );

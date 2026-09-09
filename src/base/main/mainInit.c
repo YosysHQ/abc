@@ -71,6 +71,8 @@ extern void Glucose2_Init( Abc_Frame_t *pAbc );
 extern void Glucose2_End( Abc_Frame_t * pAbc );
 extern void Ufar_Init(Abc_Frame_t *pAbc);
 
+// Initializers are registered during single-threaded process startup and are
+// immutable after the first frame is created.
 static Abc_FrameInitializer_t* s_InitializerStart = NULL;
 static Abc_FrameInitializer_t* s_InitializerEnd = NULL;
 

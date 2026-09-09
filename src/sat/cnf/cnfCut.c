@@ -294,7 +294,7 @@ void Cnf_CutInsertIthVar( Cnf_Cut_t * pCut, int iVar, int iFan )
 Cnf_Cut_t * Cnf_CutCompose( Cnf_Man_t * p, Cnf_Cut_t * pCut, Cnf_Cut_t * pCutFan, int iFan )
 {
     Cnf_Cut_t * pCutRes;
-    static int pFanins[32];
+    static ABC_THREAD_LOCAL int pFanins[32];
     unsigned * pTruth, * pTruthFan, * pTruthRes;
     unsigned * pTop = p->pTruths[0], * pFan = p->pTruths[2], * pTemp = p->pTruths[3];
     unsigned uPhase, uPhaseFan;
@@ -373,4 +373,3 @@ Cnf_Cut_t * Cnf_CutCompose( Cnf_Man_t * p, Cnf_Cut_t * pCut, Cnf_Cut_t * pCutFan
 
 
 ABC_NAMESPACE_IMPL_END
-

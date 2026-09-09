@@ -1018,7 +1018,7 @@ finish:
 ***********************************************************************/
 char * Smt_PrsGenName( Smt_Prs_t * p )
 {
-    static char Buffer[16];
+    static ABC_THREAD_LOCAL char Buffer[16];
     sprintf( Buffer, "_%0*X_", p->nDigits, ++p->NameCount );
     return Buffer;
 }

@@ -30,7 +30,7 @@
 
 ABC_NAMESPACE_IMPL_START
 
-xSAT_SolverOptions_t DefaultConfig =
+static const xSAT_SolverOptions_t DefaultConfig =
 {
     1,     //.fVerbose = 1,
 

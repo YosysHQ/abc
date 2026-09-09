@@ -931,7 +931,7 @@ cuddCacheResize(
     unsigned int slots, oldslots;
     double offset;
     int moved = 0;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 #ifndef DD_CACHE_PROFILE
     ptruint misalignment;
@@ -1097,4 +1097,3 @@ cuddComputeFloorLog2(
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -191,7 +191,7 @@ int Abc_ResCheckUnique( char Pats[], int nPats, int pat )
 ***********************************************************************/
 int Abc_ResCheckNonStrict( char Pattern[], int nVars, int nBits )
 {
-    static char Pat0[256], Pat1[256];
+    static ABC_THREAD_LOCAL char Pat0[256], Pat1[256];
     int v, m, nPats0, nPats1, nNumber = (1 << (nBits - 1));
     int Result = 0;
     for ( v = 0; v < nVars; v++ )
@@ -237,7 +237,7 @@ int Abc_ResCheckNonStrict( char Pattern[], int nVars, int nBits )
 ***********************************************************************/
 int Abc_ResCofCount( DdManager * dd, DdNode * bFunc, unsigned uMask, int * pCheck )
 {
-    static char Pattern[256];
+    static ABC_THREAD_LOCAL char Pattern[256];
     DdNode * pbVars[32];
     Vec_Ptr_t * vCofs;
     DdNode * bCof, * bCube, * bTemp;
@@ -1058,5 +1058,4 @@ ABC_NAMESPACE_IMPL_END
 ////////////////////////////////////////////////////////////////////////
 ///                       END OF FILE                                ///
 ////////////////////////////////////////////////////////////////////////
-
 

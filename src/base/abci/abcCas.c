@@ -160,23 +160,33 @@ void Abc_LutBddTestPrint( DdManager * dd, Vec_Ptr_t * vNodes, Vec_Wrd_t * vMasks
     }
 }
 
-DdManager * s_ddd = NULL;
-int Abc_LutBddCompare( DdNode ** pp1, DdNode ** pp2 )
+static void Abc_LutBddSort_rec( DdManager * dd, DdNode ** pNodes, DdNode ** pTemp, int nNodes )
 {
-    DdNode * pObj1 = *pp1;
-    DdNode * pObj2 = *pp2;
-    return Cudd_ReadPerm(s_ddd, pObj1->index) - Cudd_ReadPerm(s_ddd, pObj2->index);
+    int i, k, m, nNodes0;
+    if ( nNodes < 2 )
+        return;
+    nNodes0 = nNodes / 2;
+    Abc_LutBddSort_rec( dd, pNodes,           pTemp, nNodes0 );
+    Abc_LutBddSort_rec( dd, pNodes + nNodes0, pTemp, nNodes - nNodes0 );
+    for ( i = 0, k = nNodes0, m = 0; i < nNodes0 && k < nNodes; m++ )
+        pTemp[m] = Cudd_ReadPerm(dd, pNodes[i]->index) <= Cudd_ReadPerm(dd, pNodes[k]->index) ? pNodes[i++] : pNodes[k++];
+    while ( i < nNodes0 )
+        pTemp[m++] = pNodes[i++];
+    while ( k < nNodes )
+        pTemp[m++] = pNodes[k++];
+    memcpy( pNodes, pTemp, sizeof(DdNode *) * nNodes );
 }
 void Abc_LutBddTest( DdManager * dd, DdNode * bFunc, char ** ppNames, int nNames, int nVars )
 {
     DdGen *gen; DdNode *node;
     Vec_Ptr_t * vNodes = Vec_PtrAlloc( 100 );
+    DdNode ** pTemp;
     Cudd_ForeachNode(dd,bFunc,gen,node) 
         Vec_PtrPush( vNodes, node );
 
-    s_ddd = dd;
-    Vec_PtrSort( vNodes, (int (*)(const void *, const void *))Abc_LutBddCompare );  
-    s_ddd = NULL;
+    pTemp = ABC_ALLOC( DdNode *, Vec_PtrSize(vNodes) );
+    Abc_LutBddSort_rec( dd, (DdNode **)Vec_PtrArray(vNodes), pTemp, Vec_PtrSize(vNodes) );
+    ABC_FREE( pTemp );
 
     int i, k, f;
     Vec_Int_t * vLevels = Vec_IntAlloc( Vec_PtrSize(vNodes) );

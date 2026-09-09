@@ -113,6 +113,12 @@ ifndef ABC_USE_NO_PTHREADS
   $(call abc_info,$(MSG_PREFIX)Using pthreads)
 endif
 
+# whether to compile without thread-local frame selection
+ifdef ABC_USE_NO_THREAD_LOCAL
+  CFLAGS += -DABC_USE_NO_THREAD_LOCAL=1
+  $(call abc_info,$(MSG_PREFIX)Disabling thread-local frame selection)
+endif
+
 # whether to compile into position independent code
 ifdef ABC_USE_PIC
   CFLAGS += -fPIC

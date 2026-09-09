@@ -150,10 +150,10 @@ typedef struct TlClause TlClause;
 static char rcsid[] DD_UNUSED = "$Id: cuddEssent.c,v 1.24 2009/02/21 18:24:10 fabio Exp $";
 #endif
 
-static BitVector *Tolv;
-static BitVector *Tolp;
-static BitVector *Eolv;
-static BitVector *Eolp;
+static ABC_THREAD_LOCAL BitVector *Tolv;
+static ABC_THREAD_LOCAL BitVector *Tolp;
+static ABC_THREAD_LOCAL BitVector *Eolv;
+static ABC_THREAD_LOCAL BitVector *Eolp;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -1472,4 +1472,3 @@ tlcInfoAlloc(void)
 
 
 ABC_NAMESPACE_IMPL_END
-

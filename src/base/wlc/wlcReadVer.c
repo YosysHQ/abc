@@ -381,7 +381,7 @@ char * Wlc_PrsStrtok( char * s, const char * delim )
   const char *spanp;
   int c, sc;
   char *tok;
-  static char *last;
+  static ABC_THREAD_LOCAL char *last;
   if (s == NULL && (s = last) == NULL)
       return NULL;
   // skip leading delimiters
@@ -547,7 +547,7 @@ static inline char * Wlc_PrsFindWord( char * pStr, char * pWord, int * fFound )
 }
 static inline char * Wlc_PrsFindName( char * pStr, char ** ppPlace )
 {
-    static char Buffer[WLV_PRS_MAX_LINE];
+    static ABC_THREAD_LOCAL char Buffer[WLV_PRS_MAX_LINE];
     char * pThis = *ppPlace = Buffer;
     int fNotName = 1, Count = 0;
     pStr = Wlc_PrsSkipSpaces( pStr );
@@ -1769,4 +1769,3 @@ void Io_ReadWordTest( char * pFileName )
 
 
 ABC_NAMESPACE_IMPL_END
-

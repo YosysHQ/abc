@@ -34,8 +34,8 @@ ABC_NAMESPACE_IMPL_START
 static Mio_Library_t * Mio_LibraryReadOne( char * FileName, int fExtendedFormat, st__table * tExcludeGate, int nFaninLimit, int fVerbose );
        Mio_Library_t * Mio_LibraryReadBuffer( char * pBuffer, int fExtendedFormat, st__table * tExcludeGate, int nFaninLimit, int fVerbose );
 static int             Mio_LibraryReadInternal( Mio_Library_t * pLib, char * pBuffer, int fExtendedFormat, st__table * tExcludeGate, int nFaninLimit, int fVerbose );
-static Mio_Gate_t *    Mio_LibraryReadGate( char ** ppToken, int fExtendedFormat );
-static Mio_Pin_t *     Mio_LibraryReadPin( char ** ppToken, int fExtendedFormat );
+static Mio_Gate_t *    Mio_LibraryReadGate( char ** ppToken, char ** ppSave, int fExtendedFormat );
+static Mio_Pin_t *     Mio_LibraryReadPin( char ** ppToken, char ** ppSave, int fExtendedFormat );
 static char *          chomp( char *s );
 static void            Mio_LibraryDetectSpecialGates( Mio_Library_t * pLib );
 static void            Io_ReadFileRemoveComments( char * pBuffer, int * pnDots, int * pnLines );
@@ -229,7 +229,7 @@ Mio_Library_t * Mio_LibraryReadOne( char * FileName, int fExtendedFormat, st__ta
 int Mio_LibraryReadInternal( Mio_Library_t * pLib, char * pBuffer, int fExtendedFormat, st__table * tExcludeGate, int nFaninLimit, int fVerbose )
 {
     Mio_Gate_t * pGate, ** ppGate;
-    char * pToken;
+    char * pToken, * pSave = NULL;
     int nGates = 0;
     int nDel = 0;
 
@@ -238,7 +238,7 @@ int Mio_LibraryReadInternal( Mio_Library_t * pLib, char * pBuffer, int fExtended
     ppGate = &pLib->pGates;
 
     // read gates one by one
-    pToken = strtok( pBuffer, " \t\r\n" );
+    pToken = Abc_UtilStrtok( pBuffer, " \t\r\n", &pSave );
     while ( pToken && (strcmp( pToken, MIO_STRING_GATE ) == 0 || strcmp( pToken, MIO_STRING_LATCH ) == 0) )
     {
         // skip latches
@@ -248,18 +248,18 @@ int Mio_LibraryReadInternal( Mio_Library_t * pLib, char * pBuffer, int fExtended
             {
                 if ( strcmp( pToken, MIO_STRING_LATCH ) == 0 )
                 {
-                    pToken = strtok( NULL, " \t\r\n" );
+                    pToken = Abc_UtilStrtok( NULL, " \t\r\n", &pSave );
                     printf( "Skipping latch \"%s\"...\n", pToken );
                     continue;
                 }
-                pToken = strtok( NULL, " \t\r\n" );
+                pToken = Abc_UtilStrtok( NULL, " \t\r\n", &pSave );
             }
             if ( !(pToken && strcmp( pToken, MIO_STRING_GATE ) == 0) )
                 break;
         }
 
         // derive the next gate
-        pGate = Mio_LibraryReadGate( &pToken, fExtendedFormat );
+        pGate = Mio_LibraryReadGate( &pToken, &pSave, fExtendedFormat );
         if ( pGate == NULL )
             return 1;
 
@@ -370,7 +370,7 @@ char * Mio_LibraryCleanStr( char * p )
     return pRes;
 }
 
-Mio_Gate_t * Mio_LibraryReadGate( char ** ppToken, int fExtendedFormat )
+Mio_Gate_t * Mio_LibraryReadGate( char ** ppToken, char ** ppSave, int fExtendedFormat )
 {
     Mio_Gate_t * pGate;
     Mio_Pin_t * pPin, ** ppPin;
@@ -381,21 +381,21 @@ Mio_Gate_t * Mio_LibraryReadGate( char ** ppToken, int fExtendedFormat )
     pGate->Cell = -1;
 
     // read the name
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pGate->pName = Abc_UtilStrsav( pToken );
 
     // read the area
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pGate->dArea = atof( pToken );
 
     // read the formula
 
     // first the output name
-    pToken = strtok( NULL, "=" );
+    pToken = Abc_UtilStrtok( NULL, "=", ppSave );
     pGate->pOutName = chomp( pToken );
 
     // then rest of the expression 
-    pToken = strtok( NULL, ";" );
+    pToken = Abc_UtilStrtok( NULL, ";", ppSave );
 //    pGate->pForm = Mio_LibraryCleanStr( pToken );
     pGate->pForm = Abc_UtilStrsav( pToken );
 
@@ -405,11 +405,11 @@ Mio_Gate_t * Mio_LibraryReadGate( char ** ppToken, int fExtendedFormat )
     ppPin = &pGate->pPins;
 
     // read gates one by one
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     while ( pToken && strcmp( pToken, MIO_STRING_PIN ) == 0 )
     {
         // derive the next gate
-        pPin = Mio_LibraryReadPin( &pToken, fExtendedFormat );
+        pPin = Mio_LibraryReadPin( &pToken, ppSave, fExtendedFormat );
         if ( pPin == NULL )
         {
             Mio_GateDelete( pGate );
@@ -420,7 +420,7 @@ Mio_Gate_t * Mio_LibraryReadGate( char ** ppToken, int fExtendedFormat )
         *ppPin = pPin;
         ppPin  = &pPin->pNext;
         // get the next token
-        pToken = strtok( NULL, " \t\r\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     }
 
     *ppToken = pToken;
@@ -440,7 +440,7 @@ Mio_Gate_t * Mio_LibraryReadGate( char ** ppToken, int fExtendedFormat )
   SeeAlso     []
 
 ***********************************************************************/
-Mio_Pin_t * Mio_LibraryReadPin( char ** ppToken, int fExtendedFormat )
+Mio_Pin_t * Mio_LibraryReadPin( char ** ppToken, char ** ppSave, int fExtendedFormat )
 {
     Mio_Pin_t * pPin;
     char * pToken = *ppToken;
@@ -449,11 +449,11 @@ Mio_Pin_t * Mio_LibraryReadPin( char ** ppToken, int fExtendedFormat )
     pPin = ABC_CALLOC( Mio_Pin_t, 1 );
 
     // read the name
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->pName = Abc_UtilStrsav( pToken );
 
     // read the pin phase
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     if ( strcmp( pToken, MIO_STRING_UNKNOWN ) == 0 )
         pPin->Phase = MIO_PHASE_UNKNOWN;
     else if ( strcmp( pToken, MIO_STRING_INV ) == 0 )
@@ -468,22 +468,22 @@ Mio_Pin_t * Mio_LibraryReadPin( char ** ppToken, int fExtendedFormat )
         return NULL;
     }
 
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->dLoadInput = atof( pToken );
 
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->dLoadMax = atof( pToken );
 
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->dDelayBlockRise = atof( pToken );
 
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->dDelayFanoutRise = atof( pToken );
 
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->dDelayBlockFall = atof( pToken );
 
-    pToken = strtok( NULL, " \t\r\n" );
+    pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     pPin->dDelayFanoutFall = atof( pToken );
 
     if ( fExtendedFormat )
@@ -494,11 +494,11 @@ Mio_Pin_t * Mio_LibraryReadPin( char ** ppToken, int fExtendedFormat )
 
         pPin->dDelayBlockFall  = pPin->dDelayFanoutFall;
 
-        pToken = strtok( NULL, " \t" );
+        pToken = Abc_UtilStrtok( NULL, " \t", ppSave );
         pPin->dDelayFanoutFall = atof( pToken );
 
         /* last field is ignored */
-        pToken = strtok( NULL, " \t\r\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\r\n", ppSave );
     }
 
     if ( pPin->dDelayBlockRise > pPin->dDelayBlockFall )
@@ -802,4 +802,3 @@ void Io_ReadFileRemoveComments( char * pBuffer, int * pnDots, int * pnLines )
 
 
 ABC_NAMESPACE_IMPL_END
-

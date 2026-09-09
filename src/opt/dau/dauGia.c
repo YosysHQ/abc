@@ -32,9 +32,9 @@ extern int Kit_TruthToGia( Gia_Man_t * pMan, unsigned * pTruth, int nVars, Vec_I
 
 #define DAU_DSD_MAX_VAR 12
 
-static int m_Calls = 0;
-static int m_NonDsd = 0;
-static int m_Non1Step = 0;
+static ABC_THREAD_LOCAL int m_Calls = 0;
+static ABC_THREAD_LOCAL int m_NonDsd = 0;
+static ABC_THREAD_LOCAL int m_Non1Step = 0;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -576,4 +576,3 @@ void * Dsm_ManDeriveGia( void * pGia, int fUseMuxes )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -100,7 +100,7 @@ static int IoCommandWriteMMGia  ( Abc_Frame_t * pAbc, int argc, char **argv );
 
 extern void Abc_FrameCopyLTLDataBase( Abc_Frame_t *pAbc, Abc_Ntk_t * pNtk );
 
-extern int glo_fMapped;
+extern ABC_THREAD_LOCAL int glo_fMapped;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///

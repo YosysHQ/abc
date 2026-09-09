@@ -53,8 +53,6 @@ struct Abc_ManScl_t_
     unsigned **        uCofs;       // truth tables of the cofactors
 };
 
-static Vec_Ptr_t * s_pLeaves = NULL;
-
 static Cut_Man_t * Abc_NtkStartCutManForScl( Abc_Ntk_t * pNtk, int nLutSize );
 static Abc_ManScl_t * Abc_ManSclStart( int nLutSize, int nCutSizeMax, int nNodesMax );
 static void Abc_ManSclStop( Abc_ManScl_t * p );
@@ -114,7 +112,6 @@ int Abc_NtkSuperChoiceLut( Abc_Ntk_t * pNtk, int nLutSize, int nCutSizeMax, int 
     pManScl = Abc_ManSclStart( nLutSize, nCutSizeMax, 1000 );
     pManCuts = Abc_NtkStartCutManForScl( pNtk, nLutSize );
     pManCut = Abc_NtkManCutStart( nCutSizeMax, 100000, 100000, 100000 );
-    s_pLeaves = Abc_NtkManCutReadCutSmall( pManCut );
     pManScl->vVolume = Abc_NtkManCutReadVisited( pManCut );
 
     // process each internal node (assuming topological order of nodes!!!)
@@ -248,7 +245,8 @@ void Abc_NodeLutMap( Cut_Man_t * pManCuts, Abc_Obj_t * pObj )
 ***********************************************************************/
 Cut_Man_t * Abc_NtkStartCutManForScl( Abc_Ntk_t * pNtk, int nLutSize )
 {
-    static Cut_Params_t Params, * pParams = &Params;
+    static ABC_THREAD_LOCAL Cut_Params_t Params;
+    Cut_Params_t * pParams = &Params;
     Cut_Man_t * pManCut;
     Abc_Obj_t * pObj;
     int i;
@@ -589,29 +587,6 @@ Abc_Obj_t * Abc_NodeSuperChoiceLut( Abc_ManScl_t * p, Abc_Obj_t * pObj )
 
 /**Function*************************************************************
 
-  Synopsis    [Procedure used for sorting the nodes in increasing order of levels.]
-
-  Description []
-               
-  SideEffects []
-
-  SeeAlso     []
-
-***********************************************************************/
-int Abc_NodeCompareLevelsInc( int * pp1, int * pp2 )
-{
-    Abc_Obj_t * pNode1, * pNode2;
-    pNode1 = (Abc_Obj_t *)Vec_PtrEntry(s_pLeaves, *pp1);
-    pNode2 = (Abc_Obj_t *)Vec_PtrEntry(s_pLeaves, *pp2);
-    if ( pNode1->Level < pNode2->Level )
-        return -1;
-    if ( pNode1->Level > pNode2->Level ) 
-        return 1;
-    return 0; 
-}
-
-/**Function*************************************************************
-
   Synopsis    [Selects the earliest arriving nodes from the array.]
 
   Description []
@@ -664,8 +639,8 @@ void Abc_NodeDecomposeSort( Abc_Obj_t ** pLeaves, int nVars, int * pBSet, int nL
 ***********************************************************************/
 int Abc_NodeDecomposeStep( Abc_ManScl_t * p )
 {
-    static char pCofClasses[1<<SCL_LUT_MAX][1<<SCL_LUT_MAX];
-    static char nCofClasses[1<<SCL_LUT_MAX];
+    char pCofClasses[1<<SCL_LUT_MAX][1<<SCL_LUT_MAX];
+    char nCofClasses[1<<SCL_LUT_MAX];
     Abc_Ntk_t * pNtk;
     Abc_Obj_t * pObjNew, * pFanin, * pNodesNew[SCL_LUT_MAX];
     unsigned * pTruthCof, * pTruthClass, * pTruth, uPhase;
@@ -794,7 +769,7 @@ int Abc_NodeDecomposeStep( Abc_ManScl_t * p )
   SeeAlso     []
 
 ***********************************************************************/
-static word s__Truths6[6] = {
+static const word s__Truths6[6] = {
     ABC_CONST(0xAAAAAAAAAAAAAAAA),
     ABC_CONST(0xCCCCCCCCCCCCCCCC),
     ABC_CONST(0xF0F0F0F0F0F0F0F0),
@@ -948,6 +923,4 @@ Abc_Ntk_t * Abc_NtkSpecialMapping( Abc_Ntk_t * pNtk, int fVerbose )
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-
-
 

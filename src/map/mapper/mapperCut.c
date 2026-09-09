@@ -1085,8 +1085,8 @@ Map_Cut_t * Map_CutArray2List( Map_Cut_t ** pArray, int nCuts )
 ***********************************************************************/
 unsigned Map_CutComputeTruth( Map_Man_t * p, Map_Cut_t * pCut, Map_Cut_t * pTemp0, Map_Cut_t * pTemp1, int fComp0, int fComp1 )
 {
-    static unsigned ** pPerms53 = NULL;
-    static unsigned ** pPerms54 = NULL;
+    static ABC_THREAD_LOCAL unsigned ** pPerms53 = NULL;
+    static ABC_THREAD_LOCAL unsigned ** pPerms54 = NULL;
 
     unsigned uPhase, uTruth, uTruth0, uTruth1;
     int i, k;
@@ -1175,4 +1175,3 @@ unsigned Map_CutComputeTruth( Map_Man_t * p, Map_Cut_t * pCut, Map_Cut_t * pTemp
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-

@@ -61,7 +61,7 @@ static inline int If_CutVerifyCut( If_Cut_t * pBase, If_Cut_t * pCut ) // check 
 }
 int If_CutVerifyCuts( If_Set_t * pCutSet, int fOrdered )
 {
-    static int Count = 0;
+    static ABC_THREAD_LOCAL int Count = 0;
     If_Cut_t * pCut0, * pCut1; 
     int i, k, m, n, Value;
     assert( pCutSet->nCuts > 0 );
@@ -1558,4 +1558,3 @@ int If_CutFilter2( If_Man_t * p, If_Obj_t * pNode, If_Cut_t * pCut )
 
 
 ABC_NAMESPACE_IMPL_END
-

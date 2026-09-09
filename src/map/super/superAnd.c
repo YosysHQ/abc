@@ -576,14 +576,14 @@ void Super2_LibWriteGate( FILE * pFile, Super2_Lib_t * pLib, Super2_Gate_t * pGa
 ***********************************************************************/
 char * Super2_LibWriteGate_rec( Super2_Gate_t * pGate, int fInv, int Level )
 {
-    static char Buff01[  3], Buff02[  3];    // Max0              =  1
-    static char Buff11[  6], Buff12[  6];    // Max1 = 2*Max0 + 2 =  4
-    static char Buff21[ 12], Buff22[ 12];    // Max2 = 2*Max1 + 2 = 10
-    static char Buff31[ 25], Buff32[ 25];    // Max3 = 2*Max2 + 2 = 22
-    static char Buff41[ 50], Buff42[ 50];    // Max4 = 2*Max3 + 2 = 46
-    static char Buff51[100], Buff52[100];    // Max5 = 2*Max4 + 2 = 94
-    static char * pBuffs1[6] = { Buff01, Buff11, Buff21, Buff31, Buff41, Buff51 };
-    static char * pBuffs2[6] = { Buff02, Buff12, Buff22, Buff32, Buff42, Buff52 };
+    static ABC_THREAD_LOCAL char Buff01[  3], Buff02[  3];    // Max0              =  1
+    static ABC_THREAD_LOCAL char Buff11[  6], Buff12[  6];    // Max1 = 2*Max0 + 2 =  4
+    static ABC_THREAD_LOCAL char Buff21[ 12], Buff22[ 12];    // Max2 = 2*Max1 + 2 = 10
+    static ABC_THREAD_LOCAL char Buff31[ 25], Buff32[ 25];    // Max3 = 2*Max2 + 2 = 22
+    static ABC_THREAD_LOCAL char Buff41[ 50], Buff42[ 50];    // Max4 = 2*Max3 + 2 = 46
+    static ABC_THREAD_LOCAL char Buff51[100], Buff52[100];    // Max5 = 2*Max4 + 2 = 94
+    char * pBuffs1[6] = { Buff01, Buff11, Buff21, Buff31, Buff41, Buff51 };
+    char * pBuffs2[6] = { Buff02, Buff12, Buff22, Buff32, Buff42, Buff52 };
     char * pBranch;
     char * pBuffer1 = pBuffs1[Level];
     char * pBuffer2 = pBuffs2[Level];
@@ -698,4 +698,3 @@ int Super2_LibWriteCompare( char * pStr1, char * pStr2 )
 
 
 ABC_NAMESPACE_IMPL_END
-

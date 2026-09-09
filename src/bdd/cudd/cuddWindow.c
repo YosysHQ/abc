@@ -89,8 +89,8 @@ static char rcsid[] DD_UNUSED = "$Id: cuddWindow.c,v 1.14 2009/02/20 02:14:58 fa
 #endif
 
 #ifdef DD_STATS
-extern  int     ddTotalNumberSwapping;
-extern  int     ddTotalNISwaps;
+extern ABC_THREAD_LOCAL int ddTotalNumberSwapping;
+extern ABC_THREAD_LOCAL int ddTotalNISwaps;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -1028,4 +1028,3 @@ ddWindowConv4(
 
 
 ABC_NAMESPACE_IMPL_END
-

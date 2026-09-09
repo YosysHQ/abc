@@ -84,7 +84,7 @@ int Map_LibraryReadFile( Map_SuperLib_t * pLib, FILE * pFile )
     FILE * pFileGen;
     Map_Super_t * pGate;
     char * pTemp = NULL; // Suppress "might be used uninitialized"
-    char * pLibName;
+    char * pLibName, * pSave = NULL;
     int nCounter, nGatesTotal;
     unsigned uCanon[2];
     int RetValue;
@@ -100,7 +100,7 @@ int Map_LibraryReadFile( Map_SuperLib_t * pLib, FILE * pFile )
     }
 
     // get the genlib file name
-    pLibName = strtok( pTemp, " \t\r\n" );
+    pLibName = Abc_UtilStrtok( pTemp, " \t\r\n", &pSave );
     if ( strcmp( pLibName, "GATE" ) == 0 )
     {
         printf( "The input file \"%s\" looks like a genlib file and not a supergate library file.\n", pLib->pName );
@@ -183,7 +183,7 @@ int Map_LibraryReadFile( Map_SuperLib_t * pLib, FILE * pFile )
 Map_Super_t * Map_LibraryReadGate( Map_SuperLib_t * pLib, char * pBuffer, int nVars )
 {
     Map_Super_t * pGate;
-    char * pTemp;
+    char * pTemp, * pSave = NULL;
     int i;
 
     // start and clean the gate
@@ -191,11 +191,11 @@ Map_Super_t * Map_LibraryReadGate( Map_SuperLib_t * pLib, char * pBuffer, int nV
     memset( pGate, 0, sizeof(Map_Super_t) );
 
     // read the number
-    pTemp = strtok( pBuffer, " " );
+    pTemp = Abc_UtilStrtok( pBuffer, " ", &pSave );
     pGate->Num = atoi(pTemp);
 
     // read the signature
-    pTemp = strtok( NULL, " " );
+    pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
     if ( pLib->nVarsMax < 6 )
     {
         pGate->uTruth[0] = Extra_ReadBinary(pTemp);
@@ -209,24 +209,24 @@ Map_Super_t * Map_LibraryReadGate( Map_SuperLib_t * pLib, char * pBuffer, int nV
     }
 
     // read the max delay
-    pTemp = strtok( NULL, " " );
+    pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
     pGate->tDelayMax.Rise = (float)atof(pTemp);
     pGate->tDelayMax.Fall = pGate->tDelayMax.Rise;
 
     // read the pin-to-pin delay
     for ( i = 0; i < nVars; i++ )
     {
-        pTemp = strtok( NULL, " " );
+        pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
         pGate->tDelaysR[i].Rise = (float)atof(pTemp);
         pGate->tDelaysF[i].Fall = pGate->tDelaysR[i].Rise;
     }
 
     // read the area
-    pTemp = strtok( NULL, " " );
+    pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
     pGate->Area = (float)atof(pTemp);
 
     // the rest is the gate name
-    pTemp = strtok( NULL, " \r\n" );
+    pTemp = Abc_UtilStrtok( NULL, " \r\n", &pSave );
     if ( strlen(pTemp) == 0 )
         printf( "A gate name is empty.\n" );
 
@@ -235,7 +235,7 @@ Map_Super_t * Map_LibraryReadGate( Map_SuperLib_t * pLib, char * pBuffer, int nV
     strcpy( pGate->pFormula, pTemp );
 
     // the rest is the gate name
-    pTemp = strtok( NULL, " \n\0" );
+    pTemp = Abc_UtilStrtok( NULL, " \n\0", &pSave );
     if ( pTemp != NULL )
         printf( "The following trailing symbols found \"%s\".\n", pTemp );
     return pGate;
@@ -453,4 +453,3 @@ void Map_LibraryPrintClasses( Map_SuperLib_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

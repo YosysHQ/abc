@@ -102,11 +102,11 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddReorder.c,v 1.69 2009/02/21 18:24:10 fabio Exp $";
 #endif
 
-static  int     *entry;
+static ABC_THREAD_LOCAL int *entry;
 
-int     ddTotalNumberSwapping;
+ABC_THREAD_LOCAL int ddTotalNumberSwapping;
 #ifdef DD_STATS
-int     ddTotalNISwaps;
+ABC_THREAD_LOCAL int ddTotalNISwaps;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -409,7 +409,7 @@ cuddDynamicAllocNode(
     int     i;
     DdNodePtr *mem;
     DdNode *list, *node;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     if (table->nextFree == NULL) {        /* free list is empty */
@@ -781,7 +781,7 @@ cuddSwapInPlace(
     DdNodePtr *previousP;
     DdNode *tmp;
     DdNode *sentinel = &(table->sentinel);
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
 #ifdef DD_DEBUG

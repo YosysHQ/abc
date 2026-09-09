@@ -94,7 +94,7 @@ static char rcsid[] DD_UNUSED = "$Id: cuddBddCorr.c,v 1.14 2004/08/13 18:04:46 f
 #endif
 
 #ifdef CORREL_STATS
-static  int     num_calls;
+static ABC_THREAD_LOCAL int num_calls;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -511,5 +511,4 @@ CorrelCleanUp(
 
 
 ABC_NAMESPACE_IMPL_END
-
 

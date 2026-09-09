@@ -216,8 +216,8 @@ void Acec_MultFuncTest6()
 
 unsigned Extra_TruthCanonNPN2( unsigned uTruth, int nVars, Vec_Int_t * vRes )
 {
-    static int nVarsOld, nPerms;
-    static char ** pPerms = NULL;
+    static ABC_THREAD_LOCAL int nVarsOld, nPerms;
+    static ABC_THREAD_LOCAL char ** pPerms = NULL;
 
     unsigned uTruthMin, uTruthC, uPhase, uPerm;
     int nMints, k, i;
@@ -676,4 +676,3 @@ void Acec_MultFindPPsTest( Gia_Man_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

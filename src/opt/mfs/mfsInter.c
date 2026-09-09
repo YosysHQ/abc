@@ -347,7 +347,7 @@ Hop_Obj_t * Abc_NtkMfsInterplate( Mfs_Man_t * p, int * pCands, int nCands )
     // dump CNF file (remember to uncomment two-lit clases in clause_create_new() in 'satSolver.c')
     if ( fDumpFile )
     {
-        static int Counter = 0;
+        static ABC_THREAD_LOCAL int Counter = 0;
         sprintf( FileName, "cnf\\pj1_if6_mfs%03d.cnf", Counter++ );
         Sat_SolverWriteDimacs( pSat, FileName, NULL, NULL, 1 );
     }
@@ -395,4 +395,3 @@ Hop_Obj_t * Abc_NtkMfsInterplate( Mfs_Man_t * p, int * pCands, int nCands )
 
 
 ABC_NAMESPACE_IMPL_END
-

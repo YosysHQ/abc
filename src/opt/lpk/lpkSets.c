@@ -189,12 +189,12 @@ static void Lpk_PrintSets( Vec_Int_t * vSets )
 void Lpk_ComposeSets( Vec_Int_t * vSets0, Vec_Int_t * vSets1, int nVars, int iCofVar,
     Lpk_Set_t * pStore, int * pSize, int nSizeLimit )
 {
-    static int nTravId = 0;            // the number of the times this is visited
-    static int TravId[1<<16] = {0};    // last visited
-    static char SRed[1<<16];           // best support reduction
-    static char Over[1<<16];           // best overlaps
-    static unsigned Parents[1<<16];    // best set of parents
-    static unsigned short Used[1<<16]; // storage for used subsets
+    static ABC_THREAD_LOCAL int nTravId = 0;            // the number of the times this is visited
+    static ABC_THREAD_LOCAL int TravId[1<<16] = {0};    // last visited
+    static ABC_THREAD_LOCAL char SRed[1<<16];           // best support reduction
+    static ABC_THREAD_LOCAL char Over[1<<16];           // best overlaps
+    static ABC_THREAD_LOCAL unsigned Parents[1<<16];    // best set of parents
+    static ABC_THREAD_LOCAL unsigned short Used[1<<16]; // storage for used subsets
     int nSuppSize, nSuppOver, nSuppRed, nUsed, nMinOver, i, k, s;
     unsigned Entry, Entry0, Entry1;
     unsigned uSupp, uSupp0, uSupp1, uSuppTotal;
@@ -322,8 +322,8 @@ void Lpk_MapSuppPrintSet( Lpk_Set_t * pSet, int i )
 ***********************************************************************/
 unsigned Lpk_MapSuppRedDecSelect( Lpk_Man_t * p, unsigned * pTruth, int nVars, int * piVar, int * piVarReused )
 {
-    static int nStoreSize = 256;
-    static Lpk_Set_t pStore[256], * pSet, * pSetBest;
+    int nStoreSize = 256;
+    static ABC_THREAD_LOCAL Lpk_Set_t pStore[256], * pSet, * pSetBest;
     Kit_DsdNtk_t * ppNtks[2], * pTemp;
     Vec_Int_t * vSets0 = p->vSets[0];
     Vec_Int_t * vSets1 = p->vSets[1];
@@ -442,4 +442,3 @@ unsigned Lpk_MapSuppRedDecSelect( Lpk_Man_t * p, unsigned * pTruth, int nVars, i
 
 
 ABC_NAMESPACE_IMPL_END
-

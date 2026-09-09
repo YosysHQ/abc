@@ -130,28 +130,28 @@ static char rcsid[] DD_UNUSED = "$Id: cuddSubsetSP.c,v 1.34 2009/02/19 16:23:19 
 #endif
 
 #ifdef DD_DEBUG
-static int numCalls;
-static int hits;
-static int thishit;
+static ABC_THREAD_LOCAL int numCalls;
+static ABC_THREAD_LOCAL int hits;
+static ABC_THREAD_LOCAL int thishit;
 #endif
 
 
-static  int             memOut; /* flag to indicate out of memory */
-static  DdNode          *zero, *one; /* constant functions */
+static ABC_THREAD_LOCAL int memOut; /* flag to indicate out of memory */
+static ABC_THREAD_LOCAL DdNode *zero, *one; /* constant functions */
 
-static  NodeDist_t      **nodeDistPages; /* pointers to the pages */
-static  int             nodeDistPageIndex; /* index to next element */
-static  int             nodeDistPage; /* index to current page */
-static  int             nodeDistPageSize = DEFAULT_NODE_DIST_PAGE_SIZE; /* page size */
-static  int             maxNodeDistPages; /* number of page pointers */
-static  NodeDist_t      *currentNodeDistPage; /* current page */
+static ABC_THREAD_LOCAL NodeDist_t **nodeDistPages; /* pointers to the pages */
+static ABC_THREAD_LOCAL int nodeDistPageIndex; /* index to next element */
+static ABC_THREAD_LOCAL int nodeDistPage; /* index to current page */
+static const int nodeDistPageSize = DEFAULT_NODE_DIST_PAGE_SIZE; /* page size */
+static ABC_THREAD_LOCAL int maxNodeDistPages; /* number of page pointers */
+static ABC_THREAD_LOCAL NodeDist_t *currentNodeDistPage; /* current page */
 
-static  DdNode          ***queuePages; /* pointers to the pages */
-static  int             queuePageIndex; /* index to next element */
-static  int             queuePage; /* index to current page */
-static  int             queuePageSize = DEFAULT_PAGE_SIZE; /* page size */
-static  int             maxQueuePages; /* number of page pointers */
-static  DdNode          **currentQueuePage; /* current page */
+static ABC_THREAD_LOCAL DdNode ***queuePages; /* pointers to the pages */
+static ABC_THREAD_LOCAL int queuePageIndex; /* index to next element */
+static ABC_THREAD_LOCAL int queuePage; /* index to current page */
+static const int queuePageSize = DEFAULT_PAGE_SIZE; /* page size */
+static ABC_THREAD_LOCAL int maxQueuePages; /* number of page pointers */
+static ABC_THREAD_LOCAL DdNode **currentQueuePage; /* current page */
 
 
 /*---------------------------------------------------------------------------*/
@@ -1654,4 +1654,3 @@ stPathTableDdFree(
 
 
 ABC_NAMESPACE_IMPL_END
-

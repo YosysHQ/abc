@@ -27,8 +27,6 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-extern abctime s_MappingTime;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -171,12 +169,11 @@ int If_ManPerformMappingComb( If_Man_t * p )
         Abc_PrintTime( 1, "Total time", Abc_Clock() - clkTotal );
     }
 //    Abc_Print( 1, "Cross cut memory = %d.\n", Mem_FixedReadMaxEntriesUsed(p->pMemSet) );
-    s_MappingTime = Abc_Clock() - clkTotal;
 //    Abc_Print( 1, "Special POs = %d.\n", If_ManCountSpecialPos(p) );
 
 /*
     {
-        static char * pLastName = NULL;
+        static ABC_THREAD_LOCAL char * pLastName = NULL;
         FILE * pTable = fopen( "fpga/ucsb/stats.txt", "a+" );
         if ( pLastName == NULL || strcmp(pLastName, p->pName) )
         {

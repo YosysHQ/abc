@@ -776,7 +776,6 @@ unsigned xSAT_SolverPropagate( xSAT_Solver_t* s )
 ***********************************************************************/
 void xSAT_SolverReduceDB( xSAT_Solver_t * s )
 {
-    static abctime TimeTotal = 0;
     abctime clk = Abc_Clock();
     int nLearnedOld = Vec_IntSize( s->vLearnts );
     int i, limit;
@@ -823,12 +822,12 @@ void xSAT_SolverReduceDB( xSAT_Solver_t * s )
     }
     ABC_FREE( learnts_cls );
 
-    TimeTotal += Abc_Clock() - clk;
+    s->Stats.timeReduceDb += Abc_Clock() - clk;
     if ( s->Config.fVerbose )
     {
         Abc_Print(1, "reduceDB: Keeping %7d out of %7d clauses (%5.2f %%)  ",
             Vec_IntSize( s->vLearnts ), nLearnedOld, 100.0 * Vec_IntSize( s->vLearnts ) / nLearnedOld );
-        Abc_PrintTime( 1, "Time", TimeTotal );
+        Abc_PrintTime( 1, "Time", s->Stats.timeReduceDb );
     }
     xSAT_SolverGarbageCollect(s);
 }

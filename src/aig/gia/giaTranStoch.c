@@ -117,11 +117,16 @@ struct Gia_ManTranStochParam {
   int nVerbose;
 
 #ifdef ABC_USE_PTHREADS
+  Abc_Frame_t * pAbc;
   int nSp;
   int nIte;
   Gia_Man_t * pRes;
   int fWorking;
+  int fStop;
+  int fThreaded;
   pthread_mutex_t * mutex;
+  pthread_mutex_t * pQueueMutex;
+  pthread_cond_t * pQueueCond;
 #endif
 };
 
@@ -129,13 +134,13 @@ typedef struct Gia_ManTranStochParam Gia_ManTranStochParam;
 
 void Gia_ManTranStochLock( Gia_ManTranStochParam * p ) {
 #ifdef ABC_USE_PTHREADS
-  if ( p->fWorking )
+  if ( p->fThreaded )
     pthread_mutex_lock( p->mutex );
 #endif
 }
 void Gia_ManTranStochUnlock( Gia_ManTranStochParam * p ) {
 #ifdef ABC_USE_PTHREADS
-  if ( p->fWorking )
+  if ( p->fThreaded )
     pthread_mutex_unlock( p->mutex );
 #endif
 }
@@ -240,18 +245,25 @@ Gia_Man_t * Gia_ManTranStochOpt3( Gia_ManTranStochParam * p ) {
 #ifdef ABC_USE_PTHREADS
 void * Gia_ManTranStochWorkerThread( void * pArg ) {
   Gia_ManTranStochParam * p = (Gia_ManTranStochParam *)pArg;
-  volatile int * pPlace = &p->fWorking;
+  Abc_Frame_t * pPrevious = Abc_FrameEnter( p->pAbc );
   while ( 1 ) {
-    while ( *pPlace == 0 );
-    assert( p->fWorking );
-    if ( p->pStart == NULL ) {
-      pthread_exit( NULL );
-      assert( 0 );
+    Gia_Man_t * pRes;
+    pthread_mutex_lock( p->pQueueMutex );
+    while ( !p->fWorking && !p->fStop )
+      pthread_cond_wait( p->pQueueCond, p->pQueueMutex );
+    if ( p->fStop ) {
+      pthread_mutex_unlock( p->pQueueMutex );
+      Abc_FrameLeave( pPrevious );
       return NULL;
     }
+    pthread_mutex_unlock( p->pQueueMutex );
     p->nSeed = 1234 * (p->nIte + p->nSeedBase);
-    p->pRes = Gia_ManTranStochOpt2( p );
+    pRes = Gia_ManTranStochOpt2( p );
+    pthread_mutex_lock( p->pQueueMutex );
+    p->pRes = pRes;
     p->fWorking = 0;
+    pthread_cond_broadcast( p->pQueueCond );
+    pthread_mutex_unlock( p->pQueueMutex );
   }
   assert( 0 );
   return NULL;
@@ -276,7 +288,9 @@ Gia_Man_t * Gia_ManTranStoch( Gia_Man_t * pGia, int nRestarts, int nHops, int nS
   p->pExdc = pExdc;
   p->nVerbose = nVerbose;
 #ifdef ABC_USE_PTHREADS
+  p->pAbc = Abc_FrameCurrent();
   p->fWorking = 0;
+  p->fThreaded = 0;
 #endif
   // setup start points
   vpStarts = Vec_PtrAlloc( 4 );
@@ -348,7 +362,9 @@ Gia_Man_t * Gia_ManTranStoch( Gia_Man_t * pGia, int nRestarts, int nHops, int nS
     }
   } else {
 #ifdef ABC_USE_PTHREADS
-    static pthread_mutex_t mutex;
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t QueueMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t QueueCond = PTHREAD_COND_INITIALIZER;
     int k, status, nIte, fAssigned, fWorking;
     Gia_ManTranStochParam ThData[100];
     pthread_t WorkerThread[100];
@@ -358,6 +374,12 @@ Gia_Man_t * Gia_ManTranStoch( Gia_Man_t * pGia, int nRestarts, int nHops, int nS
       p->nVerbose--;
     for ( i = 0; i < nThreads; i++ ) {
       ThData[i] = *p;
+      ThData[i].pRes = NULL;
+      ThData[i].fWorking = 0;
+      ThData[i].fStop = 0;
+      ThData[i].fThreaded = 1;
+      ThData[i].pQueueMutex = &QueueMutex;
+      ThData[i].pQueueCond = &QueueCond;
       status = pthread_create( WorkerThread + i, NULL, Gia_ManTranStochWorkerThread, (void *)(ThData + i) );
       assert( status == 0 );
     }
@@ -365,6 +387,7 @@ Gia_Man_t * Gia_ManTranStoch( Gia_Man_t * pGia, int nRestarts, int nHops, int nS
       for ( nIte = 0; nIte <= p->nRestarts; nIte++ ) {
         fAssigned = 0;
         while ( !fAssigned ) {
+          pthread_mutex_lock( &QueueMutex );
           for ( i = 0; i < nThreads; i++ ) {
             if ( ThData[i].fWorking )
               continue;
@@ -386,9 +409,15 @@ Gia_Man_t * Gia_ManTranStoch( Gia_Man_t * pGia, int nRestarts, int nHops, int nS
             fAssigned = 1;
             break;
           }
+          if ( !fAssigned )
+            pthread_cond_wait( &QueueCond, &QueueMutex );
+          else
+            pthread_cond_broadcast( &QueueCond );
+          pthread_mutex_unlock( &QueueMutex );
         }
       }
     }
+    pthread_mutex_lock( &QueueMutex );
     fWorking = 1;
     while ( fWorking ) {
       fWorking = 0;
@@ -409,11 +438,20 @@ Gia_Man_t * Gia_ManTranStoch( Gia_Man_t * pGia, int nRestarts, int nHops, int nS
           ThData[i].pRes = NULL;
         }
       }
+      if ( fWorking )
+        pthread_cond_wait( &QueueCond, &QueueMutex );
     }
+    for ( i = 0; i < nThreads; i++ )
+      ThData[i].fStop = 1;
+    pthread_cond_broadcast( &QueueCond );
+    pthread_mutex_unlock( &QueueMutex );
     for ( i = 0; i < nThreads; i++ ) {
-      ThData[i].pStart = NULL;
-      ThData[i].fWorking = 1;
+      status = pthread_join( WorkerThread[i], NULL );
+      assert( status == 0 );
     }
+    pthread_cond_destroy( &QueueCond );
+    pthread_mutex_destroy( &QueueMutex );
+    pthread_mutex_destroy( &mutex );
 #else
     printf( "ERROR: pthread is off" );
 #endif

@@ -77,7 +77,7 @@ static void Ver_ParseRemoveSuffixTable( Ver_Man_t * pMan );
 static inline int Ver_NtkIsDefined( Abc_Ntk_t * pNtkBox )  { assert( pNtkBox->pName );     return Abc_NtkPiNum(pNtkBox) || Abc_NtkPoNum(pNtkBox);  }
 static inline int Ver_ObjIsConnected( Abc_Obj_t * pObj )   { assert( Abc_ObjIsBox(pObj) ); return Abc_ObjFaninNum(pObj) || Abc_ObjFanoutNum(pObj); }
 
-int glo_fMapped = 0; // this is bad!
+ABC_THREAD_LOCAL int glo_fMapped = 0;
 
 typedef struct Ver_Bundle_t_    Ver_Bundle_t;
 struct Ver_Bundle_t_
@@ -3050,4 +3050,3 @@ Abc_Obj_t * Ver_ParseCreateInv( Abc_Ntk_t * pNtk, Abc_Obj_t * pNet )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -22,6 +22,7 @@
 #include "bool/kit/kit.h"
 #include "bool/bdc/bdc.h"
 #include "aig/ioa/ioa.h"
+#include "base/main/main.h"
 
 ABC_NAMESPACE_IMPL_START
 
@@ -79,7 +80,21 @@ struct Aig_RMan_t_
     int           nUniqueVars;
 };
 
-static Aig_RMan_t * s_pRMan = NULL;
+static ABC_THREAD_LOCAL Aig_RMan_t * s_pRManStandalone = NULL;
+
+static Aig_RMan_t * Aig_RManCurrent()
+{
+    return Abc_FrameReadGlobalFrame() ? (Aig_RMan_t *)Abc_FrameReadManAigR() : s_pRManStandalone;
+}
+static void Aig_RManSetCurrent( Aig_RMan_t * pMan )
+{
+    if ( Abc_FrameReadGlobalFrame() )
+        Abc_FrameSetManAigR( pMan );
+    else
+        s_pRManStandalone = pMan;
+}
+
+#define s_pRMan Aig_RManCurrent()
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -98,7 +113,8 @@ static Aig_RMan_t * s_pRMan = NULL;
 ***********************************************************************/
 Aig_RMan_t * Aig_RManStart()
 {
-    static Bdc_Par_t Pars = {0}, * pPars = &Pars;
+    static ABC_THREAD_LOCAL Bdc_Par_t Pars = { RMAN_MAXVARS, 0, 0 };
+    Bdc_Par_t * pPars = &Pars;
     Aig_RMan_t * p;
     p = ABC_ALLOC( Aig_RMan_t, 1 );
     memset( p, 0, sizeof(Aig_RMan_t) );
@@ -110,8 +126,6 @@ Aig_RMan_t * Aig_RManStart()
     p->pBins = ABC_CALLOC( Aig_Tru_t *, p->nBins );
     p->pMemTrus = Aig_MmFlexStart();
     // bi-decomposition manager
-    pPars->nVarsMax = p->nVars;
-    pPars->fVerbose = 0;
     p->pBidec = Bdc_ManAlloc( pPars );
     return p;
 }
@@ -291,7 +305,7 @@ void Aig_RManQuit()
     Ioa_WriteAiger( s_pRMan->pAig, Buffer, 0, 1 );
     // quit the manager
     Aig_RManStop( s_pRMan );
-    s_pRMan = NULL;
+    Aig_RManSetCurrent( NULL );
 }
 
 /**Function*************************************************************
@@ -611,7 +625,7 @@ void Aig_RManRecord( unsigned * pTruth, int nVarsInit )
     }
 
     if ( s_pRMan == NULL )
-        s_pRMan = Aig_RManStart();
+        Aig_RManSetCurrent( Aig_RManStart() );
     s_pRMan->nTotal++;
     // canonicize the function
     pNtk = Kit_DsdDecompose( pTruth, nVarsInit );
@@ -698,4 +712,3 @@ Extra_PrintBinary( stdout, s_pRMan->pTruth, 1<<nVars ); printf( "\n\n" );
 
 
 ABC_NAMESPACE_IMPL_END
-

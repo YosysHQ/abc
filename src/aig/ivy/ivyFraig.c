@@ -2771,7 +2771,7 @@ DdNode * Ivy_FraigNodesAreEquivBdd_int( DdManager * dd, DdNode * bFunc, Vec_Ptr_
 ***********************************************************************/
 int Ivy_FraigNodesAreEquivBdd( Ivy_Obj_t * pObj1, Ivy_Obj_t * pObj2 )
 {
-    static DdManager * dd = NULL;
+    static ABC_THREAD_LOCAL DdManager * dd = NULL;
     DdNode * bFunc, * bTemp;
     Vec_Ptr_t * vFront;
     Ivy_Obj_t * pObj;
@@ -2969,4 +2969,3 @@ Counter++;
 
 
 ABC_NAMESPACE_IMPL_END
-

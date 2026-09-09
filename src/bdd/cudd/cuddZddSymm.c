@@ -96,11 +96,11 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddZddSymm.c,v 1.29 2004/08/13 18:04:54 fabio Exp $";
 #endif
 
-extern int      *zdd_entry;
+extern ABC_THREAD_LOCAL int *zdd_entry;
 
-extern int      zddTotalNumberSwapping;
+extern ABC_THREAD_LOCAL int zddTotalNumberSwapping;
 
-static DdNode   *empty;
+static ABC_THREAD_LOCAL DdNode *empty;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -1703,5 +1703,4 @@ cuddZddSymmSummary(
 
 
 ABC_NAMESPACE_IMPL_END
-
 

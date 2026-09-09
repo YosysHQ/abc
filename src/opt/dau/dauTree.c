@@ -309,15 +309,15 @@ void Dau_DsdTest_()
 */
 }
 
-abctime if_dec_time;
+static ABC_THREAD_LOCAL abctime if_dec_time;
 
 void Dau_DsdCheckStructOne( word * pTruth, int nVars, int nLeaves )
 {
     extern Dss_Ntk_t * Dss_NtkCreate( char * pDsd, int nVars, word * pTruth );
     extern void Dss_NtkFree( Dss_Ntk_t * p );
 
-    static abctime timeTt  = 0;
-    static abctime timeDsd = 0;
+    static ABC_THREAD_LOCAL abctime timeTt  = 0;
+    static ABC_THREAD_LOCAL abctime timeDsd = 0;
     abctime clkTt, clkDsd;
 
     char pDsd[1000];
@@ -400,7 +400,7 @@ void Dau_DsdCheckStructOne( word * pTruth, int nVars, int nLeaves )
 ***********************************************************************/
 static inline word ** Dss_ManTtElems()
 {
-    static word TtElems[DAU_MAX_VAR+1][DAU_MAX_WORD], * pTtElems[DAU_MAX_VAR+1] = {NULL};
+    static ABC_THREAD_LOCAL word TtElems[DAU_MAX_VAR+1][DAU_MAX_WORD], * pTtElems[DAU_MAX_VAR+1] = {NULL};
     if ( pTtElems[0] == NULL )
     {
         int v;
@@ -1388,7 +1388,7 @@ int Dss_ManOperation( Dss_Man_t * p, int Type, int * pLits, int nLits, unsigned 
 }
 Dss_Fun_t * Dss_ManOperationFun( Dss_Man_t * p, int * iDsd, int nFansTot )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     Dss_Fun_t * pFun = (Dss_Fun_t *)Buffer;
     pFun->iDsd = Dss_ManOperation( p, DAU_DSD_AND, iDsd, 2, pFun->pFans, NULL );
 //printf( "%d %d -> %d  ", iDsd[0], iDsd[1], pFun->iDsd );
@@ -1432,7 +1432,7 @@ void Dss_EntPrint( Dss_Ent_t * p, Dss_Fun_t * pFun )
 ***********************************************************************/
 Dss_Fun_t * Dss_ManBooleanAnd( Dss_Man_t * p, Dss_Ent_t * pEnt, int Counter )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     Dss_Fun_t * pFun = (Dss_Fun_t *)Buffer;
     Dss_Ntk_t * pNtk;
     word * pTruthOne, pTruth[DAU_MAX_WORD];
@@ -1509,7 +1509,7 @@ if ( Counter )
 // returns mapping of variables of dsd1 into literals of dsd0
 Dss_Ent_t * Dss_ManSharedMap( Dss_Man_t * p, int * iDsd, int * nFans, int ** pFans, unsigned uSharedMask )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     Dss_Ent_t * pEnt = (Dss_Ent_t *)Buffer;
     pEnt->iDsd0 = iDsd[0];
     pEnt->iDsd1 = iDsd[1];
@@ -1540,7 +1540,7 @@ int Dss_ManMerge( Dss_Man_t * p, int * iDsd, int * nFans, int ** pFans, unsigned
 {
     int fVerbose = 0;
     int fCheck = 0;
-    static int Counter = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
 //    word pTtTemp[DAU_MAX_WORD];
     word * pTruthOne;
     int pPermResInt[DAU_MAX_VAR];
@@ -1680,7 +1680,7 @@ if ( Counter == 43418 )
 ***********************************************************************/
 Dss_Ent_t * Dss_ManSharedMapDerive( Dss_Man_t * p, int iDsd0, int iDsd1, Vec_Str_t * vShared )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     Dss_Ent_t * pEnt = (Dss_Ent_t *)Buffer;
     pEnt->iDsd0 = iDsd0;
     pEnt->iDsd1 = iDsd1;
@@ -2019,4 +2019,3 @@ void Dau_DsdTest444()
 
 
 ABC_NAMESPACE_IMPL_END
-

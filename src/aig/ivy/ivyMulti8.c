@@ -83,8 +83,8 @@ Ivy_Obj_t * Ivy_Multi_rec( Ivy_Obj_t ** ppObjs, int nObjs, Ivy_Type_t Type )
 Ivy_Obj_t * Ivy_Multi( Ivy_Obj_t ** pArgsInit, int nArgs, Ivy_Type_t Type )
 {
     static char NumBits[32] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5};
-    static Ivy_Eval_t pEvals[15+15*14/2];
-    static Ivy_Obj_t * pArgs[16];
+    static ABC_THREAD_LOCAL Ivy_Eval_t pEvals[15+15*14/2];
+    static ABC_THREAD_LOCAL Ivy_Obj_t * pArgs[16];
     Ivy_Eval_t * pEva, * pEvaBest;
     int nArgsNew, nEvals, i, k;
     Ivy_Obj_t * pTemp;
@@ -429,4 +429,3 @@ Ivy_Obj_t * Ivy_Multi2( Ivy_Obj_t ** pArgs, int nArgs, Ivy_Type_t Type )
 
 
 ABC_NAMESPACE_IMPL_END
-

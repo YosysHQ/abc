@@ -85,7 +85,7 @@ char * Abc_ObjAssignName( Abc_Obj_t * pObj, char * pName, char * pSuffix )
 ***********************************************************************/
 char * Abc_ObjNamePrefix( Abc_Obj_t * pObj, char * pPrefix )
 {
-    static char Buffer[2000];
+    static ABC_THREAD_LOCAL char Buffer[2000];
     sprintf( Buffer, "%s%s", pPrefix, Abc_ObjName(pObj) );
     return Buffer;
 }
@@ -103,7 +103,7 @@ char * Abc_ObjNamePrefix( Abc_Obj_t * pObj, char * pPrefix )
 ***********************************************************************/
 char * Abc_ObjNameSuffix( Abc_Obj_t * pObj, char * pSuffix )
 {
-    static char Buffer[2000];
+    static ABC_THREAD_LOCAL char Buffer[2000];
     sprintf( Buffer, "%s%s", Abc_ObjName(pObj), pSuffix );
     return Buffer;
 }
@@ -121,13 +121,13 @@ char * Abc_ObjNameSuffix( Abc_Obj_t * pObj, char * pSuffix )
 ***********************************************************************/
 char * Abc_ObjNameDummy( char * pPrefix, int Num, int nDigits )
 {
-    static char Buffer[2000];
+    static ABC_THREAD_LOCAL char Buffer[2000];
     sprintf( Buffer, "%s%0*d", pPrefix, nDigits, Num );
     return Buffer;
 }
 char * Abc_ObjNameChar( int Num, int fCap )
 {
-    static char Buffer[2000];
+    static ABC_THREAD_LOCAL char Buffer[2000];
     sprintf( Buffer, "%c", (fCap ? 'A':'a') + Num );
     return Buffer;
 }
@@ -836,4 +836,3 @@ void Abc_NtkUpdateNameIds( Abc_Ntk_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

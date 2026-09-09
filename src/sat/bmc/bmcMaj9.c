@@ -772,12 +772,10 @@ static int Exa9_ManEval( Exa9_Man_t * p )
   SeeAlso     []
 
 ***********************************************************************/
-static void Exa9_ManName( Exa9_Man_t * p, int Obj, char * pBuf, int fFinal )
+static void Exa9_ManName( Exa9_Man_t * p, int Obj, char * pBuf )
 {
     if ( Obj <= p->nVars )
         sprintf( pBuf, "%c", 'a'+Obj-1 );
-    else if ( fFinal )
-        sprintf( pBuf, "F" );
     else
         sprintf( pBuf, "%02d", Obj );
 }
@@ -827,20 +825,20 @@ static void Exa9_ManDumpBlif( Exa9_Man_t * p )
     fprintf( pFile, ".inputs" );
     for ( i = 0; i < p->nVars; i++ )
         fprintf( pFile, " %c", 'a'+i );
-    fprintf( pFile, "\n.outputs F\n" );
+    fprintf( pFile, "\n.outputs FF\n" );
     for ( i = p->nVars + 1; i <= p->nObjs; i++ )
     {
         i0 = Exa9_ManFindFanin( p, i, 0, &c0 );
         i1 = Exa9_ManFindFanin( p, i, 1, &c1 );
-        Exa9_ManName( p, i0, Buf0, 0 );
-        Exa9_ManName( p, i1, Buf1, 0 );
-        Exa9_ManName( p, i,  BufOut, 0 );
+        Exa9_ManName( p, i0, Buf0 );
+        Exa9_ManName( p, i1, Buf1 );
+        Exa9_ManName( p, i,  BufOut );
         fprintf( pFile, ".names %s %s %s\n", Buf0, Buf1, BufOut );
         fprintf( pFile, "%d%d 1\n", !c0, !c1 );
     }
     iOutObj = Exa9_ManFindOutput( p, &cOut );
-    Exa9_ManName( p, iOutObj, Buf0, iOutObj == p->nObjs );
-    fprintf( pFile, ".names %s F\n", Buf0 );
+    Exa9_ManName( p, iOutObj, Buf0 );
+    fprintf( pFile, ".names %s FF\n", Buf0 );
     fprintf( pFile, "%d 1\n", cOut ? 0 : 1 );
     fprintf( pFile, ".end\n\n" );
     fclose( pFile );

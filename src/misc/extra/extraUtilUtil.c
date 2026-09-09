@@ -41,10 +41,10 @@ ABC_NAMESPACE_IMPL_START
  *  Purpose: get option letter from argv.
  */
 
-const char * globalUtilOptarg;        // Global argument pointer (util_optarg)
-int    globalUtilOptind = 0;    // Global argv index (util_optind)
+ABC_THREAD_LOCAL const char * globalUtilOptarg;        // Global argument pointer (util_optarg)
+ABC_THREAD_LOCAL int    globalUtilOptind = 0;    // Global argv index (util_optind)
 
-static const char *pScanStr;
+static ABC_THREAD_LOCAL const char *pScanStr;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -158,7 +158,7 @@ int Extra_UtilGetopt( int argc, char *argv[], const char *optstring )
 ***********************************************************************/
 char * Extra_UtilPrintTime( long t )
 {
-    static char s[40];
+    static ABC_THREAD_LOCAL char s[40];
 
     (void) sprintf(s, "%ld.%02ld sec", t/1000, (t%1000)/10);
     return s;
@@ -347,7 +347,7 @@ void Extra_UtilMMout_Of_Memory( long size )
   SeeAlso     []
 
 ***********************************************************************/
-void (*Extra_UtilMMoutOfMemory)( long size ) = (void (*)( long size ))Extra_UtilMMout_Of_Memory;
+ABC_THREAD_LOCAL void (*Extra_UtilMMoutOfMemory)( long size ) = (void (*)( long size ))Extra_UtilMMout_Of_Memory;
 
 
 /**Function*************************************************************
@@ -430,4 +430,3 @@ void Extra_MemTest()
 
 
 ABC_NAMESPACE_IMPL_END
-

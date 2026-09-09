@@ -145,12 +145,12 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddUtil.c,v 1.81 2009/03/08 02:49:02 fabio Exp $";
 #endif
 
-static  DdNode  *background, *zero;
+static ABC_THREAD_LOCAL DdNode *background, *zero;
 
-static  long cuddRand = 0;
-static  long cuddRand2;
-static  long shuffleSelect;
-static  long shuffleTable[STAB_SIZE];
+static ABC_THREAD_LOCAL long cuddRand = 0;
+static ABC_THREAD_LOCAL long cuddRand2;
+static ABC_THREAD_LOCAL long shuffleSelect;
+static ABC_THREAD_LOCAL long shuffleTable[STAB_SIZE];
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -3926,4 +3926,3 @@ ddEpdFree(
 
 
 ABC_NAMESPACE_IMPL_END
-

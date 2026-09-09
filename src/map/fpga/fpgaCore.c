@@ -27,10 +27,6 @@ ABC_NAMESPACE_IMPL_START
 
 static int  Fpga_MappingPostProcess( Fpga_Man_t * p );
 
-extern clock_t s_MappingTime;
-extern int s_MappingMem;
-
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -76,9 +72,6 @@ int Fpga_Mapping( Fpga_Man_t * p )
         return 0;
     p->timeRecover = clock() - clk;
 //ABC_PRT( "Total mapping time", clock() - clkTotal );
-
-    s_MappingTime = clock() - clkTotal;
-    s_MappingMem = Fpga_CutCountAll(p) * (sizeof(Fpga_Cut_t) - sizeof(int) * (FPGA_MAX_LEAVES - p->nVarsMax));
 
     // print the AI-graph used for mapping
     //Fpga_ManShow( p, "test" );
@@ -191,4 +184,3 @@ ABC_PRT( "Time", clock() - clk );
 
 
 ABC_NAMESPACE_IMPL_END
-

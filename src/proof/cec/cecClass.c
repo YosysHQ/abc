@@ -270,7 +270,7 @@ void Cec_ManSimClassCreate( Gia_Man_t * p, Vec_Int_t * vClass )
   SeeAlso     []
 
 ***********************************************************************/
-static int s_Count = 0;
+static ABC_THREAD_LOCAL int s_Count = 0;
 
 int Cec_ManSimClassRefineOne_rec( Cec_ManSim_t * p, int i )
 {

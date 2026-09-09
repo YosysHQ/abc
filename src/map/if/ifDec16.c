@@ -53,7 +53,7 @@ struct If_Hte_t_
 };
 
 // variable swapping code
-static word PMasks[5][3] = {
+static const word PMasks[5][3] = {
     { ABC_CONST(0x9999999999999999), ABC_CONST(0x2222222222222222), ABC_CONST(0x4444444444444444) },
     { ABC_CONST(0xC3C3C3C3C3C3C3C3), ABC_CONST(0x0C0C0C0C0C0C0C0C), ABC_CONST(0x3030303030303030) },
     { ABC_CONST(0xF00FF00FF00FF00F), ABC_CONST(0x00F000F000F000F0), ABC_CONST(0x0F000F000F000F00) },
@@ -61,7 +61,7 @@ static word PMasks[5][3] = {
     { ABC_CONST(0xFFFF00000000FFFF), ABC_CONST(0x00000000FFFF0000), ABC_CONST(0x0000FFFF00000000) }
 };
 // elementary truth tables
-static word Truth6[6] = {
+static const word Truth6[6] = {
     ABC_CONST(0xAAAAAAAAAAAAAAAA),
     ABC_CONST(0xCCCCCCCCCCCCCCCC),
     ABC_CONST(0xF0F0F0F0F0F0F0F0),
@@ -69,15 +69,10 @@ static word Truth6[6] = {
     ABC_CONST(0xFFFF0000FFFF0000),
     ABC_CONST(0xFFFFFFFF00000000)
 };
-static word TruthAll[CLU_VAR_MAX][CLU_WRD_MAX] = {{0}};
-
 extern void Kit_DsdPrintFromTruth( unsigned * pTruth, int nVars );
 extern void Extra_PrintBinary( FILE * pFile, unsigned Sign[], int nBits );
 
 extern int If_CluSupportSize( word * t, int nVars );
-
-int s_Count2 = 0;
-int s_Count3 = 0;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -603,19 +598,13 @@ void If_CluPrintConfig( int nVars, If_Grp_t * g, If_Grp_t * r, word BStruth, wor
 }
 
 
-void If_CluInitTruthTables()
+void If_CluSetVarTruth( word * pTruth, int nVars, int iVar )
 {
-    int i, k;
+    int k, nWords = If_CluWordNum( nVars );
     assert( CLU_VAR_MAX <= 16 );
-    for ( i = 0; i < 6; i++ )
-        for ( k = 0; k < CLU_WRD_MAX; k++ )
-            TruthAll[i][k] = Truth6[i];
-    for ( i = 6; i < CLU_VAR_MAX; i++ )
-        for ( k = 0; k < CLU_WRD_MAX; k++ )
-            TruthAll[i][k] = ((k >> (i-6)) & 1) ? ~(word)0 : 0;
-
-//    Extra_PrintHex( stdout, TruthAll[6], 8 ); printf( "\n" );
-//    Extra_PrintHex( stdout, TruthAll[7], 8 ); printf( "\n" );
+    assert( iVar < CLU_VAR_MAX );
+    for ( k = 0; k < nWords; k++ )
+        pTruth[k] = iVar < 6 ? Truth6[iVar] : ((k >> (iVar-6)) & 1) ? ~(word)0 : 0;
 }
 
 
@@ -644,18 +633,15 @@ void If_CluVerify( word * pF, int nVars, If_Grp_t * g, If_Grp_t * r, word BStrut
     int i;
     assert( g->nVars <= 6 && r->nVars <= 6 );
 
-    if ( TruthAll[0][0] == 0 )
-        If_CluInitTruthTables();
-
     for ( i = 0; i < g->nVars; i++ )
-        If_CluCopy( pTTFans[i], TruthAll[(int)g->pVars[i]], nVars );
+        If_CluSetVarTruth( pTTFans[i], nVars, (int)g->pVars[i] );
     If_CluComposeLut( nVars, g, &BStruth, pTTFans, pTTWire );
 
     for ( i = 0; i < r->nVars; i++ )
         if ( r->pVars[i] == nVars )
             If_CluCopy( pTTFans[i], pTTWire, nVars );
         else
-            If_CluCopy( pTTFans[i], TruthAll[(int)r->pVars[i]], nVars );
+            If_CluSetVarTruth( pTTFans[i], nVars, (int)r->pVars[i] );
     If_CluComposeLut( nVars, r, pFStruth, pTTFans, pTTRes );
 
     if ( !If_CluEqual(pTTRes, pF, nVars) )
@@ -677,15 +663,12 @@ void If_CluVerify3( word * pF, int nVars, If_Grp_t * g, If_Grp_t * g2, If_Grp_t 
     assert( g->nVars >= 2 && g2->nVars >= 2 && r->nVars >= 2 );
     assert( g->nVars <= 6 && g2->nVars <= 6 && r->nVars <= 6 );
 
-    if ( TruthAll[0][0] == 0 )
-        If_CluInitTruthTables();
-
     for ( i = 0; i < g->nVars; i++ )
-        If_CluCopy( pTTFans[i], TruthAll[(int)g->pVars[i]], nVars );
+        If_CluSetVarTruth( pTTFans[i], nVars, (int)g->pVars[i] );
     If_CluComposeLut( nVars, g, &BStruth, pTTFans, pTTWire );
 
     for ( i = 0; i < g2->nVars; i++ )
-        If_CluCopy( pTTFans[i], TruthAll[(int)g2->pVars[i]], nVars );
+        If_CluSetVarTruth( pTTFans[i], nVars, (int)g2->pVars[i] );
     If_CluComposeLut( nVars, g2, &BStruth2, pTTFans, pTTWire2 );
 
     for ( i = 0; i < r->nVars; i++ )
@@ -694,7 +677,7 @@ void If_CluVerify3( word * pF, int nVars, If_Grp_t * g, If_Grp_t * g2, If_Grp_t 
         else if ( r->pVars[i] == nVars + 1 )
             If_CluCopy( pTTFans[i], pTTWire2, nVars );
         else
-            If_CluCopy( pTTFans[i], TruthAll[(int)r->pVars[i]], nVars );
+            If_CluSetVarTruth( pTTFans[i], nVars, (int)r->pVars[i] );
     If_CluComposeLut( nVars, r, &FStruth, pTTFans, pTTRes );
 
     if ( !If_CluEqual(pTTRes, pF, nVars) )
@@ -1620,7 +1603,6 @@ If_Grp_t If_CluCheck( If_Man_t * p, word * pTruth0, int nVars, int iVarStart, in
 
     if ( G1.nVars == 0 ) 
     {
-        s_Count2++;
 
         // detect easy cofs
         if ( iVarStart == 0 )
@@ -1910,17 +1892,10 @@ If_Grp_t If_CluCheck3( If_Man_t * p, word * pTruth0, int nVars, int nLutLeaf, in
                       If_Grp_t * pR, If_Grp_t * pG2, word * pFunc0, word * pFunc1, word * pFunc2 )
 {
     int fEnableHashing = 0;
-    static int Counter = 0;
     unsigned * pHashed = NULL;
     word pLeftOver[CLU_WRD_MAX], Func0, Func1, Func2;
     If_Grp_t G1 = {0}, G2 = {0}, R = {0}, R2 = {0};
     int i;
-    Counter++;
-//    if ( Counter == 37590 )
-//    {
-//        int ns = 0;
-//    }
-
     // check hash table
     if ( p && fEnableHashing )
     {
@@ -1931,7 +1906,6 @@ If_Grp_t If_CluCheck3( If_Man_t * p, word * pTruth0, int nVars, int nLutLeaf, in
             return G1;
         }
     }
-    s_Count3++;
 
     // check two-node decomposition
     G1 = If_CluCheck( p, pTruth0, nVars, 0, 0, nLutLeaf, nLutRoot + nLutLeaf2 - 1, &R2, &Func0, &Func1, pLeftOver, 0 );
@@ -2199,7 +2173,6 @@ static Vec_Mem_t * s_vTtMem2 = NULL;
 int If_TtMemCutNum()  { return Vec_MemEntryNum(s_vTtMem); }
 int If_TtMemCutNum2() { return Vec_MemEntryNum(s_vTtMem2); }
 //        printf( "Unique TTs = %d.  Unique classes = %d.    ", If_TtMemCutNum(), If_TtMemCutNum2() );
-//        printf( "Check2 = %d.  Check3 = %d.\n", s_Count2, s_Count3 );
 #endif
 
 /**Function*************************************************************
@@ -2371,4 +2344,3 @@ void If_CluTest()
 
 
 ABC_NAMESPACE_IMPL_END
-

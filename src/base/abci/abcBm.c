@@ -39,7 +39,7 @@ ABC_NAMESPACE_IMPL_START
 
 int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch1, Vec_Int_t ** iDep1, Vec_Int_t * matchedInputs1, int * iGroup1, Vec_Int_t ** oMatch1, int * oGroup1,
                Abc_Ntk_t * pNtk2, Vec_Ptr_t ** nodesInLevel2, Vec_Int_t ** iMatch2, Vec_Int_t ** iDep2, Vec_Int_t * matchedInputs2, int * iGroup2, Vec_Int_t ** oMatch2, int * oGroup2,
-               Vec_Int_t * matchedOutputs1, Vec_Int_t * matchedOutputs2, Vec_Int_t * oMatchedGroups, Vec_Int_t * iNonSingleton, int ii, int idx);
+               Vec_Int_t * matchedOutputs1, Vec_Int_t * matchedOutputs2, Vec_Int_t * oMatchedGroups, Vec_Int_t * iNonSingleton, int ii, int idx, int * pMatchFound);
 
 int Abc_NtkBmSat( Abc_Ntk_t * pNtk1, Abc_Ntk_t * pNtk2, Vec_Ptr_t * iMatchPairs, Vec_Ptr_t * oMatchPairs, Vec_Int_t * mismatch, int mode);
 
@@ -805,28 +805,27 @@ Abc_Ntk_t * Abc_NtkMiterBm( Abc_Ntk_t * pNtk1, Abc_Ntk_t * pNtk2, Vec_Ptr_t * iC
     return pNtkMiter;
 }
 
-int * pValues1__, * pValues2__;
-
 void Abc_NtkVerifyReportError( Abc_Ntk_t * pNtk1, Abc_Ntk_t * pNtk2, int * pModel, Vec_Int_t * mismatch )
 {
     Vec_Ptr_t * vNodes;
     Abc_Obj_t * pNode;    
+    int * pValues1, * pValues2;
     int nErrors, nPrinted, i, iNode = -1;
 
     assert( Abc_NtkCiNum(pNtk1) == Abc_NtkCiNum(pNtk2) );
     assert( Abc_NtkCoNum(pNtk1) == Abc_NtkCoNum(pNtk2) );
     // get the CO values under this model
-    pValues1__ = Abc_NtkVerifySimulatePattern( pNtk1, pModel );
-    pValues2__ = Abc_NtkVerifySimulatePattern( pNtk2, pModel );
+    pValues1 = Abc_NtkVerifySimulatePattern( pNtk1, pModel );
+    pValues2 = Abc_NtkVerifySimulatePattern( pNtk2, pModel );
     // count the mismatches
     nErrors = 0;
     for ( i = 0; i < Abc_NtkCoNum(pNtk1); i++ )
-        nErrors += (int)( pValues1__[i] != pValues2__[i] );
+        nErrors += (int)( pValues1[i] != pValues2[i] );
     //printf( "Verification failed for at least %d outputs: ", nErrors );
     // print the first 3 outputs
     nPrinted = 0;
     for ( i = 0; i < Abc_NtkCoNum(pNtk1); i++ )
-        if ( pValues1__[i] != pValues2__[i] )
+        if ( pValues1[i] != pValues2[i] )
         {
             if ( iNode == -1 )
                 iNode = i;
@@ -864,13 +863,13 @@ void Abc_NtkVerifyReportError( Abc_Ntk_t * pNtk1, Abc_Ntk_t * pNtk2, int * pMode
         //printf( "\n" );
         Vec_PtrFree( vNodes );
     }
-    free( pValues1__ );
-    free( pValues2__ );
+    free( pValues1 );
+    free( pValues2 );
 }
 
 int Abc_NtkMiterSatBm( Abc_Ntk_t * pNtk, ABC_INT64_T nConfLimit, ABC_INT64_T nInsLimit, int fVerbose, ABC_INT64_T * pNumConfs, ABC_INT64_T * pNumInspects)
 {
-    static sat_solver * pSat = NULL;
+    sat_solver * pSat;
     lbool   status;
     int RetValue = 0;
     abctime clk;    
@@ -1180,35 +1179,29 @@ Abc_Ntk_t * computeCofactor(Abc_Ntk_t * pNtk, Vec_Ptr_t ** nodesInLevel, int * b
     return subNtk;
 }
 
-FILE *matchFile;
-
 int matchNonSingletonOutputs(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch1, Vec_Int_t ** iDep1, Vec_Int_t * matchedInputs1, int * iGroup1, Vec_Int_t ** oMatch1, int * oGroup1,
                               Abc_Ntk_t * pNtk2, Vec_Ptr_t ** nodesInLevel2, Vec_Int_t ** iMatch2, Vec_Int_t ** iDep2, Vec_Int_t * matchedInputs2, int * iGroup2, Vec_Int_t ** oMatch2, int * oGroup2,
                               Vec_Int_t * matchedOutputs1, Vec_Int_t * matchedOutputs2, Vec_Int_t * oMatchedGroups, Vec_Int_t * iNonSingleton,                         
                               Abc_Ntk_t * subNtk1, Abc_Ntk_t * subNtk2, Vec_Ptr_t * oMatchPairs,
-                              Vec_Int_t * oNonSingleton, int oI, int idx, int ii, int iidx)
+                              Vec_Int_t * oNonSingleton, int oI, int idx, int ii, int iidx, int * pMatchFound)
 {        
-    static int MATCH_FOUND;
     int i;
     int j, temp;
     Vec_Int_t * mismatch;        
     int * skipList;    
-    static int counter = 0;
 
-    MATCH_FOUND = FALSE;
-    
     if( oI == Vec_IntSize( oNonSingleton ) )
     {
         if( iNonSingleton != NULL)            
             if( match1by1(pNtk1, nodesInLevel1, iMatch1, iDep1, matchedInputs1, iGroup1, oMatch1, oGroup1,
                           pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup2, oMatch2, oGroup2,
-                           matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton, ii, iidx) )
-                MATCH_FOUND = TRUE;    
+                           matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton, ii, iidx, pMatchFound) )
+                *pMatchFound = TRUE;
 
         if( iNonSingleton == NULL)
-            MATCH_FOUND = TRUE;
+            *pMatchFound = TRUE;
 
-        return MATCH_FOUND;
+        return *pMatchFound;
     }
 
     i = Vec_IntEntry(oNonSingleton, oI);
@@ -1223,7 +1216,7 @@ int matchNonSingletonOutputs(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_
     Vec_PtrPush(oMatchPairs, Abc_NtkPo(subNtk1, Vec_IntEntry(oMatch1[i], idx)) );
     Vec_IntPush(matchedOutputs1, Vec_IntEntry(oMatch1[i], idx));
 
-    for(j = 0; j < Vec_IntSize( oMatch2[i] ) && MATCH_FOUND == FALSE; j++)
+    for(j = 0; j < Vec_IntSize( oMatch2[i] ) && *pMatchFound == FALSE; j++)
     {
         if( Vec_IntEntry(oMatch2[i], j) == -1 || skipList[j] == TRUE)
             continue;
@@ -1231,7 +1224,6 @@ int matchNonSingletonOutputs(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_
         Vec_PtrPush(oMatchPairs, Abc_NtkPo(subNtk2, Vec_IntEntry(oMatch2[i], j)));
         Vec_IntPush(matchedOutputs2, Vec_IntEntry(oMatch2[i], j));
 
-        counter++;        
         if( Abc_NtkBmSat( subNtk1, subNtk2, NULL, oMatchPairs, mismatch, 0) )
         {
             /*fprintf(matchFile, "%s matched to %s\n", Abc_ObjName(Abc_NtkPo(pNtk1, Vec_IntEntry(oMatch1[i], idx))), 
@@ -1246,14 +1238,14 @@ int matchNonSingletonOutputs(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_
                                          pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup2, oMatch2, oGroup2,
                                          matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton,                         
                                          subNtk1, subNtk2, oMatchPairs,
-                                         oNonSingleton, oI, idx+1, ii, iidx);
+                                         oNonSingleton, oI, idx+1, ii, iidx, pMatchFound);
             else    
                 // call the same function with idx = 0 and oI++
                 matchNonSingletonOutputs(pNtk1, nodesInLevel1, iMatch1, iDep1, matchedInputs1, iGroup1, oMatch1, oGroup1,
                                          pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup2, oMatch2, oGroup2,
                                          matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton,                         
                                          subNtk1, subNtk2, oMatchPairs,
-                                         oNonSingleton, oI+1, 0, ii, iidx);
+                                         oNonSingleton, oI+1, 0, ii, iidx, pMatchFound);
 
             Vec_IntWriteEntry(oMatch2[i], j, temp);
         }        
@@ -1303,49 +1295,39 @@ int matchNonSingletonOutputs(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_
             ABC_FREE( output2 );
         }
         
-        if(MATCH_FOUND == FALSE )
+        if(*pMatchFound == FALSE )
         {
             Vec_PtrPop(oMatchPairs);
             Vec_IntPop(matchedOutputs2);
         }
     }
 
-    if(MATCH_FOUND == FALSE )
+    if(*pMatchFound == FALSE )
     {
         Vec_PtrPop(oMatchPairs);
         Vec_IntPop(matchedOutputs1);
     }
 
-    if(MATCH_FOUND && counter != 0)
-    {        
-        /*printf("Number of OUTPUT SAT instances = %d", counter);*/
-        counter = 0;
-    }
-
     ABC_FREE( mismatch );
     ABC_FREE( skipList );
 
-    return MATCH_FOUND;
+    return *pMatchFound;
 }
 
 int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch1, Vec_Int_t ** iDep1, Vec_Int_t * matchedInputs1, int * iGroup1, Vec_Int_t ** oMatch1, int * oGroup1,
                Abc_Ntk_t * pNtk2, Vec_Ptr_t ** nodesInLevel2, Vec_Int_t ** iMatch2, Vec_Int_t ** iDep2, Vec_Int_t * matchedInputs2, int * iGroup2, Vec_Int_t ** oMatch2, int * oGroup2,
-               Vec_Int_t * matchedOutputs1, Vec_Int_t * matchedOutputs2, Vec_Int_t * oMatchedGroups, Vec_Int_t * iNonSingleton, int ii, int idx)
+               Vec_Int_t * matchedOutputs1, Vec_Int_t * matchedOutputs2, Vec_Int_t * oMatchedGroups, Vec_Int_t * iNonSingleton, int ii, int idx, int * pMatchFound)
 {
-    static int MATCH_FOUND = FALSE;
     Abc_Ntk_t * subNtk1, * subNtk2;
     Vec_Int_t * oNonSingleton;    
     Vec_Ptr_t * oMatchPairs;
     int * skipList;
     int j, m;    
     int i;        
-    static int counter = 0;
-
-    MATCH_FOUND = FALSE;
 
     if( ii == Vec_IntSize(iNonSingleton) )
     {
-        MATCH_FOUND = TRUE;
+        *pMatchFound = TRUE;
         return TRUE;
     }
     
@@ -1356,7 +1338,7 @@ int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch
         // call again with the next element in iNonSingleton
         return match1by1(pNtk1, nodesInLevel1, iMatch1, iDep1, matchedInputs1, iGroup1, oMatch1, oGroup1,
                          pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup2, oMatch2, oGroup2,
-                         matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton, ii+1, 0);            
+                         matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton, ii+1, 0, pMatchFound);
         
     }    
     
@@ -1386,7 +1368,7 @@ int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch
 
     subNtk1 = computeCofactor(pNtk1, nodesInLevel1, NULL, matchedInputs1);
 
-    for(j = idx-1; j < Vec_IntSize(iMatch2[i]) && MATCH_FOUND == FALSE; j++)
+    for(j = idx-1; j < Vec_IntSize(iMatch2[i]) && *pMatchFound == FALSE; j++)
     {
         int tempJ;
         Vec_Int_t * mismatch;
@@ -1406,8 +1388,6 @@ int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch
             Vec_PtrPush(oMatchPairs, Abc_NtkPo(subNtk2, Vec_IntEntry(matchedOutputs2, m)));
         }
 
-        counter++;
-
         if( Abc_NtkBmSat( subNtk2, subNtk1, NULL, oMatchPairs, mismatch, 0) )                
         {
             if(idx-1 != j)
@@ -1424,7 +1404,7 @@ int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch
             matchNonSingletonOutputs(pNtk1, nodesInLevel1, iMatch1, iDep1, matchedInputs1, iGroup1, oMatch1, oGroup1,
                                      pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup2, oMatch2, oGroup2,
                                      matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton,                         
-                                     subNtk1, subNtk2, oMatchPairs, oNonSingleton, 0, 0, ii, idx);
+                                     subNtk1, subNtk2, oMatchPairs, oNonSingleton, 0, 0, ii, idx, pMatchFound);
             
             
             if(idx-1 != j)
@@ -1543,11 +1523,11 @@ int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch
 
         //Vec_IntWriteEntry(iMatch2[i], j, tempJ);        
         
-        if( MATCH_FOUND == FALSE )
+        if( *pMatchFound == FALSE )
             Vec_IntPop(matchedInputs2);
     }
 
-    if( MATCH_FOUND == FALSE )
+    if( *pMatchFound == FALSE )
     {
         Vec_IntPop(matchedInputs1);    
         
@@ -1563,14 +1543,7 @@ int match1by1(Abc_Ntk_t * pNtk1, Vec_Ptr_t ** nodesInLevel1, Vec_Int_t ** iMatch
     ABC_FREE( skipList );
     Abc_NtkDelete( subNtk1 );    
 
-    if(MATCH_FOUND && counter != 0)
-    {        
-        /*printf("Number of INPUT SAT instances = %d\n", counter);*/
-
-        counter = 0;
-    }
-
-    return MATCH_FOUND;
+    return *pMatchFound;
 }
 
 float refineBySAT(Abc_Ntk_t * pNtk1, Vec_Int_t ** iMatch1, int * iGroup1, Vec_Int_t ** iDep1, int* iLastItem1, Vec_Int_t ** oMatch1, int * oGroup1, Vec_Int_t ** oDep1, int* oLastItem1, int * observability1,
@@ -1584,7 +1557,7 @@ float refineBySAT(Abc_Ntk_t * pNtk1, Vec_Int_t ** iMatch1, int * iGroup1, Vec_In
     Vec_Ptr_t ** nodesInLevel1, ** nodesInLevel2;
     Vec_Int_t * oMatchedGroups;
     FILE *result;    
-    int matchFound;
+    int matchFound, MatchFound = FALSE;
     abctime clk = Abc_Clock();
     float satTime = 0.0;
 
@@ -1683,7 +1656,7 @@ float refineBySAT(Abc_Ntk_t * pNtk1, Vec_Int_t ** iMatch1, int * iGroup1, Vec_In
 
     matchFound = match1by1(pNtk1, nodesInLevel1, iMatch1, iDep1, matchedInputs1, iGroup1, oMatch1, oGroup1,
                            pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup2, oMatch2, oGroup2,
-                           matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton, 0, 0);
+                           matchedOutputs1, matchedOutputs2, oMatchedGroups, iNonSingleton, 0, 0, &MatchFound);
 
     if( matchFound && Vec_IntSize(matchedOutputs1) != Abc_NtkPoNum(pNtk1) )
     {
@@ -1702,10 +1675,11 @@ float refineBySAT(Abc_Ntk_t * pNtk1, Vec_Int_t ** iMatch1, int * iGroup1, Vec_In
         subNtk1 = computeCofactor(pNtk1, nodesInLevel1, NULL, matchedInputs1);
         subNtk2 = computeCofactor(pNtk2, nodesInLevel2, NULL, matchedInputs2);
         
+        MatchFound = FALSE;
         matchFound = matchNonSingletonOutputs(pNtk1, nodesInLevel1, iMatch1, iDep1, matchedInputs1, iGroup1, oMatch1, oGroup1,
                                  pNtk2, nodesInLevel2, iMatch2, iDep2, matchedInputs2, iGroup1, oMatch2, oGroup2,
                                  matchedOutputs1, matchedOutputs2, oMatchedGroups, NULL,                         
-                                 subNtk1, subNtk2, oMatchPairs, oNonSingleton, 0, 0, 0, 0);
+                                 subNtk1, subNtk2, oMatchPairs, oNonSingleton, 0, 0, 0, 0, &MatchFound);
 
         Vec_IntFree( oNonSingleton );        
         Vec_PtrFree( oMatchPairs );
@@ -2047,4 +2021,3 @@ freeAndExit:
         ABC_FREE( topOrder2 );
     }
 }ABC_NAMESPACE_IMPL_END
-

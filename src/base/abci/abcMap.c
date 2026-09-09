@@ -61,7 +61,7 @@ static Abc_Obj_t *  Abc_NodeFromMapSuperChoice_rec( Abc_Ntk_t * pNtkNew, Map_Sup
 ***********************************************************************/
 Abc_Ntk_t * Abc_NtkMap( Abc_Ntk_t * pNtk, Mio_Library_t* userLib, double DelayTarget, double AreaMulti, double DelayMulti, float LogFan, float Slew, float Gain, int nGatesMin, int fRecovery, int fSwitching, int fSkipFanout, int fUseProfile, int fUseBuffs, int fVerbose )
 {
-    static int fUseMulti = 0;
+    static ABC_THREAD_LOCAL int fUseMulti = 0;
     int fShowSwitching = 1;
     Abc_Ntk_t * pNtkNew;
     Map_Man_t * pMan;
@@ -1238,4 +1238,3 @@ void Abc_NtkSetAndGateDelay( Abc_Frame_t * pAbc, float Delay )
 
 
 ABC_NAMESPACE_IMPL_END
-

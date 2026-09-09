@@ -234,7 +234,7 @@ char * If_DsdManGetCellStr( If_DsdMan_t * p )
 ***********************************************************************/
 static inline word ** If_ManDsdTtElems()
 {
-    static word TtElems[DAU_MAX_VAR+1][DAU_MAX_WORD], * pTtElems[DAU_MAX_VAR+1] = {NULL};
+    static ABC_THREAD_LOCAL word TtElems[DAU_MAX_VAR+1][DAU_MAX_WORD], * pTtElems[DAU_MAX_VAR+1] = {NULL};
     if ( pTtElems[0] == NULL )
     {
         int v;
@@ -2835,4 +2835,3 @@ void Id_DsdManTuneThresh( If_DsdMan_t * p, int fUnate, int fThresh, int fThreshH
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -955,8 +955,9 @@ void Scl_LibertyReadLoadUnit( Scl_Tree_t * p, Vec_Str_t * vOut )
     {
         // expecting (1.00,ff) or (1, pf) ... 12 or 15 for 'pf' or 'ff'
         char * pHead   = Scl_LibertyReadString(p, pItem->Head);
-        float First    = atof(strtok(pHead, " \t\n\r\\\","));
-        char * pSecond = strtok(NULL, " \t\n\r\\\",");
+        char * pSave   = NULL;
+        float First    = atof(Abc_UtilStrtok(pHead, " \t\n\r\\\",", &pSave));
+        char * pSecond = Abc_UtilStrtok(NULL, " \t\n\r\\\",", &pSave);
         if ( pSecond && (!strcmp(pSecond, "pf") || !strcmp(pSecond, "pF")) )
         {
             Vec_StrPutF_( vOut, First );
@@ -992,8 +993,9 @@ void Scl_LibertyReadWireLoad( Scl_Tree_t * p, Vec_Str_t * vOut )
         Scl_ItemForEachChildName( p, pItem, pChild, "fanout_length" )
         {
             char * pHead  = Scl_LibertyReadString(p, pChild->Head);
-            int    First  = atoi( strtok(pHead, " ,") );
-            float  Second = atof( strtok(NULL, " ") );
+            char * pSave  = NULL;
+            int    First  = atoi( Abc_UtilStrtok(pHead, " ,", &pSave) );
+            float  Second = atof( Abc_UtilStrtok(NULL, " ", &pSave) );
             Vec_StrPutI_( vOut, First );
             Vec_StrPutF_( vOut, Second );
             Vec_StrPut_( vOut );
@@ -1016,9 +1018,10 @@ void Scl_LibertyReadWireLoadSelect( Scl_Tree_t * p, Vec_Str_t * vOut )
         Scl_ItemForEachChildName( p, pItem, pChild, "wire_load_from_area" )
         {
             char * pHead  = Scl_LibertyReadString(p, pChild->Head);
-            float  First  = atof( strtok(pHead, " ,") );
-            float  Second = atof( strtok(NULL, " ,") );
-            char * pThird = strtok(NULL, " ");
+            char * pSave  = NULL;
+            float  First  = atof( Abc_UtilStrtok(pHead, " ,", &pSave) );
+            float  Second = atof( Abc_UtilStrtok(NULL, " ,", &pSave) );
+            char * pThird = Abc_UtilStrtok(NULL, " ", &pSave);
             if ( pThird[0] == '\"' )
                 assert(pThird[strlen(pThird)-1] == '\"'), pThird[strlen(pThird)-1] = 0, pThird++;
             Vec_StrPutF_( vOut, First );
@@ -1098,9 +1101,9 @@ int Scl_LibertyReadTimingSense( Scl_Tree_t * p, Scl_Item_t * pPin )
 }
 Vec_Flt_t * Scl_LibertyReadFloatVec( char * pName )
 {
-    char * pToken;
+    char * pToken, * pSave = NULL;
     Vec_Flt_t * vValues = Vec_FltAlloc( 100 );
-    for ( pToken = strtok(pName, " \t\n\r\\\","); pToken; pToken = strtok(NULL, " \t\n\r\\\",") )
+    for ( pToken = Abc_UtilStrtok(pName, " \t\n\r\\\",", &pSave); pToken; pToken = Abc_UtilStrtok(NULL, " \t\n\r\\\",", &pSave) )
         Vec_FltPush( vValues, atof(pToken) );
     return vValues;
 }

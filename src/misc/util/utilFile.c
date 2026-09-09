@@ -199,7 +199,7 @@ char* vnsprintf(const char* format, va_list args)
     char*    ret;
     va_list  args_copy;
 
-    static FILE* dummy_file = NULL;
+    static ABC_THREAD_LOCAL FILE* dummy_file = NULL;
     if (!dummy_file)
     {
 #if !defined(_MSC_VER) && !defined(__MINGW32)
@@ -246,4 +246,3 @@ char* nsprintf(const char* format, ...)
 
 
 ABC_NAMESPACE_IMPL_END
-

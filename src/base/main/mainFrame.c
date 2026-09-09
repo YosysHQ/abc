@@ -35,7 +35,7 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-static Abc_Frame_t * s_GlobalFrame = NULL;
+static ABC_THREAD_LOCAL Abc_Frame_t * s_GlobalFrame = NULL;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -68,29 +68,36 @@ void *      Abc_FrameReadManDd()                             { if ( s_GlobalFram
 void *      Abc_FrameReadManDec()                            { if ( s_GlobalFrame->pManDec == NULL ) s_GlobalFrame->pManDec = Dec_ManStart();                                        return s_GlobalFrame->pManDec; } 
 void *      Abc_FrameReadManDsd()                            { return s_GlobalFrame->pManDsd;      } 
 void *      Abc_FrameReadManDsd2()                           { return s_GlobalFrame->pManDsd2;     }
+void *      Abc_FrameReadManDar()                            { return s_GlobalFrame->pManDar;      }
+void *      Abc_FrameReadManCnf()                            { return s_GlobalFrame->pManCnf;      }
+void *      Abc_FrameReadManAigR()                           { return s_GlobalFrame->pManAigR;     }
+void *      Abc_FrameReadManNpn()                            { return s_GlobalFrame->pManNpn;      }
+void *      Abc_FrameReadManSdm()                            { return s_GlobalFrame->pManSdm;      }
+void *      Abc_FrameReadManLms()                            { return s_GlobalFrame->pManLms;      }
+void *      Abc_FrameReadManBest()                           { return s_GlobalFrame->pManBest;     }
 char *      Abc_FrameReadFlag( char * pFlag )                { return Cmd_FlagReadByName( s_GlobalFrame, pFlag );   }
 Vec_Ptr_t * Abc_FrameReadSignalNames()                       { return s_GlobalFrame->vSignalNames; }
 char *      Abc_FrameReadSpecName()                          { return s_GlobalFrame->pSpecName;    }
 
-int         Abc_FrameReadBmcFrames( Abc_Frame_t * p )        { return s_GlobalFrame->nFrames;      }               
-int         Abc_FrameReadProbStatus( Abc_Frame_t * p )       { return s_GlobalFrame->Status;       }               
-void *      Abc_FrameReadCex( Abc_Frame_t * p )              { return s_GlobalFrame->pCex;         }        
-Vec_Ptr_t * Abc_FrameReadCexVec( Abc_Frame_t * p )           { return s_GlobalFrame->vCexVec;      }        
-Vec_Int_t * Abc_FrameReadStatusVec( Abc_Frame_t * p )        { return s_GlobalFrame->vStatuses;    }        
-Vec_Ptr_t * Abc_FrameReadPoEquivs( Abc_Frame_t * p )         { return s_GlobalFrame->vPoEquivs;    }        
-Vec_Int_t * Abc_FrameReadPoStatuses( Abc_Frame_t * p )       { return s_GlobalFrame->vStatuses;    }        
-Vec_Int_t * Abc_FrameReadObjIds( Abc_Frame_t * p )           { return s_GlobalFrame->vAbcObjIds;   }        
-Abc_Nam_t * Abc_FrameReadJsonStrs( Abc_Frame_t * p )         { return s_GlobalFrame->pJsonStrs;    }     
-Vec_Wec_t * Abc_FrameReadJsonObjs( Abc_Frame_t * p )         { return s_GlobalFrame->vJsonObjs;    }   
+int         Abc_FrameReadBmcFrames( Abc_Frame_t * p )        { return p->nFrames;      }
+int         Abc_FrameReadProbStatus( Abc_Frame_t * p )       { return p->Status;       }
+void *      Abc_FrameReadCex( Abc_Frame_t * p )              { return p->pCex;         }
+Vec_Ptr_t * Abc_FrameReadCexVec( Abc_Frame_t * p )           { return p->vCexVec;      }
+Vec_Int_t * Abc_FrameReadStatusVec( Abc_Frame_t * p )        { return p->vStatuses;    }
+Vec_Ptr_t * Abc_FrameReadPoEquivs( Abc_Frame_t * p )         { return p->vPoEquivs;    }
+Vec_Int_t * Abc_FrameReadPoStatuses( Abc_Frame_t * p )       { return p->vStatuses;    }
+Vec_Int_t * Abc_FrameReadObjIds( Abc_Frame_t * p )           { return p->vAbcObjIds;   }
+Abc_Nam_t * Abc_FrameReadJsonStrs( Abc_Frame_t * p )         { return p->pJsonStrs;    }
+Vec_Wec_t * Abc_FrameReadJsonObjs( Abc_Frame_t * p )         { return p->vJsonObjs;    }
        
-int         Abc_FrameReadCexPiNum( Abc_Frame_t * p )         { return s_GlobalFrame->pCex->nPis;   }               
-int         Abc_FrameReadCexRegNum( Abc_Frame_t * p )        { return s_GlobalFrame->pCex->nRegs;  }               
-int         Abc_FrameReadCexPo( Abc_Frame_t * p )            { return s_GlobalFrame->pCex->iPo;    }               
-int         Abc_FrameReadCexFrame( Abc_Frame_t * p )         { return s_GlobalFrame->pCex->iFrame; }               
+int         Abc_FrameReadCexPiNum( Abc_Frame_t * p )         { return p->pCex->nPis;   }
+int         Abc_FrameReadCexRegNum( Abc_Frame_t * p )        { return p->pCex->nRegs;  }
+int         Abc_FrameReadCexPo( Abc_Frame_t * p )            { return p->pCex->iPo;    }
+int         Abc_FrameReadCexFrame( Abc_Frame_t * p )         { return p->pCex->iFrame; }
 
-void        Abc_FrameInputNdr( Abc_Frame_t * pAbc, void * pData ) { Ndr_Delete(s_GlobalFrame->pNdr); s_GlobalFrame->pNdr = pData;                        }
-void *      Abc_FrameOutputNdr( Abc_Frame_t * pAbc )         { void * pData = s_GlobalFrame->pNdr; s_GlobalFrame->pNdr = NULL; return pData;             }  
-int *       Abc_FrameOutputNdrArray( Abc_Frame_t * pAbc )    { int * pArray = s_GlobalFrame->pNdrArray; s_GlobalFrame->pNdrArray = NULL; return pArray;  }
+void        Abc_FrameInputNdr( Abc_Frame_t * pAbc, void * pData ) { Ndr_Delete(pAbc->pNdr); pAbc->pNdr = pData;                        }
+void *      Abc_FrameOutputNdr( Abc_Frame_t * pAbc )         { void * pData = pAbc->pNdr; pAbc->pNdr = NULL; return pData;             }
+int *       Abc_FrameOutputNdrArray( Abc_Frame_t * pAbc )    { int * pArray = pAbc->pNdrArray; pAbc->pNdrArray = NULL; return pArray;  }
 
 void        Abc_FrameSetLibLut( void * pLib )                { s_GlobalFrame->pLibLut[0]= pLib;    } 
 void        Abc_FrameSetLibLutI( void * pLib, int i )        { s_GlobalFrame->pLibLut[i]= pLib;    } 
@@ -105,6 +112,13 @@ void        Abc_FrameSetNFrames( int nFrames )               { ABC_FREE( s_Globa
 void        Abc_FrameSetStatus( int Status )                 { ABC_FREE( s_GlobalFrame->pCex ); s_GlobalFrame->Status = Status;   }
 void        Abc_FrameSetManDsd( void * pMan )                { if (s_GlobalFrame->pManDsd  && s_GlobalFrame->pManDsd  != pMan) If_DsdManFree((If_DsdMan_t *)s_GlobalFrame->pManDsd,  0); s_GlobalFrame->pManDsd = pMan;  }
 void        Abc_FrameSetManDsd2( void * pMan )               { if (s_GlobalFrame->pManDsd2 && s_GlobalFrame->pManDsd2 != pMan) If_DsdManFree((If_DsdMan_t *)s_GlobalFrame->pManDsd2, 0); s_GlobalFrame->pManDsd2 = pMan; }
+void        Abc_FrameSetManDar( void * pMan )                { s_GlobalFrame->pManDar = pMan; }
+void        Abc_FrameSetManCnf( void * pMan )                { s_GlobalFrame->pManCnf = pMan; }
+void        Abc_FrameSetManAigR( void * pMan )               { s_GlobalFrame->pManAigR = pMan; }
+void        Abc_FrameSetManNpn( void * pMan )                { s_GlobalFrame->pManNpn = pMan; }
+void        Abc_FrameSetManSdm( void * pMan )                { s_GlobalFrame->pManSdm = pMan; }
+void        Abc_FrameSetManLms( void * pMan )                { s_GlobalFrame->pManLms = pMan; }
+void        Abc_FrameSetManBest( void * pMan )               { s_GlobalFrame->pManBest = pMan; }
 void        Abc_FrameSetInv( Vec_Int_t * vInv )              { Vec_IntFreeP(&s_GlobalFrame->pAbcWlcInv); s_GlobalFrame->pAbcWlcInv = vInv; }
 void        Abc_FrameSetJsonStrs( Abc_Nam_t * pStrs )        { Abc_NamDeref( s_GlobalFrame->pJsonStrs ); s_GlobalFrame->pJsonStrs = pStrs; }
 void        Abc_FrameSetJsonObjs( Vec_Wec_t * vObjs )        { Vec_WecFreeP(&s_GlobalFrame->vJsonObjs ); s_GlobalFrame->vJsonObjs = vObjs; }
@@ -207,12 +221,10 @@ Abc_Frame_t * Abc_FrameAllocate()
 ***********************************************************************/
 void Abc_FrameDeallocate( Abc_Frame_t * p )
 {
-    extern void Rwt_ManGlobalStop();
     extern void undefine_cube_size();
 //    extern void Ivy_TruthManStop();
 //    Abc_HManStop();
 //    undefine_cube_size();
-    Rwt_ManGlobalStop();
 //    Ivy_TruthManStop();
     if ( p->vAbcObjIds)  Vec_IntFree( p->vAbcObjIds );
     if ( p->vCexVec   )  Vec_PtrFreeFree( p->vCexVec );
@@ -248,11 +260,11 @@ void Abc_FrameDeallocate( Abc_Frame_t * p )
     ABC_FREE( p->pCex2 );
     ABC_FREE( p->pCex );
     Vec_IntFreeP( &p->pAbcWlcInv );
-    Abc_NamDeref( s_GlobalFrame->pJsonStrs );
-    Vec_WecFreeP( &s_GlobalFrame->vJsonObjs );  
-    Ndr_Delete( s_GlobalFrame->pNdr );
-    ABC_FREE( s_GlobalFrame->pNdrArray );
-    Abc_FrameStoreStop( s_GlobalFrame );
+    Abc_NamDeref( p->pJsonStrs );
+    Vec_WecFreeP( &p->vJsonObjs );
+    Ndr_Delete( p->pNdr );
+    ABC_FREE( p->pNdrArray );
+    Abc_FrameStoreStop( p );
 
     Gia_ManStopP( &p->pGiaMiniAig );
     Gia_ManStopP( &p->pGiaMiniLut );
@@ -262,8 +274,9 @@ void Abc_FrameDeallocate( Abc_Frame_t * p )
     ABC_FREE( p->pBoxes );
     
 
+    if ( s_GlobalFrame == p )
+        s_GlobalFrame = NULL;
     ABC_FREE( p );
-    s_GlobalFrame = NULL;
 }
 
 
@@ -635,6 +648,70 @@ void Abc_FrameSetGlobalFrame( Abc_Frame_t * p )
 
 /**Function*************************************************************
 
+  Synopsis    [Creates an initialized frame without making it current.]
+
+***********************************************************************/
+Abc_Frame_t * Abc_FrameCreate()
+{
+    Abc_Frame_t * pAbc = Abc_FrameAllocate();
+    Abc_Frame_t * pPrevious = Abc_FrameEnter( pAbc );
+    Abc_FrameInit( pAbc );
+    Abc_FrameLeave( pPrevious );
+    return pAbc;
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Destroys an explicitly created frame.]
+
+***********************************************************************/
+void Abc_FrameDestroy( Abc_Frame_t * pAbc )
+{
+    Abc_Frame_t * pPrevious;
+    assert( pAbc != NULL );
+    assert( s_GlobalFrame != pAbc );
+    pPrevious = Abc_FrameEnter( pAbc );
+    Abc_FrameEnd( pAbc );
+    Abc_FrameDeallocate( pAbc );
+    Abc_FrameLeave( pPrevious );
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Makes the given frame current and returns the old frame.]
+
+***********************************************************************/
+Abc_Frame_t * Abc_FrameEnter( Abc_Frame_t * pAbc )
+{
+    Abc_Frame_t * pPrevious = s_GlobalFrame;
+    assert( pAbc != NULL );
+    s_GlobalFrame = pAbc;
+    return pPrevious;
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Restores the frame returned by Abc_FrameEnter().]
+
+***********************************************************************/
+void Abc_FrameLeave( Abc_Frame_t * pPrevious )
+{
+    s_GlobalFrame = pPrevious;
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Returns the current frame and requires one to be set.]
+
+***********************************************************************/
+Abc_Frame_t * Abc_FrameCurrent()
+{
+    assert( s_GlobalFrame != NULL );
+    return s_GlobalFrame;
+}
+
+/**Function*************************************************************
+
   Synopsis    []
 
   Description []
@@ -764,4 +841,3 @@ void Abc_FrameCheckPoConstTest( Abc_Frame_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

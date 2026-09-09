@@ -238,7 +238,7 @@ cuddAllocNode(
     int i;
     DdNodePtr *mem;
     DdNode *list, *node;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     if (unique->nextFree == NULL) {     /* free list is empty */
@@ -1539,7 +1539,7 @@ cuddRehash(
     DdNode *node, *next;
     DdNode *sentinel = &(unique->sentinel);
     hack split;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     if (unique->gcFrac == DD_GC_FRAC_HI && unique->slots > unique->looseUpTo) {
@@ -1710,7 +1710,7 @@ cuddShrinkSubtable(
     DdNode *node, *next;
     DdNode *sentinel = &(unique->sentinel);
     unsigned int slots, oldslots;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     oldnodelist = unique->subtables[i].nodelist;
@@ -2429,7 +2429,7 @@ ddRehashZdd(
     int j, pos;
     DdNodePtr *nodelist, *oldnodelist;
     DdNode *node, *next;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     if (unique->slots > unique->looseUpTo) {
@@ -3177,4 +3177,3 @@ See the CUDD Programmer's Guide for additional details.");
 
 
 ABC_NAMESPACE_IMPL_END
-

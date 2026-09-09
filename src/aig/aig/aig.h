@@ -428,6 +428,10 @@ static inline int     Aig_ObjFanoutNext( Aig_Man_t * p, int iFan )   { assert(iF
     for ( assert(p->pFanData), i = 0; (i < (int)(pObj)->nRefs) &&               \
           (((iFan) = i? Aig_ObjFanoutNext(p, iFan) : Aig_ObjFanout0Int(p, pObj->Id)), 1) && \
           (((pFanout) = Aig_ManObj(p, iFan>>1)), 1); i++ )
+#define Aig_ObjForEachFanoutId( p, pObj, FanId, iFan, i )                       \
+    for ( assert(p->pFanData), i = 0; (i < (int)(pObj)->nRefs) &&               \
+          (((iFan) = i? Aig_ObjFanoutNext(p, iFan) : Aig_ObjFanout0Int(p, pObj->Id)), 1) && \
+          (((FanId) = (iFan >> 1)), 1); i++ )
 
 
 ////////////////////////////////////////////////////////////////////////

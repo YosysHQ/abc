@@ -27,8 +27,6 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-extern abctime s_MappingTime;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -384,7 +382,6 @@ int If_ManPerformMappingSeq( If_Man_t * p )
 
     // postprocess it using combinational mapping
     If_ManPerformMappingSeqPost( p );
-    s_MappingTime = Abc_Clock() - clkTotal;
     return 1;
 }
 
@@ -394,4 +391,3 @@ int If_ManPerformMappingSeq( If_Man_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

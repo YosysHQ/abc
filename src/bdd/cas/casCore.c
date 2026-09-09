@@ -590,8 +590,8 @@ DdNode * GetSingleOutputFunction( DdManager * dd, DdNode ** pbOuts, int nOuts, D
 DdNode * GetSingleOutputFunctionRemapped( DdManager * dd, DdNode ** pOutputs, int nOuts, DdNode ** pbVarsEnc, int nVarsEnc )
 // returns the ADD of the remapped function
 {
-    static int Permute[MAXINPUTS];
-    static DdNode * pRemapped[MAXOUTPUTS];
+    static ABC_THREAD_LOCAL int Permute[MAXINPUTS];
+    static ABC_THREAD_LOCAL DdNode * pRemapped[MAXOUTPUTS];
 
     DdNode * bSupp, * bTemp;
     int i, Counter;
@@ -648,10 +648,10 @@ DdNode * GetSingleOutputFunctionRemapped( DdManager * dd, DdNode ** pOutputs, in
 DdNode * GetSingleOutputFunctionRemappedNewDD( DdManager * dd, DdNode ** pOutputs, int nOuts, DdManager ** DdNew )
 // returns the ADD of the remapped function
 {
-    static int Permute[MAXINPUTS];
-    static DdNode * pRemapped[MAXOUTPUTS];
+    static ABC_THREAD_LOCAL int Permute[MAXINPUTS];
+    static ABC_THREAD_LOCAL DdNode * pRemapped[MAXOUTPUTS];
 
-    static DdNode * pbVarsEnc[MAXINPUTS];
+    static ABC_THREAD_LOCAL DdNode * pbVarsEnc[MAXINPUTS];
     int nVarsEnc;
 
     DdManager * ddnew;
@@ -1250,4 +1250,3 @@ cuddBddTransferPermuteRecur( DdManager * ddS,
 
 
 ABC_NAMESPACE_IMPL_END
-

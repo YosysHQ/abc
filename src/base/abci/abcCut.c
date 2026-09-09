@@ -31,8 +31,6 @@ ABC_NAMESPACE_IMPL_START
 static void Abc_NtkPrintCuts( void * p, Abc_Ntk_t * pNtk, int fSeq );
 static void Abc_NtkPrintCuts_( void * p, Abc_Ntk_t * pNtk, int fSeq );
 
-extern int nTotal, nGood, nEqual;
-
 static Vec_Int_t * Abc_NtkGetNodeAttributes( Abc_Ntk_t * pNtk );
 static int Abc_NtkComputeArea( Abc_Ntk_t * pNtk, Cut_Man_t * p );
 
@@ -136,8 +134,6 @@ Cut_Man_t * Abc_NtkCuts( Abc_Ntk_t * pNtk, Cut_Params_t * pParams )
     if ( pParams->fAdjust )
     Abc_NtkCutsSubtractFanunt( pNtk );
 
-    nTotal = nGood = nEqual = 0;
-
     assert( Abc_NtkIsStrash(pNtk) );
     // start the manager
     pParams->nIdsMax = Abc_NtkObjNumMax( pNtk );
@@ -206,9 +202,6 @@ ABC_PRT( "TOTAL", Abc_Clock() - clk );
 //Abc_NtkPrintCuts( p, pNtk, 0 );
 //    Cut_ManPrintStatsToFile( p, pNtk->pSpec, Abc_Clock() - clk );
 
-    // temporary printout of stats
-    if ( nTotal )
-    printf( "Total cuts = %d. Good cuts = %d.  Ratio = %5.2f\n", nTotal, nGood, ((double)nGood)/nTotal );
     if ( pParams->fAdjust )
     Abc_NtkCutsAddFanunt( pNtk );
     return p;
@@ -697,4 +690,3 @@ Vec_Int_t * Abc_NtkGetNodeAttributes2( Abc_Ntk_t * pNtk )
 
 
 ABC_NAMESPACE_IMPL_END
-

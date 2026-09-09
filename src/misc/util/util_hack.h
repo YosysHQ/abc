@@ -39,7 +39,7 @@ ABC_NAMESPACE_HEADER_START
 
 extern abctime              Extra_CpuTime();
 extern int                  Extra_GetSoftDataLimit();
-extern void               (*Extra_UtilMMoutOfMemory)( long size );
+extern ABC_THREAD_LOCAL void (*Extra_UtilMMoutOfMemory)( long size );
 
 ABC_NAMESPACE_HEADER_END
 

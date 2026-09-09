@@ -1526,7 +1526,8 @@ void Mio_LibraryReadProfile( FILE * pFile, Mio_Library_t * pLib )
     char pBuffer[1000];
     while ( fgets( pBuffer, 1000, pFile ) != NULL )
     {
-        char * pToken = strtok( pBuffer, " \t\n" );
+        char * pSave = NULL;
+        char * pToken = Abc_UtilStrtok( pBuffer, " \t\n", &pSave );
         if ( pToken == NULL )
             continue;
         if ( pToken[0] == '#' )
@@ -1539,7 +1540,7 @@ void Mio_LibraryReadProfile( FILE * pFile, Mio_Library_t * pLib )
             continue;
         }
         // read profile
-        pToken = strtok( NULL, " \t\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave );
         Mio_GateSetProfile( pGate, atoi(pToken) );
     }
 }
@@ -1848,4 +1849,3 @@ void Mio_LibraryMatches2Fetch( Mio_Library_t * pLib, Vec_Ptr_t ** pvNames, Vec_W
 
 
 ABC_NAMESPACE_IMPL_END
-

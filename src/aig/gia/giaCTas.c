@@ -663,10 +663,6 @@ static inline void Tas_ManCancelUntil( Tas_Man_t * p, int iBound )
     Vec_IntShrink( p->vLevReas, 3*iBound );
 }
 
-int s_Counter2 = 0;
-int s_Counter3 = 0;
-int s_Counter4 = 0;
-
 /**Function*************************************************************
 
   Synopsis    [Assigns the variables a value.]
@@ -700,7 +696,6 @@ static inline void Tas_ManAssign( Tas_Man_t * p, Gia_Obj_t * pObj, int Level, Gi
         Vec_IntPush( p->vLevReas, pRes1 ? pRes1-pObjR : 0 );
     }
     assert( Vec_IntSize(p->vLevReas) == 3 * p->pProp.iTail );
-    s_Counter2++;
 }
 
 
@@ -1171,7 +1166,6 @@ static inline int Tas_ManPropagateOne( Tas_Man_t * p, Gia_Obj_t * pVar, int Leve
     int Value0, Value1, hClause;
     assert( !Gia_IsComplement(pVar) );
     assert( Tas_VarIsAssigned(pVar) );
-    s_Counter3++;
     if ( (hClause = Tas_ManPropagateWatch( p, Level, Tas_VarToLit(p, pVar) )) )
         return hClause;
     if ( Gia_ObjIsCi(pVar) )
@@ -1237,7 +1231,6 @@ static inline int Tas_ManPropagateOne( Tas_Man_t * p, Gia_Obj_t * pVar, int Leve
 static inline int Tas_ManPropagateTwo( Tas_Man_t * p, Gia_Obj_t * pVar, int Level )
 {
     int Value0, Value1;
-    s_Counter4++;
     assert( !Gia_IsComplement(pVar) );
     assert( Gia_ObjIsAnd(pVar) );
     assert( Tas_VarIsAssigned(pVar) );
@@ -1393,7 +1386,6 @@ int Tas_ManSolve_rec( Tas_Man_t * p, int Level )
 int Tas_ManSolve( Tas_Man_t * p, Gia_Obj_t * pObj, Gia_Obj_t * pObj2 )
 {
     int i, Entry, RetValue = 0;
-    s_Counter2 = 0;
     Vec_IntClear( p->vModel );
     if ( pObj == Gia_ManConst0(p->pAig) || pObj2 == Gia_ManConst0(p->pAig) || pObj == Gia_Not(pObj2) )
         return 1;
@@ -1454,9 +1446,6 @@ int Tas_ManSolveArray( Tas_Man_t * p, Vec_Ptr_t * vObjs )
 {
     Gia_Obj_t * pObj;
     int i, Entry, RetValue = 0;
-    s_Counter2 = 0;
-    s_Counter3 = 0;
-    s_Counter4 = 0;
     Vec_IntClear( p->vModel );
     Vec_PtrForEachEntry( Gia_Obj_t *, vObjs, pObj, i )
         if ( pObj == Gia_ManConst0(p->pAig) )
@@ -1497,9 +1486,6 @@ int Tas_ManSolveArray( Tas_Man_t * p, Vec_Ptr_t * vObjs )
 //    printf( "%d ", Gia_ManObjNum(p->pAig) );
 //    printf( "%d ", p->Pars.nBTThis );
 //    printf( "%d ", p->Pars.nJustThis );
-//    printf( "%d ", s_Counter2 );
-//    printf( "%d ", s_Counter3 );
-//    printf( "%d  ", s_Counter4 );
     return RetValue;
 }
 

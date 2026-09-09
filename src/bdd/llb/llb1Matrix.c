@@ -180,7 +180,7 @@ int * Llb_MtrFindVarOrder( Llb_Mtr_t * p )
 ***********************************************************************/
 char * Llb_MtrVarName( Llb_Mtr_t * p, int iVar )
 {
-    static char Buffer[10];
+    static ABC_THREAD_LOCAL char Buffer[10];
     if ( iVar < p->nPis )
         strcpy( Buffer, "pi" );
     else if ( iVar < p->nPis + p->nFfs )
@@ -427,4 +427,3 @@ Llb_Mtr_t * Llb_MtrCreate( Llb_Man_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -1063,7 +1063,7 @@ if ( s_Show )
                     // go through the decomposition list of pPrev and find components 
                     // whose support does not overlap with supp(Lower) 
 
-                    static Dsd_Node_t * pNonOverlap[MAXINPUTS];
+                    static ABC_THREAD_LOCAL Dsd_Node_t * pNonOverlap[MAXINPUTS];
                     int i, nNonOverlap = 0;
                     for ( i = 0; i < pPrev->nDecs; i++ )
                     {
@@ -1115,8 +1115,8 @@ if ( s_Show )
             } // end of if ( !fEqualLevel )
             else // if ( fEqualLevel ) -- they have the same top level var
             {
-                static Dsd_Node_t * pMarkedLeft[MAXINPUTS]; // the pointers to the marked blocks
-                static char pMarkedPols[MAXINPUTS]; // polarities of the marked blocks
+                static ABC_THREAD_LOCAL Dsd_Node_t * pMarkedLeft[MAXINPUTS]; // the pointers to the marked blocks
+                static ABC_THREAD_LOCAL char pMarkedPols[MAXINPUTS]; // polarities of the marked blocks
                 int nMarkedLeft = 0;
 
                 int fPolarity = 0;
@@ -1256,7 +1256,7 @@ EXIT:
         cout << endl << "Internal verification failed!"" );
 
         // create the variable mask
-        static int s_pVarMask[MAXINPUTS];
+        static ABC_THREAD_LOCAL int s_pVarMask[MAXINPUTS];
         int nInputCounter = 0;
 
         Cudd_SupportArray( dd, bF, s_pVarMask );
@@ -1339,7 +1339,7 @@ Dsd_Node_t * dsdKernelFindContainingComponent( Dsd_Manager_t * pDsdMan, Dsd_Node
 ***********************************************************************/
 int dsdKernelFindCommonComponents( Dsd_Manager_t * pDsdMan, Dsd_Node_t * pL, Dsd_Node_t * pH, Dsd_Node_t *** pCommon, Dsd_Node_t ** pLastDiffL, Dsd_Node_t ** pLastDiffH )
 {
-    static Dsd_Node_t * Common[MAXINPUTS];
+    static ABC_THREAD_LOCAL Dsd_Node_t * Common[MAXINPUTS];
     int nCommon = 0;
 
     // pointers to the current decomposition entries
@@ -1572,7 +1572,7 @@ int dsdKernelVerifyDecomposition( Dsd_Manager_t * pDsdMan, Dsd_Node_t * pDE )
     else if ( pR->Type == DSD_NODE_PRIME )
     {
         int i;
-        static DdNode * bGVars[MAXINPUTS];
+        static ABC_THREAD_LOCAL DdNode * bGVars[MAXINPUTS];
         // transform the function of this block, so that it depended on inputs
         // corresponding to the formal inputs
         DdNode * bNewFunc = Dsd_TreeGetPrimeFunctionOld( dd, pR, 1 );  Cudd_Ref( bNewFunc );
@@ -1610,4 +1610,3 @@ int dsdKernelVerifyDecomposition( Dsd_Manager_t * pDsdMan, Dsd_Node_t * pDE )
 ///                           END OF FILE                            ///
 ////////////////////////////////////////////////////////////////////////
 ABC_NAMESPACE_IMPL_END
-

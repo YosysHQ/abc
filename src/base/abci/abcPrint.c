@@ -44,10 +44,31 @@ ABC_NAMESPACE_IMPL_START
 //extern int s_TotalNodes = 0;
 //extern int s_TotalChanges = 0;
 
-abctime s_MappingTime = 0;
-int s_MappingMem = 0;
-//abctime s_ResubTime = 0;
-abctime s_ResynTime = 0;
+typedef struct Abc_ParBest_t_ Abc_ParBest_t;
+struct Abc_ParBest_t_
+{
+    char * pName;  // name of the best saved network
+    int    Depth;  // depth of the best saved network
+    int    Flops;  // flops in the best saved network
+    int    Nodes;  // nodes in the best saved network
+    int    Edges;  // edges in the best saved network
+    int    nPis;   // the number of primary inputs
+    int    nPos;   // the number of primary outputs
+};
+
+static ABC_THREAD_LOCAL Abc_ParBest_t * s_pParsBestStandalone = NULL;
+
+static Abc_ParBest_t * Abc_ParBestCurrent()
+{
+    return Abc_FrameReadGlobalFrame() ? (Abc_ParBest_t *)Abc_FrameReadManBest() : s_pParsBestStandalone;
+}
+static void Abc_ParBestSetCurrent( Abc_ParBest_t * pPars )
+{
+    if ( Abc_FrameReadGlobalFrame() )
+        Abc_FrameSetManBest( pPars );
+    else
+        s_pParsBestStandalone = pPars;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -69,25 +90,27 @@ abctime s_ResynTime = 0;
 int Abc_NtkCompareAndSaveBest( Abc_Ntk_t * pNtk )
 {
     extern void Io_Write( Abc_Ntk_t * pNtk, char * pFileName, Io_FileType_t FileType );
-    static struct ParStruct {
-        char * pName;  // name of the best saved network
-        int    Depth;  // depth of the best saved network
-        int    Flops;  // flops in the best saved network 
-        int    Nodes;  // nodes in the best saved network
-        int    Edges;  // edges in the best saved network
-        int    nPis;   // the number of primary inputs
-        int    nPos;   // the number of primary outputs
-    } ParsNew, ParsBest = { 0 };
+    Abc_ParBest_t ParsNew, * pParsBest = Abc_ParBestCurrent();
     char * pFileNameOut;
     // free storage for the name
     if ( pNtk == NULL )
     {
-        ABC_FREE( ParsBest.pName );
+        if ( pParsBest )
+        {
+            ABC_FREE( pParsBest->pName );
+            ABC_FREE( pParsBest );
+            Abc_ParBestSetCurrent( NULL );
+        }
         return 0;
     }
     // quit if not a logic network
     if ( !Abc_NtkIsLogic(pNtk) )
         return 0;
+    if ( pParsBest == NULL )
+    {
+        pParsBest = ABC_CALLOC( Abc_ParBest_t, 1 );
+        Abc_ParBestSetCurrent( pParsBest );
+    }
     // get the parameters
     ParsNew.Depth = Abc_NtkLevel( pNtk );
     ParsNew.Flops = Abc_NtkLatchNum( pNtk );
@@ -96,20 +119,20 @@ int Abc_NtkCompareAndSaveBest( Abc_Ntk_t * pNtk )
     ParsNew.nPis  = Abc_NtkPiNum( pNtk );
     ParsNew.nPos  = Abc_NtkPoNum( pNtk );
     // reset the parameters if the network has the same name
-    if (  ParsBest.pName == NULL ||
-          strcmp(ParsBest.pName, pNtk->pName) ||
-          ParsBest.Depth >  ParsNew.Depth ||
-         (ParsBest.Depth == ParsNew.Depth && ParsBest.Flops >  ParsNew.Flops) ||
-         (ParsBest.Depth == ParsNew.Depth && ParsBest.Flops == ParsNew.Flops && ParsBest.Edges >  ParsNew.Edges) )
+    if (  pParsBest->pName == NULL ||
+          strcmp(pParsBest->pName, pNtk->pName) ||
+          pParsBest->Depth >  ParsNew.Depth ||
+         (pParsBest->Depth == ParsNew.Depth && pParsBest->Flops >  ParsNew.Flops) ||
+         (pParsBest->Depth == ParsNew.Depth && pParsBest->Flops == ParsNew.Flops && pParsBest->Edges >  ParsNew.Edges) )
     {
-        ABC_FREE( ParsBest.pName );
-        ParsBest.pName = Extra_UtilStrsav( pNtk->pName );
-        ParsBest.Depth = ParsNew.Depth;
-        ParsBest.Flops = ParsNew.Flops;
-        ParsBest.Nodes = ParsNew.Nodes;
-        ParsBest.Edges = ParsNew.Edges;
-        ParsBest.nPis  = ParsNew.nPis;
-        ParsBest.nPos  = ParsNew.nPos;
+        ABC_FREE( pParsBest->pName );
+        pParsBest->pName = Extra_UtilStrsav( pNtk->pName );
+        pParsBest->Depth = ParsNew.Depth;
+        pParsBest->Flops = ParsNew.Flops;
+        pParsBest->Nodes = ParsNew.Nodes;
+        pParsBest->Edges = ParsNew.Edges;
+        pParsBest->nPis  = ParsNew.nPis;
+        pParsBest->nPos  = ParsNew.nPos;
         // writ the network
         if ( strcmp(pNtk->pSpec + strlen(pNtk->pSpec) - strlen("_best.blif"), "_best.blif") )
             pFileNameOut = Extra_FileNameGenericAppend( pNtk->pSpec, "_best.blif" );
@@ -447,7 +470,7 @@ void Abc_NtkPrintStats( Abc_Ntk_t * pNtk, int fFactored, int fSaveBest, int fDum
 /*
     // print the statistic into a file
     {
-        static int Counter = 0;
+        static ABC_THREAD_LOCAL int Counter = 0;
         extern int timeRetime;
         FILE * pTable;
         Counter++;

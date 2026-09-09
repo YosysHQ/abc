@@ -524,7 +524,7 @@ hashResize(
 #endif
     int shift;
     int oldNumBuckets = queue->numBuckets;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     /* Compute the new size of the subtable. */
@@ -566,4 +566,3 @@ hashResize(
 
 
 ABC_NAMESPACE_IMPL_END
-

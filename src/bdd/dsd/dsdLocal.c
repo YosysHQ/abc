@@ -281,7 +281,7 @@ DdNode * dsdTreeGetPrimeFunction( DdManager * dd, Dsd_Node_t * pNode, int fRemap
     DdNode * bCof0,  * bCof1, * bCube0, * bCube1, * bNewFunc, * bTemp;
     int i;
     int fAllBuffs = 1;
-    static int Permute[MAXINPUTS];
+    static ABC_THREAD_LOCAL int Permute[MAXINPUTS];
 
     assert( pNode );
     assert( !Dsd_IsComplement( pNode ) );
@@ -339,4 +339,3 @@ DdNode * dsdTreeGetPrimeFunction( DdManager * dd, Dsd_Node_t * pNode, int fRemap
 ///                           END OF FILE                            ///
 ////////////////////////////////////////////////////////////////////////
 ABC_NAMESPACE_IMPL_END
-

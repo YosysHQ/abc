@@ -34,13 +34,10 @@ ABC_NAMESPACE_IMPL_START
 
 static void Abc_AttachSetupTruthTables( unsigned uTruths[][2] );
 static void Abc_AttachComputeTruth( char * pSop, unsigned uTruthsIn[][2], unsigned * uTruthNode );
-static Mio_Gate_t * Abc_AttachFind( Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned * uTruthNode, int * Perm );
+static Mio_Gate_t * Abc_AttachFind( Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned * uTruthNode, int * Perm, char ** pPerms, int nPerms );
 static int Abc_AttachCompare( unsigned ** puTruthGates, int nGates, unsigned * uTruthNode );
-static int Abc_NodeAttach( Abc_Obj_t * pNode, Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned uTruths[][2] );
+static int Abc_NodeAttach( Abc_Obj_t * pNode, Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned uTruths[][2], char ** pPerms, int nPerms );
 static void Abc_TruthPermute( char * pPerm, int nVars, unsigned * uTruthNode, unsigned * uTruthPerm );
-
-static char ** s_pPerms = NULL;
-static int s_nPerms;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -64,7 +61,8 @@ int Abc_NtkAttach( Abc_Ntk_t * pNtk )
     unsigned uTruths[6][2];
     Abc_Obj_t * pNode;
     Mio_Gate_t ** ppGates;
-    int nGates, nFanins, i;
+    char ** pPerms;
+    int nGates, nFanins, nPerms, i;
 
     assert( Abc_NtkIsSopLogic(pNtk) );
 
@@ -78,6 +76,8 @@ int Abc_NtkAttach( Abc_Ntk_t * pNtk )
 
     // start the truth tables
     Abc_AttachSetupTruthTables( uTruths );
+    pPerms = Extra_Permutations( 6 );
+    nPerms = Extra_Factorial( 6 );
     
     // collect all the gates
     ppGates = Mio_CollectRoots( pGenlib, 6, (float)1.0e+20, 1, &nGates, 0 );
@@ -115,21 +115,23 @@ int Abc_NtkAttach( Abc_Ntk_t * pNtk )
             ABC_FREE( puTruthGates[0] );
             ABC_FREE( puTruthGates );
             ABC_FREE( ppGates );
+            ABC_FREE( pPerms );
             return 0;
         }
-        else if ( !Abc_NodeAttach( pNode, ppGates, puTruthGates, nGates, uTruths ) )
+        else if ( !Abc_NodeAttach( pNode, ppGates, puTruthGates, nGates, uTruths, pPerms, nPerms ) )
         {
             printf( "Could not attach the library gate to node %s.\n", Abc_ObjName(pNode) );
             ABC_FREE( puTruthGates[0] );
             ABC_FREE( puTruthGates );
             ABC_FREE( ppGates );
+            ABC_FREE( pPerms );
             return 0;
         }
     }
     ABC_FREE( puTruthGates[0] );
     ABC_FREE( puTruthGates );
     ABC_FREE( ppGates );
-    ABC_FREE( s_pPerms );
+    ABC_FREE( pPerms );
 
     // perform the final transformation
     Abc_NtkForEachNode( pNtk, pNode, i )
@@ -170,7 +172,7 @@ int Abc_NtkAttach( Abc_Ntk_t * pNtk )
   SeeAlso     []
 
 ***********************************************************************/
-int Abc_NodeAttach( Abc_Obj_t * pNode, Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned uTruths[][2] )
+int Abc_NodeAttach( Abc_Obj_t * pNode, Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned uTruths[][2], char ** pPerms, int nPerms )
 {
     int Perm[10];
     int pTempInts[10];
@@ -182,7 +184,7 @@ int Abc_NodeAttach( Abc_Obj_t * pNode, Mio_Gate_t ** ppGates, unsigned ** puTrut
     // compute the node's truth table
     Abc_AttachComputeTruth( (char *)pNode->pData, uTruths, uTruthNode );
     // find the matching gate and permutation
-    pGate = Abc_AttachFind( ppGates, puTruthGates, nGates, uTruthNode, Perm );
+    pGate = Abc_AttachFind( ppGates, puTruthGates, nGates, uTruthNode, Perm, pPerms, nPerms );
     if ( pGate == NULL )
         return 0;
     // permute the fanins
@@ -320,7 +322,7 @@ void Abc_AttachComputeTruth( char * pSop, unsigned uTruthsIn[][2], unsigned * uT
   SeeAlso     []
 
 ***********************************************************************/
-Mio_Gate_t * Abc_AttachFind( Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned * uTruthNode, int * Perm )
+Mio_Gate_t * Abc_AttachFind( Mio_Gate_t ** ppGates, unsigned ** puTruthGates, int nGates, unsigned * uTruthNode, int * Perm, char ** pPerms, int nPerms )
 {
     unsigned uTruthPerm[2];
     int i, v, iNum;
@@ -332,20 +334,14 @@ Mio_Gate_t * Abc_AttachFind( Mio_Gate_t ** ppGates, unsigned ** puTruthGates, in
             Perm[v] = v;
         return ppGates[iNum];
     }
-    // get permutations
-    if ( s_pPerms == NULL )
-    {
-        s_pPerms = Extra_Permutations( 6 );
-        s_nPerms = Extra_Factorial( 6 );
-    }
     // try permutations
-    for ( i = 0; i < s_nPerms; i++ )
+    for ( i = 0; i < nPerms; i++ )
     {
-        Abc_TruthPermute( s_pPerms[i], 6, uTruthNode, uTruthPerm );
+        Abc_TruthPermute( pPerms[i], 6, uTruthNode, uTruthPerm );
         if ( (iNum = Abc_AttachCompare( puTruthGates, nGates, uTruthPerm )) >= 0 )
         {
             for ( v = 0; v < 6; v++ )
-                Perm[v] = (int)s_pPerms[i][v];
+                Perm[v] = (int)pPerms[i][v];
             return ppGates[iNum];
         }
     }
@@ -406,4 +402,3 @@ void Abc_TruthPermute( char * pPerm, int nVars, unsigned * uTruthNode, unsigned 
 
 
 ABC_NAMESPACE_IMPL_END
-

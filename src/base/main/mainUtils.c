@@ -58,12 +58,11 @@ static char * DateReadFromDateString( char * datestr );
 ***********************************************************************/
 char * Abc_UtilsGetVersion( Abc_Frame_t * pAbc )
 {
-    static char Version[1000];
 #if __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdate-time"
 #endif
-    sprintf(Version, "%s (compiled %s %s)", ABC_VERSION, __DATE__, __TIME__);
+    static char Version[] = ABC_VERSION " (compiled " __DATE__ " " __TIME__ ")";
 #if __GNUC__
     #pragma GCC diagnostic pop
 #endif
@@ -83,11 +82,11 @@ char * Abc_UtilsGetVersion( Abc_Frame_t * pAbc )
 ***********************************************************************/
 char * Abc_UtilsGetUsersInput( Abc_Frame_t * pAbc )
 {
-    static char Prompt[5000];
+    static ABC_THREAD_LOCAL char Prompt[5000];
     sprintf( Prompt, "abc %02d> ", pAbc->nSteps );
 #ifdef ABC_USE_READLINE
     {
-    static char * line = NULL;
+    static ABC_THREAD_LOCAL char * line = NULL;
     if (line != NULL) ABC_FREE(line);
     line = readline(Prompt);  
     if (line == NULL){ printf("***EOF***\n"); exit(0); }
@@ -274,7 +273,7 @@ void Abc_UtilsSource( Abc_Frame_t * pAbc )
 ******************************************************************************/
 char * DateReadFromDateString( char * datestr )
 {
-  static char result[100];
+  static ABC_THREAD_LOCAL char result[100];
   char        day[10];
   char        month[10];
   char        zone[10];

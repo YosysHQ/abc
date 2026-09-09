@@ -44,7 +44,8 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 Lpk_Res_t * Lpk_MuxAnalize( Lpk_Man_t * pMan, Lpk_Fun_t * p )
 {
-    static Lpk_Res_t Res, * pRes = &Res;
+    static ABC_THREAD_LOCAL Lpk_Res_t Res;
+    Lpk_Res_t * pRes = &Res;
     int nSuppSize0, nSuppSize1, nSuppSizeS, nSuppSizeL;
     int Var, Area, Polarity, Delay, Delay0, Delay1, DelayA, DelayB;
     memset( pRes, 0, sizeof(Lpk_Res_t) );
@@ -237,4 +238,3 @@ Extra_PrintBinary( stdout, &uSupp, 16 ); printf( "\n\n" );
 
 
 ABC_NAMESPACE_IMPL_END
-

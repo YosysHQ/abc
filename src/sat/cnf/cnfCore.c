@@ -19,6 +19,7 @@
 ***********************************************************************/
 
 #include "cnf.h"
+#include "base/main/main.h"
 
 ABC_NAMESPACE_IMPL_START
 
@@ -27,7 +28,21 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-static Cnf_Man_t * s_pManCnf = NULL;
+static ABC_THREAD_LOCAL Cnf_Man_t * s_pManCnfStandalone = NULL;
+
+static Cnf_Man_t * Cnf_ManCurrent()
+{
+    return Abc_FrameReadGlobalFrame() ? (Cnf_Man_t *)Abc_FrameReadManCnf() : s_pManCnfStandalone;
+}
+static void Cnf_ManSetCurrent( Cnf_Man_t * pMan )
+{
+    if ( Abc_FrameReadGlobalFrame() )
+        Abc_FrameSetManCnf( pMan );
+    else
+        s_pManCnfStandalone = pMan;
+}
+
+#define s_pManCnf Cnf_ManCurrent()
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -48,7 +63,7 @@ void Cnf_ManPrepare()
     if ( s_pManCnf == NULL )
     {
 //        printf( "\n\nCreating CNF manager!!!!!\n\n" );
-        s_pManCnf = Cnf_ManStart();
+        Cnf_ManSetCurrent( Cnf_ManStart() );
     }
 }
 Cnf_Man_t * Cnf_ManRead()
@@ -60,7 +75,7 @@ void Cnf_ManFree()
     if ( s_pManCnf == NULL )
         return;
     Cnf_ManStop( s_pManCnf );
-    s_pManCnf = NULL;
+    Cnf_ManSetCurrent( NULL );
 }
 
 
@@ -287,4 +302,3 @@ ABC_PRT( "Ext ", Abc_Clock() - clk );
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -59,7 +59,7 @@ INOUT pcost cost;
 char *fmt_cost(cost)
 IN pcost cost;
 {
-    static char s[200];
+    static ABC_THREAD_LOCAL char s[200];
 
     if (cube.num_binary_vars == cube.num_vars - 1)
     (void) sprintf(s, "c=%d(%d) in=%d out=%d tot=%d",
@@ -144,4 +144,3 @@ char *s;
     exit(1);
 }
 ABC_NAMESPACE_IMPL_END
-

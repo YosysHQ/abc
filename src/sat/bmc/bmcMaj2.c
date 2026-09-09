@@ -281,7 +281,7 @@ static inline int Maj_ManFindFanin( Maj_Man_t * p, int i, int k )
 static inline int Maj_ManEval( Maj_Man_t * p )
 {
     int fUseMiddle = 1;
-    static int Flag = 0;
+    int Flag = 0;
     int i, k, iMint; word * pFanins[3];
     for ( i = p->nVars + 2; i < p->nObjs; i++ )
     {
@@ -655,7 +655,7 @@ static inline char * Exa_ManObjName( Exa_Man_t * p, int iObj, char * pBuffer )
 }
 static inline int Exa_ManEval( Exa_Man_t * p )
 {
-    static int Flag = 0;
+    int Flag = 0;
     int i, k, iMint; word * pFanins[2];
     for ( i = p->nVars; i < p->nObjs; i++ )
     {
@@ -1248,7 +1248,7 @@ static inline int Exa3_ManFindFanin( Exa3_Man_t * p, int i, int k )
 }
 static inline int Exa3_ManEval( Exa3_Man_t * p )
 {
-    static int Flag = 0;
+    int Flag = 0;
     int i, k, j, iMint; word * pFanins[6];
     for ( i = p->nVars; i < p->nObjs; i++ )
     {

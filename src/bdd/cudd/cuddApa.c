@@ -97,7 +97,7 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddApa.c,v 1.19 2009/03/08 01:27:50 fabio Exp $";
 #endif
 
-static  DdNode  *background, *zero;
+static ABC_THREAD_LOCAL DdNode *background, *zero;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -976,4 +976,3 @@ cuddApaStCountfree(
 
 
 ABC_NAMESPACE_IMPL_END
-

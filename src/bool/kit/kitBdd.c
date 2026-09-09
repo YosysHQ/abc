@@ -202,7 +202,7 @@ DdNode * Kit_TruthToBdd( DdManager * dd, unsigned * pTruth, int nVars, int fMSBo
 ***********************************************************************/
 int Kit_SopFactorVerify( Vec_Int_t * vCover, Kit_Graph_t * pFForm, int nVars )
 {
-    static DdManager * dd = NULL;
+    static ABC_THREAD_LOCAL DdManager * dd = NULL;
     Kit_Sop_t Sop, * cSop = &Sop;
     DdNode * bFunc1, * bFunc2;
     Vec_Int_t * vMemory;
@@ -240,4 +240,3 @@ int Kit_SopFactorVerify( Vec_Int_t * vCover, Kit_Graph_t * pFForm, int nVars )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -192,6 +192,7 @@ int Cmd_CommandHandleSpecial( Abc_Frame_t * pAbc, const char * sCommand )
 ***********************************************************************/
 int Cmd_CommandExecute( Abc_Frame_t * pAbc, const char * sCommand )
 {
+    Abc_Frame_t * pPrevious = Abc_FrameEnter( pAbc );
     int fStatus = 0, argc, loop;
     const char * sCommandNext;
     char **argv;
@@ -211,6 +212,7 @@ int Cmd_CommandExecute( Abc_Frame_t * pAbc, const char * sCommand )
         CmdFreeArgv( argc, argv );
     } 
     while ( fStatus == 0 && *sCommandNext != '\0' );
+    Abc_FrameLeave( pPrevious );
     return fStatus;
 }
 
@@ -220,4 +222,3 @@ int Cmd_CommandExecute( Abc_Frame_t * pAbc, const char * sCommand )
 
 
 ABC_NAMESPACE_IMPL_END
-

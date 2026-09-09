@@ -120,37 +120,37 @@ typedef struct NodeData NodeData_t;
 static char rcsid[] DD_UNUSED = "$Id: cuddSubsetHB.c,v 1.37 2009/02/20 02:14:58 fabio Exp $";
 #endif
 
-static int memOut;
+static ABC_THREAD_LOCAL int memOut;
 #ifdef DEBUG
-static  int             num_calls;
+static ABC_THREAD_LOCAL int num_calls;
 #endif
 
-static  DdNode          *zero, *one; /* constant functions */
-static  double          **mintermPages; /* pointers to the pages */
-static  int             **nodePages; /* pointers to the pages */
-static  int             **lightNodePages; /* pointers to the pages */
-static  double          *currentMintermPage; /* pointer to the current
+static ABC_THREAD_LOCAL DdNode *zero, *one; /* constant functions */
+static ABC_THREAD_LOCAL double **mintermPages; /* pointers to the pages */
+static ABC_THREAD_LOCAL int **nodePages; /* pointers to the pages */
+static ABC_THREAD_LOCAL int **lightNodePages; /* pointers to the pages */
+static ABC_THREAD_LOCAL double *currentMintermPage; /* pointer to the current
                                                    page */
-static  double          max; /* to store the 2^n value of the number
+static ABC_THREAD_LOCAL double max; /* to store the 2^n value of the number
                               * of variables */
 
-static  int             *currentNodePage; /* pointer to the current
+static ABC_THREAD_LOCAL int *currentNodePage; /* pointer to the current
                                                    page */
-static  int             *currentLightNodePage; /* pointer to the
+static ABC_THREAD_LOCAL int *currentLightNodePage; /* pointer to the
                                                 *  current page */
-static  int             pageIndex; /* index to next element */
-static  int             page; /* index to current page */
-static  int             pageSize = DEFAULT_PAGE_SIZE; /* page size */
-static  int             maxPages; /* number of page pointers */
+static ABC_THREAD_LOCAL int pageIndex; /* index to next element */
+static ABC_THREAD_LOCAL int page; /* index to current page */
+static const int pageSize = DEFAULT_PAGE_SIZE; /* page size */
+static ABC_THREAD_LOCAL int maxPages; /* number of page pointers */
 
-static  NodeData_t      *currentNodeDataPage; /* pointer to the current
+static ABC_THREAD_LOCAL NodeData_t *currentNodeDataPage; /* pointer to the current
                                                  page */
-static  int             nodeDataPage; /* index to next element */
-static  int             nodeDataPageIndex; /* index to next element */
-static  NodeData_t      **nodeDataPages; /* index to current page */
-static  int             nodeDataPageSize = DEFAULT_NODE_DATA_PAGE_SIZE;
+static ABC_THREAD_LOCAL int nodeDataPage; /* index to next element */
+static ABC_THREAD_LOCAL int nodeDataPageIndex; /* index to next element */
+static ABC_THREAD_LOCAL NodeData_t **nodeDataPages; /* index to current page */
+static const int nodeDataPageSize = DEFAULT_NODE_DATA_PAGE_SIZE;
                                                      /* page size */
-static  int             maxNodeDataPages; /* number of page pointers */
+static ABC_THREAD_LOCAL int maxNodeDataPages; /* number of page pointers */
 
 
 /*---------------------------------------------------------------------------*/
@@ -1334,4 +1334,3 @@ BuildSubsetBdd(
 
 
 ABC_NAMESPACE_IMPL_END
-

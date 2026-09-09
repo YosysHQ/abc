@@ -166,6 +166,7 @@ struct sat_solver_t
     int         nLearntDelta;  // delta of learned clause limit
     int         nLearntRatio;  // ratio percentage of learned clauses
     int         nDBreduces;    // number of DB reductions
+    abctime     timeReduceDb;  // runtime of DB reductions
 
     ABC_INT64_T nConfLimit;    // external limit on the number of conflicts
     ABC_INT64_T nInsLimit;     // external limit on the number of implications

@@ -315,7 +315,7 @@ void Sat_ProofReduce2( sat_solver2 * s )
     satset * pNode, * pFanin, * pPivot;
     int i, k, hTemp;
     abctime clk = Abc_Clock();
-    static abctime TimeTotal = 0;
+    static ABC_THREAD_LOCAL abctime TimeTotal = 0;
 
     // collect visited nodes
     vUsed = Proof_CollectUsedIter( vProof, vRoots, 1 );
@@ -391,7 +391,6 @@ int Sat_ProofReduce( Vec_Set_t * vProof, void * pRoots, int hProofPivot )
     satset * pNode, * pFanin, * pPivot;
     int i, j, k, hTemp, nSize;
     abctime clk = Abc_Clock();
-    static abctime TimeTotal = 0;
     int RetValue;
 //Sat_ProofCheck0( vProof );
 
@@ -448,8 +447,7 @@ int Sat_ProofReduce( Vec_Set_t * vProof, void * pRoots, int hProofPivot )
         printf( "The proof was reduced from %6.2f MB to %6.2f MB (by %6.2f %%)  ", 
             1.0 * Vec_SetMemory(vProof) / (1<<20), 1.0 * Vec_SetMemoryS(vProof) / (1<<20), 
             100.0 * (Vec_SetMemory(vProof) - Vec_SetMemoryS(vProof)) / Vec_SetMemory(vProof) );
-        TimeTotal += Abc_Clock() - clk;
-        Abc_PrintTime( 1, "Time", TimeTotal );
+        Abc_PrintTime( 1, "Time", Abc_Clock() - clk );
     }
     Vec_SetShrink( vProof, Vec_SetHandCurrentS(vProof) );
     Vec_SetShrinkLimits( vProof );
@@ -931,4 +929,3 @@ void * Proof_DeriveCore( Vec_Set_t * vProof, int hRoot )
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-

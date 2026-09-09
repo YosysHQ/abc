@@ -891,7 +891,8 @@ static inline Ivy_Obj_t * Ivy_ObjRealFanin( Ivy_Obj_t * pObj )
 ***********************************************************************/
 Ivy_Store_t * Ivy_NodeFindCutsAll( Ivy_Man_t * p, Ivy_Obj_t * pObj, int nLeaves )
 {
-    static Ivy_Store_t CutStore, * pCutStore = &CutStore;
+    static ABC_THREAD_LOCAL Ivy_Store_t CutStore;
+    Ivy_Store_t * pCutStore = &CutStore;
     Ivy_Cut_t CutNew, * pCutNew = &CutNew, * pCut;
     Ivy_Obj_t * pLeaf;
     int i, k, iLeaf0, iLeaf1;
@@ -992,4 +993,3 @@ void Ivy_ManTestCutsAll( Ivy_Man_t * p )
 
 
 ABC_NAMESPACE_IMPL_END
-

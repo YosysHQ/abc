@@ -134,7 +134,7 @@ Cudd_Init(
     DdNode *one, *zero;
     unsigned int maxCacheSize;
     unsigned int looseUpTo;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     if (maxMemory == 0) {
@@ -315,5 +315,4 @@ cuddZddFreeUniv(
 
 
 ABC_NAMESPACE_IMPL_END
-
 

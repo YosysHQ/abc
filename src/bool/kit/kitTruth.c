@@ -1186,7 +1186,7 @@ void Kit_TruthMuxVarPhase( unsigned * pOut, unsigned * pCof0, unsigned * pCof1, 
 ***********************************************************************/
 int Kit_TruthVarsSymm( unsigned * pTruth, int nVars, int iVar0, int iVar1, unsigned * pCof0, unsigned * pCof1 )
 {
-    static unsigned uTemp0[32], uTemp1[32];
+    static ABC_THREAD_LOCAL unsigned uTemp0[32], uTemp1[32];
     if ( pCof0 == NULL )
     {
         assert( nVars <= 10 );
@@ -1222,7 +1222,7 @@ int Kit_TruthVarsSymm( unsigned * pTruth, int nVars, int iVar0, int iVar1, unsig
 ***********************************************************************/
 int Kit_TruthVarsAntiSymm( unsigned * pTruth, int nVars, int iVar0, int iVar1, unsigned * pCof0, unsigned * pCof1 )
 {
-    static unsigned uTemp0[32], uTemp1[32];
+    static ABC_THREAD_LOCAL unsigned uTemp0[32], uTemp1[32];
     if ( pCof0 == NULL )
     {
         assert( nVars <= 10 );
@@ -1314,7 +1314,7 @@ void Kit_TruthChangePhase( unsigned * pTruth, int nVars, int iVar )
 ***********************************************************************/
 int Kit_TruthMinCofSuppOverlap( unsigned * pTruth, int nVars, int * pVarMin )
 {
-    static unsigned uCofactor[16];
+    static ABC_THREAD_LOCAL unsigned uCofactor[16];
     int i, ValueCur, ValueMin, VarMin;
     unsigned uSupp0, uSupp1;
     int nVars0, nVars1;
@@ -2003,7 +2003,7 @@ void Kit_TruthCountMintermsPrecomp()
 ***********************************************************************/
 char * Kit_TruthDumpToFile( unsigned * pTruth, int nVars, int nFile )
 {
-    static char pFileName[100];
+    static ABC_THREAD_LOCAL char pFileName[100];
     FILE * pFile;
     sprintf( pFileName, "tt\\s%04d", nFile );
     pFile = fopen( pFileName, "w" );
@@ -2221,4 +2221,3 @@ void Kit_TruthPrintProfile( unsigned * pTruth, int nVars )
 
 
 ABC_NAMESPACE_IMPL_END
-

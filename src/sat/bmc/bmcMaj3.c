@@ -215,7 +215,7 @@ static inline void Maj3_ManPrintSolution( Maj3_Man_t * p )
 static inline int Maj3_ManEval( Maj3_Man_t * p )
 {
     int fUseMiddle = 1;
-    static int Flag = 0;
+    int Flag = 0;
     int i, k, iMint, pFanins[3]; word * pFaninsW[3];
     for ( i = p->nVars; i < p->nObjs; i++ )
     {
@@ -1196,7 +1196,7 @@ static void Zyx_ManPrintSolution( Zyx_Man_t * p, int fCompl, int fFirst )
 }
 static inline int Zyx_ManEval( Zyx_Man_t * p )
 {
-    static int Flag = 0;
+    int Flag = 0;
     //abctime clk = Abc_Clock();
     int i, k, j, iMint; word * pFaninsW[6], * pSpec;
     for ( i = p->pPars->nVars; i < p->nObjs; i++ )
@@ -1517,4 +1517,3 @@ void Zyx_TestExact( char * pFileName )
 
 
 ABC_NAMESPACE_IMPL_END
-

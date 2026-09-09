@@ -92,7 +92,7 @@ char * Ioa_FileNameGeneric( char * FileName )
 ***********************************************************************/
 char * Ioa_FileNameGenericAppend( char * pBase, char * pSuffix )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     char * pDot;
     if ( pBase == NULL )
     {
@@ -126,7 +126,7 @@ char * Ioa_FileNameGenericAppend( char * pBase, char * pSuffix )
 ***********************************************************************/
 char * Ioa_TimeStamp()
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     char * TimeStamp;
     time_t ltime;
     // get the current time
@@ -143,4 +143,3 @@ char * Ioa_TimeStamp()
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -535,7 +535,7 @@ Vec_Int_t * Gla_ManRefinement( Gla_Man_t * p )
 Vec_Int_t * Gla_ManRefinement2( Gla_Man_t * p )
 {
     int fVerify = 1;
-    static int Sign = 0;
+    static ABC_THREAD_LOCAL int Sign = 0;
     Vec_Int_t * vPis, * vPPis, * vCos, * vRoAnds, * vSelect = NULL;
     Rfn_Obj_t * pRef, * pRef0, * pRef1;
     Gia_Obj_t * pObj;
@@ -1263,7 +1263,7 @@ int Gla_ManCountPPis( Gla_Man_t * p )
 }
 void Gla_ManExplorePPis( Gla_Man_t * p, Vec_Int_t * vPPis )
 {
-    static int Round = 0;
+    static ABC_THREAD_LOCAL int Round = 0;
     Gla_Obj_t * pObj, * pFanin;
     int i, j, k, Count;
     if ( (Round++ % 5) == 0 )
@@ -1953,4 +1953,3 @@ finish:
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -92,10 +92,10 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddZddLin.c,v 1.14 2004/08/13 18:04:53 fabio Exp $";
 #endif
 
-extern  int     *zdd_entry;
-extern  int     zddTotalNumberSwapping;
-static  int     zddTotalNumberLinearTr;
-static  DdNode  *empty;
+extern ABC_THREAD_LOCAL int *zdd_entry;
+extern ABC_THREAD_LOCAL int zddTotalNumberSwapping;
+static ABC_THREAD_LOCAL int zddTotalNumberLinearTr;
+static ABC_THREAD_LOCAL DdNode *empty;
 
 
 /*---------------------------------------------------------------------------*/
@@ -971,5 +971,4 @@ cuddZddUndoMovesOutOfMem:
 
 
 ABC_NAMESPACE_IMPL_END
-
 

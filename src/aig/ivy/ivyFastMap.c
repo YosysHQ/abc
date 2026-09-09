@@ -83,10 +83,6 @@ static int  Ivy_FastMapNodeRef( Ivy_Man_t * pAig, Ivy_Obj_t * pObj );
 static int  Ivy_FastMapNodeDeref( Ivy_Man_t * pAig, Ivy_Obj_t * pObj );
 
 
-extern abctime s_MappingTime;
-extern int s_MappingMem;
-
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -107,7 +103,7 @@ void Ivy_FastMapPerform( Ivy_Man_t * pAig, int nLimit, int fRecovery, int fVerbo
     Ivy_SuppMan_t * pMan;
     Ivy_Obj_t * pObj;
     int i, Delay, Area;
-    abctime clk, clkTotal = Abc_Clock();
+    abctime clk;
     // start the memory for supports
     pMan = ABC_ALLOC( Ivy_SuppMan_t, 1 );
     memset( pMan, 0, sizeof(Ivy_SuppMan_t) );
@@ -166,8 +162,6 @@ clk = Abc_Clock();
     }
 
 
-    s_MappingTime = Abc_Clock() - clkTotal;
-    s_MappingMem = pMan->nObjs * pMan->nSize;
 /*
     {
         Vec_Ptr_t * vNodes;
@@ -369,10 +363,10 @@ static inline int Vec_IntRemoveDup( int * pArray, int nSize )
 ***********************************************************************/
 void Ivy_FastMapNodeArea2( Ivy_Man_t * pAig, Ivy_Obj_t * pObj, int nLimit )
 {
-    static int Store[32], StoreSize;
-    static char Supp0[16], Supp1[16];
-    static Ivy_Supp_t * pTemp0 = (Ivy_Supp_t *)Supp0;
-    static Ivy_Supp_t * pTemp1 = (Ivy_Supp_t *)Supp1;
+    int Store[32], StoreSize;
+    word Supp0[2], Supp1[2];
+    Ivy_Supp_t * pTemp0 = (Ivy_Supp_t *)Supp0;
+    Ivy_Supp_t * pTemp1 = (Ivy_Supp_t *)Supp1;
     Ivy_Obj_t * pFanin0, * pFanin1;
     Ivy_Supp_t * pSupp0, * pSupp1, * pSupp;
     int RetValue, DelayOld;
@@ -440,10 +434,10 @@ void Ivy_FastMapNodeArea2( Ivy_Man_t * pAig, Ivy_Obj_t * pObj, int nLimit )
 ***********************************************************************/
 void Ivy_FastMapNodeArea( Ivy_Man_t * pAig, Ivy_Obj_t * pObj, int nLimit )
 {
-    static int Store[32], StoreSize;
-    static char Supp0[16], Supp1[16];
-    static Ivy_Supp_t * pTemp0 = (Ivy_Supp_t *)Supp0;
-    static Ivy_Supp_t * pTemp1 = (Ivy_Supp_t *)Supp1;
+    int Store[32], StoreSize;
+    word Supp0[2], Supp1[2];
+    Ivy_Supp_t * pTemp0 = (Ivy_Supp_t *)Supp0;
+    Ivy_Supp_t * pTemp1 = (Ivy_Supp_t *)Supp1;
     Ivy_Obj_t * pFanin0, * pFanin1;
     Ivy_Supp_t * pSupp0, * pSupp1, * pSupp;
     int RetValue, DelayOld, RefsOld;
@@ -1566,4 +1560,3 @@ void Ivy_FastMapNodeRecover4( Ivy_Man_t * pAig, Ivy_Obj_t * pObj, int nLimit, Ve
 
 
 ABC_NAMESPACE_IMPL_END
-

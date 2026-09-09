@@ -57,7 +57,7 @@ static int Ivy_MultiCover( Ivy_Man_t * p, Ivy_Eva_t * pEvals, int nLeaves, int n
 ***********************************************************************/
 int Ivy_MultiPlus( Ivy_Man_t * p, Vec_Ptr_t * vLeaves, Vec_Ptr_t * vCone, Ivy_Type_t Type, int nLimit, Vec_Ptr_t * vSols )
 {
-    static Ivy_Eva_t pEvals[IVY_EVAL_LIMIT];
+    static ABC_THREAD_LOCAL Ivy_Eva_t pEvals[IVY_EVAL_LIMIT];
     Ivy_Eva_t * pEval, * pFan0, * pFan1;
     Ivy_Obj_t * pObj = NULL; // Suppress "might be used uninitialized"
     Ivy_Obj_t * pTemp;
@@ -309,4 +309,3 @@ int Ivy_MultiCover( Ivy_Man_t * p, Ivy_Eva_t * pEvals, int nLeaves, int nEvals, 
 
 
 ABC_NAMESPACE_IMPL_END
-

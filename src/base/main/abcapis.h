@@ -65,6 +65,16 @@ typedef struct Abc_Frame_t_      Abc_Frame_t;
 extern ABC_DLL void   Abc_Start();
 extern ABC_DLL void   Abc_Stop();
 
+// An explicitly created frame is owned by the caller and is not current on
+// return. Enter/Leave pairs must be nested in strict LIFO order on one thread.
+// Leave all scopes before Destroy. The lazy default frame is stopped with
+// Abc_Stop(); explicitly created frames are stopped with Abc_FrameDestroy().
+extern ABC_DLL Abc_Frame_t * Abc_FrameCreate();
+extern ABC_DLL void          Abc_FrameDestroy( Abc_Frame_t * pAbc );
+extern ABC_DLL Abc_Frame_t * Abc_FrameEnter( Abc_Frame_t * pAbc );
+extern ABC_DLL void          Abc_FrameLeave( Abc_Frame_t * pPrevious );
+extern ABC_DLL Abc_Frame_t * Abc_FrameCurrent();
+
 // procedures to get the ABC framework (pAbc) and execute commands in it
 extern ABC_DLL Abc_Frame_t * Abc_FrameGetGlobalFrame();
 extern ABC_DLL int   Cmd_CommandExecute( Abc_Frame_t * pAbc, const char * pCommandLine );
@@ -122,4 +132,3 @@ ABC_NAMESPACE_HEADER_END
 ////////////////////////////////////////////////////////////////////////
 ///                       END OF FILE                                ///
 ////////////////////////////////////////////////////////////////////////
-

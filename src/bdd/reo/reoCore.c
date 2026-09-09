@@ -29,9 +29,6 @@ static int  reoRecursiveDeref( reo_unit * pUnit );
 static int  reoCheckZeroRefs( reo_plane * pPlane );
 static int  reoCheckLevels( reo_man * p );
 
-double s_AplBefore;
-double s_AplAfter;
-
 ////////////////////////////////////////////////////////////////////////
 ///                    FUNCTION DEFINITIONS                          ///
 ////////////////////////////////////////////////////////////////////////
@@ -174,9 +171,6 @@ void reoReorderArray( reo_man * p, DdManager * dd, DdNode * Funcs[], DdNode * Fu
     }
     assert( reoCheckLevels( p ) );
     ///////////////////////////////////////////////////////////////////
-
-s_AplBefore = p->nAplBeg;
-s_AplAfter  = p->nAplEnd;
 
     // set the initial parameters
     p->nRefNodes  = 0;
@@ -438,4 +432,3 @@ int reoCheckLevels( reo_man * p )
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-

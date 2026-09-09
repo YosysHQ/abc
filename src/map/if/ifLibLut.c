@@ -47,7 +47,7 @@ If_LibLut_t * If_LibLutReadString( char * pStr )
 {
     If_LibLut_t * p;
     Vec_Ptr_t * vStrs;
-    char * pToken, * pBuffer, * pStrNew, * pStrMem;
+    char * pToken, * pBuffer, * pStrNew, * pStrMem, * pSave = NULL;
     int i, k, j;
 
     if ( pStr == NULL || pStr[0] == 0 )
@@ -73,7 +73,7 @@ If_LibLut_t * If_LibLutReadString( char * pStr )
     {
         if ( pBuffer[0] == 0 )
             continue;
-        pToken = strtok( pBuffer, " \t\n" );
+        pToken = Abc_UtilStrtok( pBuffer, " \t\n", &pSave );
         if ( pToken == NULL )
             continue;
         if ( pToken[0] == '#' )
@@ -89,12 +89,12 @@ If_LibLut_t * If_LibLutReadString( char * pStr )
         }
 
         // read area
-        pToken = strtok( NULL, " \t\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave );
         p->pLutAreas[i] = (float)atof(pToken);
 
         // read delays
         k = 0;
-        while ( (pToken = strtok( NULL, " \t\n" )) )
+        while ( (pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave )) )
             p->pLutDelays[i][k++] = (float)atof(pToken);
 
         // check for out-of-bound
@@ -201,7 +201,7 @@ int Abc_FrameSetLutLibraryTest( Abc_Frame_t * pAbc )
 ***********************************************************************/
 If_LibLut_t * If_LibLutRead( char * FileName )
 {
-    char pBuffer[1000], * pToken;
+    char pBuffer[1000], * pToken, * pSave = NULL;
     If_LibLut_t * p;
     FILE * pFile;
     int i, k;
@@ -220,7 +220,7 @@ If_LibLut_t * If_LibLutRead( char * FileName )
     i = 1;
     while ( fgets( pBuffer, 1000, pFile ) != NULL )
     {
-        pToken = strtok( pBuffer, " \t\n" );
+        pToken = Abc_UtilStrtok( pBuffer, " \t\n", &pSave );
         if ( pToken == NULL )
             continue;
         if ( pToken[0] == '#' )
@@ -235,12 +235,12 @@ If_LibLut_t * If_LibLutRead( char * FileName )
         }
 
         // read area
-        pToken = strtok( NULL, " \t\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave );
         p->pLutAreas[i] = (float)atof(pToken);
 
         // read delays
         k = 0;
-        while ( (pToken = strtok( NULL, " \t\n" )) )
+        while ( (pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave )) )
             p->pLutDelays[i][k++] = (float)atof(pToken);
 
         // check for out-of-bound
@@ -434,7 +434,7 @@ static int If_LibCellComputeRecordSize( char * pFuncDesc, int nInputs )
 ***********************************************************************/
 If_LibCell_t * If_LibCellRead( char * FileName )
 {
-    char pBuffer[1000], * pToken;
+    char pBuffer[1000], * pToken, * pSave = NULL;
     If_LibCell_t * p;
     FILE * pFile;
     int i, k;
@@ -455,7 +455,7 @@ If_LibCell_t * If_LibCellRead( char * FileName )
     // Read each line of the file
     while ( fgets( pBuffer, 1000, pFile ) != NULL )
     {
-        pToken = strtok( pBuffer, " \t\n" );
+        pToken = Abc_UtilStrtok( pBuffer, " \t\n", &pSave );
         if ( pToken == NULL )
             continue;
         if ( pToken[0] == '#' )
@@ -472,7 +472,7 @@ If_LibCell_t * If_LibCellRead( char * FileName )
         }
 
         // Read FuncDesc
-        pToken = strtok( NULL, " \t\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave );
         if ( pToken == NULL )
         {
             Abc_Print( -1, "Missing function description for cell %d.\n", CellId );
@@ -507,7 +507,7 @@ If_LibCell_t * If_LibCellRead( char * FileName )
         p->pCellRecordSizes[CellId] = If_LibCellComputeRecordSize( FuncDesc, nInputs );
 
         // Read Area
-        pToken = strtok( NULL, " \t\n" );
+        pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave );
         if ( pToken == NULL )
         {
             Abc_Print( -1, "Missing area for cell %d.\n", CellId );
@@ -519,7 +519,7 @@ If_LibCell_t * If_LibCellRead( char * FileName )
 
         // Read all available delays
         k = 0;
-        while ( (pToken = strtok( NULL, " \t\n" )) != NULL && k < IF_MAX_LUTSIZE )
+        while ( (pToken = Abc_UtilStrtok( NULL, " \t\n", &pSave )) != NULL && k < IF_MAX_LUTSIZE )
         {
             p->pCellPinDelays[CellId][k] = atoi(pToken);
             k++;

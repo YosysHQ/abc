@@ -44,7 +44,7 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 Cut_Cut_t * Cut_CutMergeTwo2( Cut_Man_t * p, Cut_Cut_t * pCut0, Cut_Cut_t * pCut1 )
 { 
-    static int M[7][3] = {{0},{0},{0},{0},{0},{0},{0}};
+    static ABC_THREAD_LOCAL int M[7][3] = {{0},{0},{0},{0},{0},{0},{0}};
     Cut_Cut_t * pRes;
     int * pRow;
     int nLeaves0, nLeaves1, Limit;
@@ -478,7 +478,7 @@ Cut_Cut_t * Cut_CutMergeTwo4( Cut_Man_t * p, Cut_Cut_t * pCut0, Cut_Cut_t * pCut
 ***********************************************************************/
 Cut_Cut_t * Cut_CutMergeTwo5( Cut_Man_t * p, Cut_Cut_t * pCut0, Cut_Cut_t * pCut1 )
 { 
-    static int M[7][3] = {{0},{0},{0},{0},{0},{0},{0}};
+    static ABC_THREAD_LOCAL int M[7][3] = {{0},{0},{0},{0},{0},{0},{0}};
     Cut_Cut_t * pRes;
     int * pRow;
     unsigned uSign0, uSign1;
@@ -659,4 +659,3 @@ Cut_Cut_t * Cut_CutMergeTwo5( Cut_Man_t * p, Cut_Cut_t * pCut0, Cut_Cut_t * pCut
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -233,7 +233,7 @@ void Dec_GraphPrint_rec( FILE * pFile, Dec_Graph_t * pGraph, Dec_Node_t * pNode,
 ***********************************************************************/
 int Dec_GraphPrintGetLeafName( FILE * pFile, int iLeaf, int fCompl, char * pNamesIn[] )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     sprintf( Buffer, "%s%s", fCompl? "!" : "", pNamesIn[iLeaf] );
     fprintf( pFile, "%s", Buffer );
     return strlen( Buffer );
@@ -286,4 +286,3 @@ int Dec_GraphPrintOutputName( FILE * pFile, char * pNameOut )
 
 
 ABC_NAMESPACE_IMPL_END
-

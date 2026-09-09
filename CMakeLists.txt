@@ -38,6 +38,8 @@ endfunction()
 
 project(abc)
 
+option(ABC_USE_NO_THREAD_LOCAL "Disable thread-local frame selection" OFF)
+
 if(READLINE_FOUND MATCHES TRUE)
     addprefix(ABC_READLINE_INCLUDES_FLAGS "-I" ${READLINE_INCLUDE})
     string(REPLACE ";" " " ABC_READLINE_INCLUDES_FLAGS "${ABC_READLINE_INCLUDES_FLAGS}")
@@ -53,6 +55,10 @@ if(ABC_USE_NAMESPACE)
     set(ABC_USE_NAMESPACE_FLAGS "ABC_USE_NAMESPACE=${ABC_USE_NAMESPACE}")
 endif()
 
+if(ABC_USE_NO_THREAD_LOCAL)
+    set(ABC_USE_NO_THREAD_LOCAL_FLAGS "ABC_USE_NO_THREAD_LOCAL=1")
+endif()
+
 if( APPLE )
     set(make_env ${CMAKE_COMMAND} -E env SDKROOT=${CMAKE_OSX_SYSROOT})
 endif()
@@ -64,6 +70,7 @@ execute_process(
     make
         ${ABC_READLINE_FLAGS}
         ${ABC_USE_NAMESPACE_FLAGS}
+        ${ABC_USE_NO_THREAD_LOCAL_FLAGS}
         ARCHFLAGS_EXE=${CMAKE_CURRENT_BINARY_DIR}/abc_arch_flags_program.exe
         ABC_MAKE_NO_DEPS=1
         CC=${CMAKE_C_COMPILER}

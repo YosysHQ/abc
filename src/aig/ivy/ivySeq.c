@@ -1026,7 +1026,8 @@ static inline int Ivy_CutReadLeaf( Ivy_Obj_t * pFanin )
 ***********************************************************************/
 Ivy_Store_t * Ivy_CutComputeForNode( Ivy_Man_t * p, Ivy_Obj_t * pObj, int nLeaves )
 {
-    static Ivy_Store_t CutStore, * pCutStore = &CutStore;
+    static ABC_THREAD_LOCAL Ivy_Store_t CutStore;
+    Ivy_Store_t * pCutStore = &CutStore;
     Ivy_Cut_t CutNew, * pCutNew = &CutNew, * pCut;
     Ivy_Obj_t * pLeaf;
     int i, k, Temp, nLats, iLeaf0, iLeaf1;
@@ -1139,4 +1140,3 @@ void Ivy_CutComputeAll( Ivy_Man_t * p, int nInputs )
 
 
 ABC_NAMESPACE_IMPL_END
-

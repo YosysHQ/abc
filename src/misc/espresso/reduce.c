@@ -115,7 +115,7 @@ INOUT pcube *T;         /* T will be disposed of */
     pcube r;
     register pcube cl, cr;
     register int best;
-    static int sccc_level = 0;
+    static ABC_THREAD_LOCAL int sccc_level = 0;
 
     if (debug & REDUCE1) {
     debug_print(T, "SCCC", sccc_level++);
@@ -260,4 +260,3 @@ OUT pcube *result;              /* returned only if answer determined */
     return MAYBE;
 }
 ABC_NAMESPACE_IMPL_END
-

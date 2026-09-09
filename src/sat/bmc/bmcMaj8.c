@@ -353,7 +353,7 @@ static inline int Exa8_ManFindFanin( Exa8_Man_t * p, int i, int k )
 }
 static inline int Exa8_ManEval( Exa8_Man_t * p )
 {
-    static int Flag = 0;
+    int Flag = 0;
     int i, k, j, iMint; word * pFanins[MAJ_MAX_LUT];
     for ( i = p->nVars; i < p->nObjs; i++ )
     {

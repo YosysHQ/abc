@@ -709,8 +709,8 @@ static inline unsigned Abc_TtSemiCanonicize( word * pTruth, int nVars, char * pC
 ***********************************************************************/
 void Abc_TtCofactorTest10( word * pTruth, int nVars, int N )
 {
-    static word pCopy1[1024];
-    static word pCopy2[1024];
+    static ABC_THREAD_LOCAL word pCopy1[1024];
+    static ABC_THREAD_LOCAL word pCopy2[1024];
     int nWords = Abc_TtWordNum( nVars );
     int i;
     for ( i = 0; i < nVars - 1; i++ )
@@ -801,7 +801,7 @@ int Abc_TtCofactorPermNaive( word * pTruth, int i, int nWords, int fSwapOnly )
 {
     if ( fSwapOnly )
     {
-        static word pCopy[1024];
+        static ABC_THREAD_LOCAL word pCopy[1024];
         Abc_TtCopy( pCopy, pTruth, nWords, 0 );
         Abc_TtSwapAdjacent( pCopy, nWords, i );
         if ( Abc_TtCompareRev(pTruth, pCopy, nWords) == 1 )
@@ -812,8 +812,8 @@ int Abc_TtCofactorPermNaive( word * pTruth, int i, int nWords, int fSwapOnly )
         return 0;
     }
     {
-        static word pCopy[1024];
-        static word pBest[1024];
+        static ABC_THREAD_LOCAL word pCopy[1024];
+        static ABC_THREAD_LOCAL word pBest[1024];
         int Config = 0;
         // save two copies
         Abc_TtCopy( pCopy, pTruth, nWords, 0 );
@@ -992,7 +992,7 @@ int Abc_TtCofactorPerm( word * pTruth, int i, int nWords, int fSwapOnly, char * 
         return Config;
     }
     {
-        static word pCopy1[1024];
+        static ABC_THREAD_LOCAL word pCopy1[1024];
         int Config;
         Abc_TtCopy( pCopy1, pTruth, nWords, 0 );
         Config = Abc_TtCofactorPermConfig( pTruth, i, nWords, 0, fNaive );
@@ -1042,8 +1042,8 @@ unsigned Abc_TtCanonicize( word * pTruth, int nVars, char * pCanonPerm )
 
 #ifdef CANON_VERIFY
     char pCanonPermCopy[16];
-    static word pCopy1[1024];
-    static word pCopy2[1024];
+    static ABC_THREAD_LOCAL word pCopy1[1024];
+    static ABC_THREAD_LOCAL word pCopy2[1024];
     Abc_TtCopy( pCopy1, pTruth, nWords, 0 );
 #endif
 
@@ -1091,8 +1091,8 @@ unsigned Abc_TtCanonicizePerm( word * pTruth, int nVars, char * pCanonPerm )
 
 #ifdef CANON_VERIFY
     char pCanonPermCopy[16];
-    static word pCopy1[1024];
-    static word pCopy2[1024];
+    static ABC_THREAD_LOCAL word pCopy1[1024];
+    static ABC_THREAD_LOCAL word pCopy2[1024];
     Abc_TtCopy( pCopy1, pTruth, nWords, 0 );
 #endif
 
@@ -1192,8 +1192,8 @@ unsigned Abc_TtCanonicizePhase( word * pTruth, int nVars )
 //    Counter++;
 
 #ifdef CANON_VERIFY
-    static word pCopy1[1024];
-    static word pCopy2[1024];
+    static ABC_THREAD_LOCAL word pCopy1[1024];
+    static ABC_THREAD_LOCAL word pCopy2[1024];
     Abc_TtCopy( pCopy1, pTruth, nWords, 0 );
 #endif
 
@@ -1506,7 +1506,7 @@ SeeAlso     []
 
 ***********************************************************************/
 
-// Johnson¨CTrotter algorithm
+// Johnson-Trotter algorithm
 static int Abc_NextPermSwapC(char * pData, signed char * pDir, int size)
 {
     int i, j, k = -1;
@@ -1532,7 +1532,7 @@ unsigned Abc_TtCanonicizeWrap(TtCanonicizeFunc func, Abc_TtHieMan_t * p, word * 
     int nWords = Abc_TtWordNum(nVars);
     unsigned uCanonPhase1, uCanonPhase2;
     char pCanonPerm2[16];
-    static word pTruth2[1024];
+    static ABC_THREAD_LOCAL word pTruth2[1024];
 
     Abc_TtNormalizeSmallTruth(pTruth, nVars);
     if (Abc_TtCountOnesInTruth(pTruth, nVars) != nWords * 32)
@@ -1547,13 +1547,13 @@ unsigned Abc_TtCanonicizeWrap(TtCanonicizeFunc func, Abc_TtHieMan_t * p, word * 
     return uCanonPhase2;
 }
 
-word gpVerCopy[1024];
+static ABC_THREAD_LOCAL word gpVerCopy[1024];
 static int Abc_TtCannonVerify(word* pTruth, int nVars, char * pCanonPerm, unsigned uCanonPhase)
 {
 #ifdef CANON_VERIFY
     int nWords = Abc_TtWordNum(nVars);
     char pCanonPermCopy[16];
-    static word pCopy2[1024];
+    static ABC_THREAD_LOCAL word pCopy2[1024];
     Abc_TtVerifySmallTruth(pTruth, nVars);
     Abc_TtCopy(pCopy2, pTruth, nWords, 0);
     memcpy(pCanonPermCopy, pCanonPerm, sizeof(char) * nVars);
@@ -1767,7 +1767,7 @@ SeeAlso     []
 
 ***********************************************************************/
 
-static word pSymCopy[1024];
+static ABC_THREAD_LOCAL word pSymCopy[1024];
 
 static int Abc_TtIsSymmetric(word * pTruth, int nVars, int iVar, int jVar, int fPhase)
 {
@@ -2051,8 +2051,8 @@ SeeAlso     []
 static int Abc_TgSymGroupPerm(Abc_TgMan_t* pMan, int idx, int fSwapOnly)
 {
     word* pTruth = pMan->pTruth;
-    static word pCopy[1024];
-    static word pBest[1024];
+    static ABC_THREAD_LOCAL word pCopy[1024];
+    static ABC_THREAD_LOCAL word pBest[1024];
     int Config = 0;
     int nWords = Abc_TtWordNum(pMan->nVars);
     Abc_TgMan_t tgManCopy, tgManBest;
@@ -2130,7 +2130,7 @@ static int Abc_TgSymGroupPerm(Abc_TgMan_t* pMan, int idx, int fSwapOnly)
 
 static int Abc_TgPermPhase(Abc_TgMan_t* pMan, int iVar)
 {
-    static word pCopy[1024];
+    static ABC_THREAD_LOCAL word pCopy[1024];
     int nWords = Abc_TtWordNum(pMan->nVars);
     int ivp = pMan->pPermTRev[iVar];
     Abc_TtCopy(pCopy, pMan->pTruth, nWords, 0);
@@ -2367,7 +2367,7 @@ static int Abc_TgPermCostScc(Abc_TgMan_t * pMan, int *pScc)
 
 static void Abc_TgPermEnumerationScc(Abc_TgMan_t * pMan, Abc_TgMan_t * pBest)
 {
-    static word pCopy[1024];
+    static ABC_THREAD_LOCAL word pCopy[1024];
     Abc_TgMan_t tgManCopy;
     Abc_TgManCopy(&tgManCopy, pCopy, pMan);
     if (pMan->nAlgorithm > 1)
@@ -2487,7 +2487,7 @@ static void Abc_TgPhaseEnumerationScc(Abc_TgMan_t * pMan, Abc_TgMan_t * pBest)
     Vec_Int_t * vPhase = pMan->vPhase;
     int i, j, n = pMan->pGroup->nGVars;
     int ph0 = 0, ph, flp;
-    static word pCopy[1024];
+    static ABC_THREAD_LOCAL word pCopy[1024];
     Abc_TgMan_t tgManCopy;
 
     if (pMan->fPhased)
@@ -2574,7 +2574,7 @@ unsigned Abc_TtCanonicizeAda(Abc_TtHieMan_t * p, word * pTruth, int nVars, char 
 {
     int nWords = Abc_TtWordNum(nVars);
     unsigned fExac = 0, fHash = 1 << 29;
-    static word pCopy[1024];
+    static ABC_THREAD_LOCAL word pCopy[1024];
     Abc_TgMan_t tgMan, tgManCopy;
     int iCost;
     const int MaxCost = 84;  // maximun posible cost for function with 16 inputs
@@ -2638,7 +2638,7 @@ unsigned Abc_TtCanonicizeCA(Abc_TtHieMan_t * p, word * pTruth, int nVars, char *
 {
     int nWords = Abc_TtWordNum(nVars);
     unsigned fHard = 0, fHash = 1 << 29;
-    static word pCopy[1024];
+    static ABC_THREAD_LOCAL word pCopy[1024];
     Abc_TgMan_t tgMan, tgManCopy;
     Abc_SccCost_t sc;
 
@@ -2699,4 +2699,3 @@ unsigned Abc_TtCanonicizeCA(Abc_TtHieMan_t * p, word * pTruth, int nVars, char *
 
 
 ABC_NAMESPACE_IMPL_END
-

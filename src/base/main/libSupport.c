@@ -45,14 +45,13 @@ ABC_NAMESPACE_IMPL_START
 
 
 #define MAX_LIBS 256
-static void* libHandles[MAX_LIBS+1]; // will be null terminated
 
 typedef void (*lib_init_end_func) (Abc_Frame_t * pAbc);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This will find all the ABC library extensions in the current directory and load them all.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void open_libs() {
+static void open_libs( void ** libHandles ) {
     int curr_lib = 0;
 
 #ifdef WIN32
@@ -86,10 +85,8 @@ void open_libs() {
       dirp = opendir(p);
       if (dirp == NULL) {
 //      printf("Warning: directory in ABC_LIB_PATH does not exist (%s).\n", p);
-        continue;
       }
-
-      while ((dp = readdir(dirp)) != NULL) {
+      else while ((dp = readdir(dirp)) != NULL) {
         if ((strncmp("libabc_", dp->d_name, 7) == 0) &&
             (strcmp(".so", dp->d_name + strlen(dp->d_name) - 3) == 0)) {
 
@@ -120,7 +117,8 @@ void open_libs() {
           }
         }
       }
-      closedir(dirp);
+      if ( dirp )
+        closedir(dirp);
       //p = endp+1;
       if (endp == NULL) {
         break; // last directory in the list
@@ -139,9 +137,8 @@ void open_libs() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This will close all open ABC library extensions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void close_libs() {
+static void close_libs( void ** libHandles ) {
 #ifdef WIN32
-    printf("Warning: close_libs WIN32 not implemented.\n");
 #else
     int i;
     for (i = 0; libHandles[i] != 0; i++) {
@@ -156,7 +153,7 @@ void close_libs() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This will get a pointer to a function inside of an open library
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void* get_fnct_ptr(int lib_num, char* sym_name) {
+static void * get_fnct_ptr( void ** libHandles, int lib_num, char * sym_name ) {
 #ifdef WIN32
     printf("Warning: get_fnct_ptr WIN32 not implemented.\n");
     return 0;
@@ -168,11 +165,11 @@ void* get_fnct_ptr(int lib_num, char* sym_name) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This will call an initialization function in every open library.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void call_inits(Abc_Frame_t* pAbc) {
+static void call_inits( void ** libHandles, Abc_Frame_t * pAbc ) {
     int i;
     lib_init_end_func init_func;
     for (i = 0; libHandles[i] != 0; i++) {
-        init_func = (lib_init_end_func) get_fnct_ptr(i, "abc_init");
+        init_func = (lib_init_end_func) get_fnct_ptr(libHandles, i, "abc_init");
         if (init_func == 0) {
             printf("Warning: Failed to initialize library %d.\n", i);
         } else {
@@ -184,11 +181,11 @@ void call_inits(Abc_Frame_t* pAbc) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This will call a shutdown function in every open library.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void call_ends(Abc_Frame_t* pAbc) {
+static void call_ends( void ** libHandles, Abc_Frame_t * pAbc ) {
     int i;
     lib_init_end_func end_func;
     for (i = 0; libHandles[i] != 0; i++) {
-        end_func = (lib_init_end_func) get_fnct_ptr(i, "abc_end");
+        end_func = (lib_init_end_func) get_fnct_ptr(libHandles, i, "abc_end");
         if (end_func == 0) {
             printf("Warning: Failed to end library %d.\n", i);
         } else {
@@ -199,20 +196,21 @@ void call_ends(Abc_Frame_t* pAbc) {
 
 void Libs_Init(Abc_Frame_t * pAbc)
 {
-    open_libs();
-    call_inits(pAbc);
+    assert( pAbc->pLibHandles == NULL );
+    pAbc->pLibHandles = ABC_CALLOC( void *, MAX_LIBS + 1 );
+    open_libs( pAbc->pLibHandles );
+    call_inits( pAbc->pLibHandles, pAbc );
 }
 
 void Libs_End(Abc_Frame_t * pAbc)
 {
-    call_ends(pAbc);
-
-    // It's good practice to close our libraries at this point, but this can mess up any backtrace printed by Valgind.
-    //    close_libs();
+    assert( pAbc->pLibHandles != NULL );
+    call_ends( pAbc->pLibHandles, pAbc );
+    close_libs( pAbc->pLibHandles );
+    ABC_FREE( pAbc->pLibHandles );
 }
 
 ////////////////////////////////////////////////////////////////////////
 ///                       END OF FILE                                ///
 ////////////////////////////////////////////////////////////////////////
 ABC_NAMESPACE_IMPL_END
-

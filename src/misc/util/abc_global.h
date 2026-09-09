@@ -67,6 +67,25 @@
 #endif
 #endif
 
+#if defined(ABC_USE_NO_THREAD_LOCAL)
+#define ABC_THREAD_LOCAL
+#define ABC_HAS_THREAD_LOCAL 0
+#elif defined(_MSC_VER)
+#define ABC_THREAD_LOCAL __declspec(thread)
+#define ABC_HAS_THREAD_LOCAL 1
+#elif defined(__GNUC__) || defined(__clang__)
+#define ABC_THREAD_LOCAL __thread
+#define ABC_HAS_THREAD_LOCAL 1
+#elif defined(__cplusplus) && __cplusplus >= 201103L
+#define ABC_THREAD_LOCAL thread_local
+#define ABC_HAS_THREAD_LOCAL 1
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define ABC_THREAD_LOCAL _Thread_local
+#define ABC_HAS_THREAD_LOCAL 1
+#else
+#error "No thread-local mechanism; build with ABC_USE_NO_THREAD_LOCAL for a single-threaded configuration"
+#endif
+
 /*
 #ifdef __cplusplus
 #error "C++ code"
@@ -296,6 +315,24 @@ static inline int      Abc_Base16LogW( word n )               { int r; if ( n < 
 static inline char *   Abc_UtilStrsav( char * s )             { return s ? strcpy(ABC_ALLOC(char, strlen(s)+1), s) : NULL;  }
 static inline char *   Abc_UtilStrsavTwo( char * s, char * a ){ char * r; if (!a) return Abc_UtilStrsav(s); r = ABC_ALLOC(char, strlen(s)+strlen(a)+1); snprintf(r, strlen(s)+strlen(a)+1, "%s%s", s, a ); return r; }
 static inline char *   Abc_UtilStrsavNum( char * s, int n )   { char * r; if (!s) return NULL;              r = ABC_ALLOC(char, strlen(s)+12+1);        snprintf(r, strlen(s)+12+1, "%s%d", s, n ); return r; }
+static inline char *   Abc_UtilStrtok( char * s, const char * d, char ** pSave )
+{
+    char * pToken;
+    if ( s == NULL )
+        s = *pSave;
+    s += strspn( s, d );
+    if ( *s == '\0' )
+    {
+        *pSave = s;
+        return NULL;
+    }
+    pToken = s;
+    s += strcspn( s, d );
+    if ( *s != '\0' )
+        *s++ = '\0';
+    *pSave = s;
+    return pToken;
+}
 static inline int      Abc_BitByteNum( int nBits )            { return (nBits>>3) + ((nBits&7)  > 0);                       }
 static inline int      Abc_BitWordNum( int nBits )            { return (nBits>>5) + ((nBits&31) > 0);                       }
 static inline int      Abc_Bit6WordNum( int nBits )           { return (nBits>>6) + ((nBits&63) > 0);                       }

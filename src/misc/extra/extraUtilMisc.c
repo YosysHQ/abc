@@ -160,7 +160,7 @@ int Extra_NumCombinations( int k, int n )
 ***********************************************************************/
 int * Extra_DeriveRadixCode( int Number, int Radix, int nDigits )
 {
-    static int Code[100];
+    static ABC_THREAD_LOCAL int Code[100];
     int i;
     assert( nDigits < 100 );
     for ( i = 0; i < nDigits; i++ )
@@ -495,8 +495,8 @@ unsigned Extra_TruthCanonNN( unsigned uTruth, int nVars )
 ***********************************************************************/
 unsigned Extra_TruthCanonP( unsigned uTruth, int nVars )
 {
-    static int nVarsOld, nPerms;
-    static char ** pPerms = NULL;
+    static ABC_THREAD_LOCAL int nVarsOld, nPerms;
+    static ABC_THREAD_LOCAL char ** pPerms = NULL;
 
     unsigned uTruthMin, uPerm;
     int k;
@@ -538,8 +538,8 @@ unsigned Extra_TruthCanonP( unsigned uTruth, int nVars )
 ***********************************************************************/
 unsigned Extra_TruthCanonNP( unsigned uTruth, int nVars )
 {
-    static int nVarsOld, nPerms;
-    static char ** pPerms = NULL;
+    static ABC_THREAD_LOCAL int nVarsOld, nPerms;
+    static ABC_THREAD_LOCAL char ** pPerms = NULL;
 
     unsigned uTruthMin, uPhase, uPerm;
     int nMints, k, i;
@@ -586,8 +586,8 @@ unsigned Extra_TruthCanonNP( unsigned uTruth, int nVars )
 ***********************************************************************/
 unsigned Extra_TruthCanonNPN( unsigned uTruth, int nVars )
 {
-    static int nVarsOld, nPerms;
-    static char ** pPerms = NULL;
+    static ABC_THREAD_LOCAL int nVarsOld, nPerms;
+    static ABC_THREAD_LOCAL char ** pPerms = NULL;
 
     unsigned uTruthMin, uTruthC, uPhase, uPerm;
     int nMints, k, i;
@@ -2734,4 +2734,3 @@ void Extra_BitMatrixTransposeTest()
 
 
 ABC_NAMESPACE_IMPL_END
-

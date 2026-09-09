@@ -38,7 +38,6 @@ ABC_NAMESPACE_IMPL_START
 
 static sat_solver * Abc_NtkMiterSatCreateLogic( Abc_Ntk_t * pNtk, int fAllPrimes );
 extern Vec_Int_t * Abc_NtkGetCiSatVarNums( Abc_Ntk_t * pNtk );
-static int nMuxes;
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -137,9 +136,6 @@ int Abc_NtkMiterSat( Abc_Ntk_t * pNtk, ABC_INT64_T nConfLimit, ABC_INT64_T nInsL
         *pNumConfs = (int)pSat->stats.conflicts;
     if ( pNumInspects )
         *pNumInspects = (int)pSat->stats.inspects;
-
-sat_solver_store_write( pSat, "trace.cnf" );
-sat_solver_store_free( pSat );
 
     sat_solver_delete( pSat );
     return RetValue;
@@ -564,8 +560,6 @@ int Abc_NtkMiterSatCreateInt( sat_solver * pSat, Abc_Ntk_t * pNtk )
         // add the clauses
         if ( fUseMuxes && Abc_NodeIsMuxType(pNode) )
         {
-            nMuxes++;
-
             pNodeC = Abc_NodeRecognizeMux( pNode, &pNodeT, &pNodeE );
             Vec_PtrClear( vSuper );
             Vec_PtrPush( vSuper, pNodeC );
@@ -671,7 +665,6 @@ void * Abc_NtkMiterSatCreate( Abc_Ntk_t * pNtk, int fAllPrimes )
     if ( Abc_NtkIsBddLogic(pNtk) )
         return Abc_NtkMiterSatCreateLogic(pNtk, fAllPrimes);
 
-    nMuxes = 0;
     pSat = sat_solver_new();
 //sat_solver_store_alloc( pSat );
     RetValue = Abc_NtkMiterSatCreateInt( pSat, pNtk );
@@ -1049,4 +1042,3 @@ void Abc_NtkWriteSorterCnf( char * pFileName, int nVars, int nQueens )
 
 
 ABC_NAMESPACE_IMPL_END
-

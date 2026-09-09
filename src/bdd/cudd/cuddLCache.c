@@ -1104,7 +1104,7 @@ cuddLocalCacheResize(
     int i, shift;
     unsigned int posn;
     unsigned int slots, oldslots;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     olditem = cache->item;
@@ -1294,7 +1294,7 @@ cuddHashTableResize(
 #endif
     int shift;
     int oldNumBuckets = hash->numBuckets;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 
     /* Compute the new size of the table. */
@@ -1395,7 +1395,7 @@ cuddHashTableAlloc(
 {
     int i;
     unsigned int itemsize = hash->itemsize;
-    extern DD_OOMFP MMoutOfMemory;
+    extern ABC_THREAD_LOCAL DD_OOMFP MMoutOfMemory;
     DD_OOMFP saveHandler;
 #ifdef __osf__
 #pragma pointer_size save
@@ -1462,4 +1462,3 @@ cuddHashTableAlloc(
 
 
 ABC_NAMESPACE_IMPL_END
-

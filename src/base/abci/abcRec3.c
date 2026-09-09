@@ -25,6 +25,7 @@
 #include "misc/vec/vecMem.h"
 #include "opt/dau/dau.h"
 #include "misc/util/utilTruth.h"
+#include "base/main/main.h"
 
 ABC_NAMESPACE_IMPL_START
 
@@ -93,7 +94,21 @@ struct Lms_Man_t_
     abctime           timeTotal;
 };
 
-static Lms_Man_t * s_pMan3 = NULL;
+static ABC_THREAD_LOCAL Lms_Man_t * s_pMan3Standalone = NULL;
+
+static Lms_Man_t * Lms_ManCurrent()
+{
+    return Abc_FrameReadGlobalFrame() ? (Lms_Man_t *)Abc_FrameReadManLms() : s_pMan3Standalone;
+}
+static void Lms_ManSetCurrent( Lms_Man_t * pMan )
+{
+    if ( Abc_FrameReadGlobalFrame() )
+        Abc_FrameSetManLms( pMan );
+    else
+        s_pMan3Standalone = pMan;
+}
+
+#define s_pMan3 Lms_ManCurrent()
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -1415,14 +1430,14 @@ void Abc_NtkRecPs3(int fPrintLib)
 void Abc_NtkRecStart3( Gia_Man_t * p, int nVars, int nCuts, int fFuncOnly, int fVerbose )
 {
     assert( s_pMan3 == NULL );
-    s_pMan3 = Lms_ManStart( p, nVars, nCuts, fFuncOnly, fVerbose );
+    Lms_ManSetCurrent( Lms_ManStart(p, nVars, nCuts, fFuncOnly, fVerbose) );
 }
 
 void Abc_NtkRecStop3()
 {
     assert( s_pMan3 != NULL );
     Lms_ManStop( s_pMan3 );
-    s_pMan3 = NULL;
+    Lms_ManSetCurrent( NULL );
 }
 
 ////////////////////////////////////////////////////////////////////////

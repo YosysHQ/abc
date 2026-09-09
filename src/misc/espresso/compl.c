@@ -53,7 +53,7 @@ pcube *T;            /* T will be disposed of */
     register int best;
     pcover Tbar, Tl, Tr;
     int lifting;
-    static int compl_level = 0;
+    static ABC_THREAD_LOCAL int compl_level = 0;
 
     if (debug & COMPL)
     debug_print(T, "COMPLEMENT", compl_level++);
@@ -431,7 +431,7 @@ pcover *Tbar;
     register int best;
     pcover Tl, Tr, Tlbar, Trbar;
     int lifting;
-    static int simplify_level = 0;
+    static ABC_THREAD_LOCAL int simplify_level = 0;
 
     if (debug & COMPL)
     debug_print(T, "SIMPCOMP", simplify_level++);
@@ -570,7 +570,7 @@ pcube *T;            /* T will be disposed of */
     register int best;
     pcover Tbar, Tl, Tr;
     int lifting;
-    static int simplify_level = 0;
+    static ABC_THREAD_LOCAL int simplify_level = 0;
 
     if (debug & COMPL) {
     debug_print(T, "SIMPLIFY", simplify_level++);
@@ -682,4 +682,3 @@ pcover *Tnew;            /* returned only if answer determined */
     }
 }
 ABC_NAMESPACE_IMPL_END
-

@@ -76,7 +76,7 @@ char * Mio_SopRegister( Mem_Flex_t * pMan, char * pName )
 int Mio_GateCollectNames( char * pFormula, char * pPinNames[] )
 {
     char * Buffer;
-    char * pTemp;
+    char * pTemp, * pSave = NULL;
     int nPins, i;
 
     // save the formula as it was
@@ -94,7 +94,7 @@ int Mio_GateCollectNames( char * pFormula, char * pPinNames[] )
 
     // save the names
     nPins = 0;
-    pTemp = strtok( Buffer, " " );
+    pTemp = Abc_UtilStrtok( Buffer, " ", &pSave );
     while ( pTemp )
     {
         for ( i = 0; i < nPins; i++ )
@@ -105,7 +105,7 @@ int Mio_GateCollectNames( char * pFormula, char * pPinNames[] )
             pPinNames[nPins++] = Abc_UtilStrsav(pTemp);
         }
         // get the next name
-        pTemp = strtok( NULL, " " );
+        pTemp = Abc_UtilStrtok( NULL, " ", &pSave );
     }
     ABC_FREE( Buffer );
     return nPins;
@@ -324,4 +324,3 @@ int Mio_LibraryParseFormulas( Mio_Library_t * pLib )
 
 
 ABC_NAMESPACE_IMPL_END
-

@@ -155,7 +155,7 @@ int Fra_FraigMiterAssertedOutput( Aig_Man_t * p )
 ***********************************************************************/
 static inline void Fra_FraigNodeSpeculate( Fra_Man_t * p, Aig_Obj_t * pObj, Aig_Obj_t * pObjFraig, Aig_Obj_t * pObjReprFraig )
 { 
-    static int Counter = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
     char FileName[20];
     Aig_Man_t * pTemp;
     Aig_Obj_t * pNode;
@@ -487,4 +487,3 @@ Aig_Man_t * Fra_FraigEquivence( Aig_Man_t * pManAig, int nConfMax, int fProve )
 
 
 ABC_NAMESPACE_IMPL_END
-

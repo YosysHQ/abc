@@ -611,7 +611,7 @@ static int GiaHie_NameIsLegalInVerilog( char * pName )
 }
 static char * GiaHie_ObjGetDumpName( Vec_Ptr_t * vNames, char c, int i, int d )
 {
-    static char pBuffer[10000];
+    static ABC_THREAD_LOCAL char pBuffer[10000];
     if ( vNames )
     {
         char * pName = (char *)Vec_PtrEntry(vNames, i);

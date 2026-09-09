@@ -111,12 +111,12 @@ static char rcsid[] DD_UNUSED = "$Id: cuddCompose.c,v 1.45 2004/08/13 18:04:47 f
 #endif
 
 #ifdef DD_DEBUG
-static int addPermuteRecurHits;
-static int bddPermuteRecurHits;
-static int bddVectorComposeHits;
-static int addVectorComposeHits;
+static ABC_THREAD_LOCAL int addPermuteRecurHits;
+static ABC_THREAD_LOCAL int bddPermuteRecurHits;
+static ABC_THREAD_LOCAL int bddVectorComposeHits;
+static ABC_THREAD_LOCAL int addVectorComposeHits;
 
-static int addGeneralVectorComposeHits;
+static ABC_THREAD_LOCAL int addGeneralVectorComposeHits;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -1757,4 +1757,3 @@ ddIsIthAddVarPair(
 
 
 ABC_NAMESPACE_IMPL_END
-

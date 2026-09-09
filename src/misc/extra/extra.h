@@ -406,10 +406,10 @@ extern char *        Extra_UtilPrintTime( long t );
 extern char *        Extra_UtilStrsav( const char *s );
 extern char *        Extra_UtilTildeExpand( char *fname );
 extern char *        Extra_UtilFileSearch( char *file, char *path, char *mode );
-extern void          (*Extra_UtilMMoutOfMemory)( long size );
+extern ABC_THREAD_LOCAL void (*Extra_UtilMMoutOfMemory)( long size );
 
-extern const char *  globalUtilOptarg;
-extern int           globalUtilOptind;
+extern ABC_THREAD_LOCAL const char * globalUtilOptarg;
+extern ABC_THREAD_LOCAL int          globalUtilOptind;
 
 /**AutomaticEnd***************************************************************/
 

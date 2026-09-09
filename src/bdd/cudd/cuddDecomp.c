@@ -109,8 +109,8 @@ typedef struct  NodeStat {
 static char rcsid[] DD_UNUSED = "$Id: cuddDecomp.c,v 1.44 2004/08/13 18:04:47 fabio Exp $";
 #endif
 
-static  DdNode  *one, *zero;
-long lastTimeG;
+static ABC_THREAD_LOCAL DdNode *one, *zero;
+static ABC_THREAD_LOCAL long lastTimeG;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -2182,4 +2182,3 @@ outOfMem:
 
 
 ABC_NAMESPACE_IMPL_END
-

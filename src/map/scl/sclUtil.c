@@ -250,24 +250,25 @@ int Abc_SclCountMinSize( SC_Lib * pLib, Abc_Ntk_t * p, int fUseMax )
 ***********************************************************************/
 void Abc_SclReadTimingConstr( Abc_Frame_t * pAbc, char * pFileName, int fVerbose )
 {
-    char Buffer[1000], * pToken;
+    char Buffer[1000], * pToken, * pSave;
     FILE * pFile = fopen( pFileName, "rb" );
     while ( fgets( Buffer, 1000, pFile ) )
     {
-        pToken = strtok( Buffer, " \t\r\n" );
+        pSave = NULL;
+        pToken = Abc_UtilStrtok( Buffer, " \t\r\n", &pSave );
         if ( pToken == NULL )
             continue;
         if ( !strcmp(pToken, "set_driving_cell") )
 //        if ( !strcmp(pToken, "default_input_cell") )
         {
-            Abc_FrameSetDrivingCell( Abc_UtilStrsav(strtok(NULL, " \t\r\n")) );
+            Abc_FrameSetDrivingCell( Abc_UtilStrsav(Abc_UtilStrtok(NULL, " \t\r\n", &pSave)) );
             if ( fVerbose ) 
                 printf( "Setting driving cell to be \"%s\".\n", Abc_FrameReadDrivingCell() );
         }
         else if ( !strcmp(pToken, "set_load") )
 //        else if ( !strcmp(pToken, "default_output_load") )
         {
-            Abc_FrameSetMaxLoad( atof(strtok(NULL, " \t\r\n")) );
+            Abc_FrameSetMaxLoad( atof(Abc_UtilStrtok(NULL, " \t\r\n", &pSave)) );
             if ( fVerbose ) 
                 printf( "Setting output load to be %f.\n", Abc_FrameReadMaxLoad() );
         }

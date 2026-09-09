@@ -219,7 +219,7 @@ pcube *T;         /* T will be disposed of */
 {
     register pcube cl, cr;
     register int best, result;
-    static int taut_level = 0;
+    static ABC_THREAD_LOCAL int taut_level = 0;
 
     if (debug & TAUT) {
     debug_print(T, "TAUTOLOGY", taut_level++);
@@ -348,7 +348,7 @@ sm_matrix *table;
 {
     register pcube cl, cr;
     register int best;
-    static int ftaut_level = 0;
+    static ABC_THREAD_LOCAL int ftaut_level = 0;
 
     if (debug & TAUT) {
     debug_print(T, "FIND_TAUTOLOGY", ftaut_level++);
@@ -442,4 +442,3 @@ start:
     return MAYBE;
 }
 ABC_NAMESPACE_IMPL_END
-

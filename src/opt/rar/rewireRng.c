@@ -23,8 +23,8 @@
 ABC_NAMESPACE_IMPL_START
 
 unsigned Random_Int(int fReset) {
-    static unsigned int m_z = NUMBER1;
-    static unsigned int m_w = NUMBER2;
+    static ABC_THREAD_LOCAL unsigned int m_z = NUMBER1;
+    static ABC_THREAD_LOCAL unsigned int m_w = NUMBER2;
     if (fReset) {
         m_z = NUMBER1;
         m_w = NUMBER2;
@@ -41,7 +41,7 @@ word Random_Word(int fReset) {
 // This procedure should be called once with Seed > 0 to initialize the generator.
 // After initialization, the generator should be always called with Seed == 0.
 unsigned Random_Num(int Seed) {
-    static unsigned RandMask = 0;
+    static ABC_THREAD_LOCAL unsigned RandMask = 0;
     if (Seed == 0)
         return RandMask ^ Random_Int(0);
     RandMask = Random_Int(1);

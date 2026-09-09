@@ -653,7 +653,7 @@ void Io_NtkEdgelistWriteSubcktFanins( FILE * pFile, Abc_Obj_t * pNode )
 ***********************************************************************/
 int Io_NtkEdgelistWriteNodeGate( FILE * pFile, Abc_Obj_t * pNode, int Length, int fName)
 {
-    static int fReport = 0;
+    static ABC_THREAD_LOCAL int fReport = 0;
     Mio_Gate_t * pGate = (Mio_Gate_t *)pNode->pData;
     Mio_Pin_t * pGatePin;
     Abc_Obj_t * pNode2;
@@ -960,7 +960,7 @@ void Io_NtkEdgelistWriteNodeIntStruct( FILE * pFile, Abc_Obj_t * pNode, Vec_Int_
     {
         extern int If_CluMinimumBase( word * t, int * pSupp, int nVarsAll, int * pnVars );
 
-        static word TruthStore[16][1<<10] = {{0}}, * pTruths[16];
+        static ABC_THREAD_LOCAL word TruthStore[16][1<<10] = {{0}}, * pTruths[16];
         word pCube[1<<10], pRes[1<<10], Func0, Func1, Func2;
         char pLut0[32], pLut1[32], pLut2[32] = {0}, * pSop;
 //        int nVarsMin[3], pVars[3][20];
@@ -1134,7 +1134,7 @@ void Io_NtkEdgelistWriteModelIntStruct( FILE * pFile, Abc_Obj_t * pNode, Vec_Int
     {
         extern int If_CluMinimumBase( word * t, int * pSupp, int nVarsAll, int * pnVars );
 
-        static word TruthStore[16][1<<10] = {{0}}, * pTruths[16];
+        static ABC_THREAD_LOCAL word TruthStore[16][1<<10] = {{0}}, * pTruths[16];
         word pCube[1<<10], pRes[1<<10], Func0, Func1, Func2;
         char pLut0[32], pLut1[32], pLut2[32] = {0}, * pSop;
 //        int nVarsMin[3], pVars[3][20];
@@ -1249,4 +1249,3 @@ void Io_NtkEdgelistWriteModelIntStruct( FILE * pFile, Abc_Obj_t * pNode, Vec_Int
 
 
 ABC_NAMESPACE_IMPL_END
-

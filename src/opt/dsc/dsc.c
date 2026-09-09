@@ -449,7 +449,7 @@ extern int Dsc_Decompose(word * pTruth, const int nVarsInit, char * const pRes, 
 ***********************************************************************/
 int * Dsc_ComputeMatches( char * p )
 {
-    static int pMatches[DSC_MAX_VAR];
+    static ABC_THREAD_LOCAL int pMatches[DSC_MAX_VAR];
     int pNested[DSC_MAX_VAR];
     int v, nNested = 0;
     for ( v = 0; p[v]; v++ )

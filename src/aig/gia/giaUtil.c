@@ -48,13 +48,8 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 unsigned Gia_ManRandom( int fReset )
 {
-#ifdef _MSC_VER
-    static unsigned int m_z = NUMBER1;
-    static unsigned int m_w = NUMBER2;
-#else
-    static __thread unsigned int m_z = NUMBER1;
-    static __thread unsigned int m_w = NUMBER2;
-#endif    
+    static ABC_THREAD_LOCAL unsigned int m_z = NUMBER1;
+    static ABC_THREAD_LOCAL unsigned int m_w = NUMBER2;
     if ( fReset )
     {
         m_z = NUMBER1;
@@ -105,7 +100,7 @@ void Gia_ManRandomInfo( Vec_Ptr_t * vInfo, int iInputStart, int iWordStart, int 
 ***********************************************************************/
 char * Gia_TimeStamp()
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     char * TimeStamp;
     time_t ltime;
     // get the current time
@@ -129,7 +124,7 @@ char * Gia_TimeStamp()
 ***********************************************************************/
 char * Gia_FileNameGenericAppend( char * pBase, char * pSuffix )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     char * pDot;
     strcpy( Buffer, pBase );
     if ( (pDot = strrchr( Buffer, '.' )) )

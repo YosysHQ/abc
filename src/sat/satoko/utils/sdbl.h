@@ -31,8 +31,8 @@ ABC_NAMESPACE_HEADER_START
 
 typedef word sdbl_t;
 
-static sdbl_t SDBL_CONST1 = ABC_CONST(0x0000800000000000);
-static sdbl_t SDBL_MAX = ~(sdbl_t)(0);
+static const sdbl_t SDBL_CONST1 = ABC_CONST(0x0000800000000000);
+static const sdbl_t SDBL_MAX = ~(sdbl_t)(0);
 
 union ui64_dbl { word ui64; double dbl; };
 

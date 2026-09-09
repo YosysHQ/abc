@@ -44,7 +44,7 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 char * Llb_ManGetDummyName( char * pPrefix, int Num, int nDigits )
 {
-    static char Buffer[2000];
+    static ABC_THREAD_LOCAL char Buffer[2000];
     sprintf( Buffer, "%s%0*d", pPrefix, nDigits, Num );
     return Buffer;
 }
@@ -101,4 +101,3 @@ void Llb_ManDumpReached( DdManager * ddG, DdNode * bReached, char * pModel, char
 
 
 ABC_NAMESPACE_IMPL_END
-

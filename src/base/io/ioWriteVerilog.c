@@ -763,7 +763,7 @@ int Io_WriteVerilogWiresCount( Abc_Ntk_t * pNtk )
 ***********************************************************************/
 char * Io_WriteVerilogGetName( char * pName )
 {
-    static char Buffer[500];
+    static ABC_THREAD_LOCAL char Buffer[500];
     int i, Length = strlen(pName);
     if ( pName[0] < '0' || pName[0] > '9' )
     {

@@ -178,7 +178,7 @@ int Ndr_TypeWlc2Ndr( int Type )
 ***********************************************************************/
 char * Ndr_ObjWriteConstant( unsigned * pBits, int nBits )
 {
-    static char Buffer[10000]; int i, Len;
+    static ABC_THREAD_LOCAL char Buffer[10000]; int i, Len;
     assert( nBits + 10 < 10000 );
     sprintf( Buffer, "%d\'b", nBits );
     Len = strlen(Buffer);
@@ -572,4 +572,3 @@ void Wlc_ReadNdrTest()
 
 
 ABC_NAMESPACE_IMPL_END
-

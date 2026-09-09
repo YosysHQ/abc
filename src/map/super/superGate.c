@@ -1218,7 +1218,7 @@ void Super_WriteLibraryGateName_rec( Super_Gate_t * pGate, char * pBuffer )
 }
 char * Super_WriteLibraryGateName( Super_Gate_t * pGate )
 {
-    static char Buffer[2000];
+    static ABC_THREAD_LOCAL char Buffer[2000];
     Buffer[0] = 0;
     Super_WriteLibraryGateName_rec( pGate, Buffer );
     return Buffer;
@@ -1473,4 +1473,3 @@ void Super_WriteLibraryTree( Super_Man_t * pMan )
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-

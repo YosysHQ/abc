@@ -33,11 +33,6 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-// used in abcCut.c
-int nTotal = 0;
-int nGood  = 0;
-int nEqual = 0;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -125,7 +120,7 @@ void Cut_TruthNCanonicize( Cut_Cut_t * pCut )
 ***********************************************************************/
 void Cut_TruthComputeOld( Cut_Cut_t * pCut, Cut_Cut_t * pCut0, Cut_Cut_t * pCut1, int fCompl0, int fCompl1 )
 {
-    static unsigned uTruth0[8], uTruth1[8];
+    unsigned uTruth0[8], uTruth1[8];
     int nTruthWords = Cut_TruthWords( pCut->nVarsMax );
     unsigned * pTruthRes;
     int i, uPhase;
@@ -196,29 +191,6 @@ void Cut_TruthCompute( Cut_Man_t * p, Cut_Cut_t * pCut, Cut_Cut_t * pCut0, Cut_C
 
 //    Ivy_TruthTestOne( *Cut_CutReadTruth(pCut) );
 
-    // quit if no fancy computation is needed
-    if ( !p->pParams->fFancy )
-        return;
-
-    if ( pCut->nLeaves != 7 )
-        return;
-
-    // count the total number of truth tables computed
-    nTotal++;
-
-    // MAPPING INTO ALTERA 6-2 LOGIC BLOCKS
-    // call this procedure to find the minimum number of common variables in the cofactors
-    // if this number is less or equal than 3, the cut can be implemented using the 6-2 logic block
-    if ( Extra_TruthMinCofSuppOverlap( Cut_CutReadTruth(pCut), pCut->nVarsMax, NULL ) <= 4 )
-        nGood++;
-
-    // MAPPING INTO ACTEL 2x2 CELLS
-    // call this procedure to see if a semi-canonical form can be found in the lookup table 
-    // (if it exists, then a two-level 3-input LUT implementation of the cut exists)
-    // Before this procedure is called, cell manager should be defined by calling
-    // Cut_CellLoad (make sure file "cells22_daomap_iwls.txt" is available in the working dir)
-//    if ( Cut_CellIsRunning() && pCut->nVarsMax <= 9 )
-//        nGood += Cut_CellTruthLookup( Cut_CutReadTruth(pCut), pCut->nVarsMax );
 }
 
 
@@ -229,4 +201,3 @@ void Cut_TruthCompute( Cut_Man_t * p, Cut_Cut_t * pCut, Cut_Cut_t * pCut0, Cut_C
 
 
 ABC_NAMESPACE_IMPL_END
-

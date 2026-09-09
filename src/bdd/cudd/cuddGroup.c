@@ -113,21 +113,21 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddGroup.c,v 1.44 2009/02/21 18:24:10 fabio Exp $";
 #endif
 
-static  int     *entry;
-extern  int     ddTotalNumberSwapping;
+static ABC_THREAD_LOCAL int *entry;
+extern ABC_THREAD_LOCAL int ddTotalNumberSwapping;
 #ifdef DD_STATS
-extern  int     ddTotalNISwaps;
-static  int     extsymmcalls;
-static  int     extsymm;
-static  int     secdiffcalls;
-static  int     secdiff;
-static  int     secdiffmisfire;
+extern ABC_THREAD_LOCAL int ddTotalNISwaps;
+static ABC_THREAD_LOCAL int extsymmcalls;
+static ABC_THREAD_LOCAL int extsymm;
+static ABC_THREAD_LOCAL int secdiffcalls;
+static ABC_THREAD_LOCAL int secdiff;
+static ABC_THREAD_LOCAL int secdiffmisfire;
 #endif
 #ifdef DD_DEBUG
-static  int     pr = 0; /* flag to enable printing while debugging */
+static ABC_THREAD_LOCAL int pr = 0; /* flag to enable printing while debugging */
                         /* by depositing a 1 into it */
 #endif
-static unsigned int originalSize;
+static ABC_THREAD_LOCAL unsigned int originalSize;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */

@@ -25,9 +25,6 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-abctime timeSelect;
-abctime timeAssign;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -324,16 +321,12 @@ void Fraig_ManFree( Fraig_Man_t * p )
 ***********************************************************************/
 void Fraig_ManCreateSolver( Fraig_Man_t * p )
 {
-    extern abctime timeSelect;
-    extern abctime timeAssign;
     assert( p->pSat == NULL );
     // allocate data for SAT solving
     p->pSat       = Msat_SolverAlloc( 500, 1, 1, 1, 1, 0 );
     p->vVarsInt   = Msat_SolverReadConeVars( p->pSat );   
     p->vAdjacents = Msat_SolverReadAdjacents( p->pSat );
     p->vVarsUsed  = Msat_SolverReadVarsUsed( p->pSat );
-    timeSelect = 0;
-    timeAssign = 0;
 }
 
  
@@ -370,8 +363,6 @@ void Fraig_ManPrintStats( Fraig_Man_t * p )
     if ( p->time2 > 0 ) { Fraig_PrintTime( "time2", p->time2 ); }
     if ( p->time3 > 0 ) { Fraig_PrintTime( "time3", p->time3 ); }
     if ( p->time4 > 0 ) { Fraig_PrintTime( "time4", p->time4 ); }
-//    ABC_PRT( "Selection ", timeSelect );
-//    ABC_PRT( "Assignment", timeAssign );
     fflush( stdout );
 }
 
@@ -543,4 +534,3 @@ void Fraig_ManAddClause( Fraig_Man_t * p, Fraig_Node_t ** ppNodes, int nNodes )
 ////////////////////////////////////////////////////////////////////////
 
 ABC_NAMESPACE_IMPL_END
-

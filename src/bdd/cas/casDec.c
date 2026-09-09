@@ -77,14 +77,6 @@ extern void WriteDDintoBLIFfileReorder( DdManager * dd, FILE * pFile, DdNode * F
 ///                      static varibles                             ///
 ////////////////////////////////////////////////////////////////////////
 
-static int s_LutSize = 15;
-static int s_nFuncVars; 
-
-long s_EncodingTime;
-
-long s_EncSearchTime;
-long s_EncComputeTime;
-
 ////////////////////////////////////
 // temporary output variables
 //FILE * pTable;
@@ -111,9 +103,9 @@ int CreateDecomposedNetwork( DdManager * dd, DdNode * aFunc, char ** pNames, int
 // FileName is the name of the output file for the LUT network
 // dynamic variable reordering should be disabled when this function is running
 {
-    static LUT * pLuts[MAXINPUTS];   // the LUT cascade
-    static int Profile[MAXINPUTS];   // the profile filled in with the info about the BDD width
-    static int Permute[MAXINPUTS];   // the array to store a temporary permutation of variables
+    LUT * pLuts[MAXINPUTS];   // the LUT cascade
+    int Profile[MAXINPUTS];   // the profile filled in with the info about the BDD width
+    int Permute[MAXINPUTS];   // the array to store a temporary permutation of variables
 
     LUT * p;               // the current LUT
     int i, v;
@@ -128,11 +120,7 @@ int CreateDecomposedNetwork( DdManager * dd, DdNode * aFunc, char ** pNames, int
     int nLutOutputs = 0;
     int nLutOutputsOrig = 0;
 
-    abctime clk1;
-
-    s_LutSize = nLutSize;
-
-    s_nFuncVars = nNames;
+    abctime clk1, EncodingTime = 0;
 
     // get the profile
     clk1 = Abc_Clock();
@@ -156,7 +144,7 @@ int CreateDecomposedNetwork( DdManager * dd, DdNode * aFunc, char ** pNames, int
         p = (LUT*) ABC_ALLOC( char, sizeof(LUT) );
         memset( p, 0, sizeof(LUT) );
 
-        if ( nVarsRem + PrevMulti <= s_LutSize ) // this is the last LUT
+        if ( nVarsRem + PrevMulti <= nLutSize ) // this is the last LUT
         {
             p->nIns   = nVarsRem + PrevMulti;
             p->nInsP  = PrevMulti;
@@ -171,17 +159,17 @@ int CreateDecomposedNetwork( DdManager * dd, DdNode * aFunc, char ** pNames, int
         }
         else // this is not the last LUT
         {
-            p->nIns   = s_LutSize;
+            p->nIns   = nLutSize;
             p->nInsP  = PrevMulti;
-            p->nCols  = Profile[nNames-(nVarsRem-(s_LutSize-PrevMulti))];
+            p->nCols  = Profile[nNames-(nVarsRem-(nLutSize-PrevMulti))];
             p->nMulti = Abc_Base2Log(p->nCols);
             p->Level  = nNames-nVarsRem;
 
-            nVarsRem  = nVarsRem-(s_LutSize-PrevMulti);
+            nVarsRem  = nVarsRem-(nLutSize-PrevMulti);
             PrevMulti = p->nMulti;
         }
         
-        if ( p->nMulti >= s_LutSize )
+        if ( p->nMulti >= nLutSize )
         {
             printf( "The LUT size is too small\n" );
             return 0;
@@ -214,11 +202,10 @@ int CreateDecomposedNetwork( DdManager * dd, DdNode * aFunc, char ** pNames, int
 
 
     // add the new variables at the bottom
-    for ( i = 0; i < s_LutSize; i++ )
+    for ( i = 0; i < nLutSize; i++ )
         bCVars[i] = Cudd_bddNewVar(dd);
 
     // for each LUT - assign the LUT and encode the columns
-    s_EncodingTime = 0;
     for ( i = 0; i < nLuts; i++ )
     {
         int RetValue;
@@ -287,7 +274,7 @@ int CreateDecomposedNetwork( DdManager * dd, DdNode * aFunc, char ** pNames, int
             abctime clk2 = Abc_Clock();
 //          p->bRelation = PerformTheEncoding( dd, p->pbCols, p->nCols, bVarsCube, bCVars, p->nMulti, &p->nSimple );  Cudd_Ref( p->bRelation );
             p->bRelation = Extra_bddEncodingNonStrict( dd, p->pbCols, p->nCols, bVarsCube, bCVars, p->nMulti, &p->nSimple );  Cudd_Ref( p->bRelation );
-            s_EncodingTime += Abc_Clock() - clk2;
+            EncodingTime += Abc_Clock() - clk2;
         }
 
         // update the number of LUT outputs
@@ -353,16 +340,12 @@ printf( "Stage %3d: In = %3d  InP = %3d  Cols = %5d  Multi = %2d  Simple = %2d  
 
     if ( fVerbose )
     {
-    printf( "Pure decomposition time   = %.2f sec\n", (float)(Abc_Clock() - clk1 - s_EncodingTime)/(float)(CLOCKS_PER_SEC) );
-    printf( "Encoding time             = %.2f sec\n", (float)(s_EncodingTime)/(float)(CLOCKS_PER_SEC) );
-//  printf( "Encoding search time      = %.2f sec\n", (float)(s_EncSearchTime)/(float)(CLOCKS_PER_SEC) );
-//  printf( "Encoding compute time     = %.2f sec\n", (float)(s_EncComputeTime)/(float)(CLOCKS_PER_SEC) );
+    printf( "Pure decomposition time   = %.2f sec\n", (float)(Abc_Clock() - clk1 - EncodingTime)/(float)(CLOCKS_PER_SEC) );
+    printf( "Encoding time             = %.2f sec\n", (float)(EncodingTime)/(float)(CLOCKS_PER_SEC) );
     }
 
 
 //fprintf( pTable, "%.2f ", (float)(s_ReadingTime)/(float)(CLOCKS_PER_SEC) );
-//fprintf( pTable, "%.2f ", (float)(Abc_Clock() - clk1 - s_EncodingTime)/(float)(CLOCKS_PER_SEC) );
-//fprintf( pTable, "%.2f ", (float)(s_EncodingTime)/(float)(CLOCKS_PER_SEC) );
 //fprintf( pTable, "%.2f ", (float)(s_RemappingTime)/(float)(CLOCKS_PER_SEC) );
 
 
@@ -416,9 +399,9 @@ printf( "Stage %3d: In = %3d  InP = %3d  Cols = %5d  Multi = %2d  Simple = %2d  
 void WriteLUTSintoBLIFfile( FILE * pFile, DdManager * dd, LUT ** pLuts, int nLuts, DdNode ** bCVars, char ** pNames, int nNames, char * FileName )
 {
     int i, v, o;
-    static char * pNamesLocalIn[MAXINPUTS];
-    static char * pNamesLocalOut[MAXINPUTS];
-    static char Buffer[100];
+    char * pNamesLocalIn[MAXINPUTS] = {0};
+    char * pNamesLocalOut[MAXINPUTS] = {0};
+    char Buffer[100];
     DdNode * bCube, * bCof, * bFunc;
     LUT * p;
 
@@ -509,4 +492,3 @@ void WriteLUTSintoBLIFfile( FILE * pFile, DdManager * dd, LUT ** pLuts, int nLut
 
 
 ABC_NAMESPACE_IMPL_END
-

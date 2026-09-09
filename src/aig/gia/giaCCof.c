@@ -61,7 +61,8 @@ struct Ccf_Man_t_
 ***********************************************************************/
 Ccf_Man_t * Ccf_ManStart( Gia_Man_t * pGia, int nFrameMax, int nConfMax, int nTimeMax, int fVerbose )
 {
-    static Gia_ParFra_t Pars, * pPars = &Pars;
+    static ABC_THREAD_LOCAL Gia_ParFra_t Pars;
+    Gia_ParFra_t * pPars = &Pars;
     Ccf_Man_t * p;
     assert( nFrameMax > 0 );
     p = ABC_CALLOC( Ccf_Man_t, 1 );
@@ -346,4 +347,3 @@ Gia_Man_t * Gia_ManCofTest( Gia_Man_t * pGia, int nFrameMax, int nConfMax, int n
 
 
 ABC_NAMESPACE_IMPL_END
-

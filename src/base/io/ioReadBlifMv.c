@@ -37,8 +37,6 @@ typedef struct Io_MvVar_t_ Io_MvVar_t; // parsing var
 typedef struct Io_MvMod_t_ Io_MvMod_t; // parsing model
 typedef struct Io_MvMan_t_ Io_MvMan_t; // parsing manager
 
-Vec_Ptr_t *vGlobalLtlArray;
-
 struct Io_MvVar_t_
 {
     int                  nValues;      // the number of values 
@@ -147,7 +145,6 @@ Abc_Ntk_t * Io_ReadBlifMv( char * pFileName, int fBlifMv, int fCheck )
     Abc_Des_t * pDesign = NULL; 
     char * pDesignName;
     int RetValue, i;
-    char * pLtlProp;
 
     // check that the file is available
     pFile = fopen( pFileName, "rb" );
@@ -248,10 +245,6 @@ Abc_Ntk_t * Io_ReadBlifMv( char * pFileName, int fBlifMv, int fCheck )
     if ( pNtk->pSpec == NULL )
         pNtk->pSpec = Extra_UtilStrsav( pFileName );
 
-    vGlobalLtlArray = Vec_PtrAlloc( 100 );
-    Vec_PtrForEachEntry( char *, vGlobalLtlArray, pLtlProp, i )
-        Vec_PtrPush( pNtk->vLtlProperties, pLtlProp );
-    Vec_PtrFreeP( &vGlobalLtlArray );
     return pNtk;
 }
 
@@ -1217,7 +1210,7 @@ static int Io_MvParseLineLtlProperty( Io_MvMod_t * p, char * pLine )
         //printf("%c", pLine[i] );
         actualLtlFormula[j] = pLine[i];
     actualLtlFormula[j] = '\0';
-    Vec_PtrPush( vGlobalLtlArray, actualLtlFormula );
+    Vec_PtrPush( p->pNtk->vLtlProperties, actualLtlFormula );
     return 1;
 }
 
@@ -2133,6 +2126,7 @@ static int Io_MvParseLineNamesBlif( Io_MvMod_t * p, char * pLine )
 
 ABC_NAMESPACE_IMPL_END
 
+
 #include "map/mio/mio.h"
 #include "base/main/main.h"
 
@@ -2405,4 +2399,3 @@ static inline int Abc_MapBox2Prev( Vec_Ptr_t * vDrivers, Vec_Int_t * vMapIn, Vec
 
 
 ABC_NAMESPACE_IMPL_END
-

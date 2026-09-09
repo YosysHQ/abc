@@ -6,34 +6,49 @@
 
 ABC is always changing but the current snapshot is believed to be stable.
 
-## ABC fork with new features
+## Compiling
 
-Here is a [fork](https://github.com/yongshiwo/abc.git) of ABC containing Agdmap, a novel technology mapper for LUT-based FPGAs.  Agdmap is based on a technology mapping algorithm with adaptive gate decomposition [1]. It is a cut enumeration based mapping algorithm with bin packing for simultaneous wide gate decomposition, which is a patent pending technology.
+To compile the ABC executable, run `make`. To compile ABC as a static library,
+run `make libabc.a`.
 
-The mapper is developed and maintained by Longfei Fan and Prof. Chang Wu at Fudan University in Shanghai, China.  The experimental results presented in [1] indicate that Agdmap can substantially improve area (by 10% or more) when compared against the best LUT mapping solutions in ABC, such as command "if".
-
-The source code is provided for research and evaluation only. For commercial usage, please contact Prof. Chang Wu at wuchang@fudan.edu.cn.
-
-References:
-
-[1] L. Fan and C. Wu, "FPGA technology mapping with adaptive gate decompostion", ACM/SIGDA FPGA International Symposium on FPGAs, 2023. 
-
-## Compiling:
-
-To compile ABC as a binary, download and unzip the code, then type `make`.
-To compile ABC as a static library, type `make libabc.a`.
-
-When ABC is used as a static library, two additional procedures, `Abc_Start()` 
-and `Abc_Stop()`, are provided for starting and quitting the ABC framework in 
-the calling application. A simple demo program (file src/demo.c) shows how to 
+When ABC is used as a static library, `Abc_Start()` and `Abc_Stop()` are
+provided for starting and quitting a single ABC session in the calling
+application. A simple demo program (file src/demo.c) shows how to
 create a stand-alone program performing DAG-aware AIG rewriting, by calling 
 APIs of ABC compiled as a static library.
 
-To build the demo program
+Independent ABC sessions can run concurrently in different threads on Linux
+and macOS. Existing single-threaded applications using `Abc_Start()` and
+`Abc_Stop()` continue to work unchanged. Concurrent applications should create
+one `Abc_Frame_t` per session with `Abc_FrameCreate()`, execute commands using
+that frame, and release it with `Abc_FrameDestroy()`; the same frame must not be
+used concurrently by multiple threads. Scoped calls to
+`Abc_FrameEnter()`/`Abc_FrameLeave()` establish the current frame when invoking
+APIs outside command execution that depend on it. See `src/runabc.c` for
+single-threaded and concurrent embedding examples. Some obsolete commands still
+use shared process state and are not safe to run in concurrent sessions.
 
- * Copy demo.c and libabc.a to the working directory
- * Run `gcc -Wall -g -c demo.c -o demo.o`
- * Run `g++ -g -o demo demo.o libabc.a -lm -ldl -lreadline -lpthread`
+Build and run the single-threaded demo from the repository root with:
+
+```sh
+gcc -Wall -O2 -c src/demo.c -o demo.o
+g++ -o demo demo.o libabc.a -lm -ldl -lreadline -lpthread
+./demo i10.aig
+```
+
+Build and run the MiniAIG/MiniLUT embedding example with:
+
+```sh
+gcc -Wall -O2 -Isrc -c src/runabc.c -o runabc.o
+g++ -o runabc runabc.o libabc.a -lm -ldl -lreadline -lpthread
+./runabc i10.aig
+./runabc -t 4 i10.aig
+```
+
+The last command compares four concurrent sessions with a single-threaded
+baseline. If ABC is built with `ABC_USE_NO_READLINE=1`, omit `-lreadline`.
+Explicitly single-threaded configurations may disable thread-local frame
+selection with `ABC_USE_NO_THREAD_LOCAL=1`.
 
 To run the demo program, give it a file with the logic network in AIGER or BLIF. For example:
 
@@ -60,66 +75,65 @@ or in the batch mode:
     i10          : i/o =  257/  224  lat =    0  and =   1851  lev = 35
     Networks are equivalent.
 
-## Compiling as C or C++
+### Compiling as C or C++
 
-The current version of ABC can be compiled with C compiler or C++ compiler.
+ABC can be compiled with a C or C++ compiler.
 
- * To compile as C code (default): make sure that `CC=gcc` and `ABC_NAMESPACE` is not defined.
- * To compile as C++ code without namespaces: make sure that `CC=g++` and `ABC_NAMESPACE` is not defined.
- * To compile as C++ code with namespaces: make sure that `CC=g++` and `ABC_NAMESPACE` is set to
-   the name of the requested namespace. For example, add `-DABC_NAMESPACE=xxx` to OPTFLAGS.
+- To compile as C code, use the default Make configuration.
+- To compile as C++ in a namespace, run `make ABC_USE_NAMESPACE=xxx`.
 
-## Building a shared library
+### Building a shared library
 
- * Compile the code as position-independent by adding `ABC_USE_PIC=1`.
- * Build the `libabc.so` target: 
- 
-     make ABC_USE_PIC=1 libabc.so
+Build the shared library as position-independent code with:
 
-## Bug reporting:
+```sh
+make ABC_USE_PIC=1 libabc.so
+```
 
-Please try to reproduce all the reported bugs and unexpected features using the latest 
-version of ABC available from https://github.com/berkeley-abc/abc
+### Building with CMake
 
-If the bug still persists, please provide the following information:    
+ABC also supports CMake builds. The default CMake configuration builds the
+executable and regression tests:
 
- 1. ABC version (when it was downloaded from GitHub)
- 1. Linux distribution and version (32-bit or 64-bit)
- 1. The exact command-line and error message when trying to run the tool
- 1. The output of the `ldd` command run on the exeutable (e.g. `ldd abc`).
- 1. Versions of relevant tools or packages used.
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
 
+## Bug Reporting
 
-## Troubleshooting:
+Please reproduce bugs and unexpected behavior using the latest version of ABC
+available from https://github.com/berkeley-abc/abc.
 
- 1. If compilation does not start because of the cyclic dependency check, 
-try touching all files as follows: `find ./ -type f -exec touch "{}" \;`
- 1. If compilation fails because readline is missing, install 'readline' library or
-compile with `make ABC_USE_NO_READLINE=1`
- 1. If compilation fails because pthreads are missing, install 'pthread' library or
-compile with `make ABC_USE_NO_PTHREADS=1`
-    * See http://sourceware.org/pthreads-win32/ for pthreads on Windows
-    * Precompiled DLLs are available from ftp://sourceware.org/pub/pthreads-win32/dll-latest
- 1. If compilation fails in file "src/base/main/libSupport.c", try the following:
-    * Remove "src/base/main/libSupport.c" from "src/base/main/module.make"
-    * Comment out calls to `Libs_Init()` and `Libs_End()` in "src/base/main/mainInit.c"
- 1. On some systems, readline requires adding '-lcurses' to Makefile.
+If the problem persists, provide the following information:
 
-The following comment was added by Krish Sundaresan:
+1. ABC version or Git commit.
+2. Operating system, distribution, architecture, and compiler version.
+3. The exact command line and complete error message.
+4. The output of `ldd abc` on Linux, or the corresponding dependency report
+   on another platform, when relevant.
+5. Versions of relevant tools and libraries.
 
-"I found that the code does compile correctly on Solaris if gcc is used (instead of 
-g++ that I was using for some reason). Also readline which is not available by default 
-on most Sol10 systems, needs to be installed. I downloaded the readline-5.2 package 
-from sunfreeware.com and installed it locally. Also modified CFLAGS to add the local 
-include files for readline and LIBS to add the local libreadline.a. Perhaps you can 
-add these steps in the readme to help folks compiling this on Solaris."
+## Troubleshooting
+
+1. If compilation does not start because of the cyclic dependency check, run
+   `find . -type f -exec touch "{}" \;` and rebuild.
+2. If readline is unavailable, install its development package or build with
+   `make ABC_USE_NO_READLINE=1`.
+3. If pthreads are unavailable, build without pthread support using
+   `make ABC_USE_NO_PTHREADS=1`. Concurrent embedding requires pthread support.
+4. On systems where readline depends on curses, include the appropriate curses
+   library in `ABC_READLINE_LIBRARIES`.
 
 The following tutorial is kindly offered by Ana Petkovska from EPFL:
 https://www.dropbox.com/s/qrl9svlf0ylxy8p/ABC_GettingStarted.pdf
 
-## Final remarks:
+## Final Remarks
 
-Unfortunately, there is no comprehensive regression test. Good luck!                                
+ABC includes CMake-based regression tests, which run in continuous integration
+on supported configurations. The suite is not exhaustive, so bug reports
+should include a small reproducer whenever possible.
 
 This system is maintained by Alan Mishchenko <alanmi@berkeley.edu>. Consider also 
 using ZZ framework developed by Niklas Een: https://bitbucket.org/niklaseen/abc-zz (or https://github.com/berkeley-abc/abc-zz)

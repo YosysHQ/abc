@@ -242,7 +242,7 @@ pcover T, D;
 pcube select;
 int offset, first, last;
 {
-    static int level = 0;
+    static ABC_THREAD_LOCAL int level = 0;
     int middle;
     pset_family sl, sr, temp;
 
@@ -626,4 +626,3 @@ pPLA PLA;
     }
 }
 ABC_NAMESPACE_IMPL_END
-

@@ -27,8 +27,6 @@ ABC_NAMESPACE_IMPL_START
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-abctime timeRetime = 0;
-
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
 ////////////////////////////////////////////////////////////////////////
@@ -100,7 +98,6 @@ int Abc_NtkRetime( Abc_Ntk_t * pNtk, int Mode, int nDelayLim, int fForwardOnly, 
             nLatches - Abc_NtkLatchNum(pNtk), nLevels - Abc_NtkLevel(pNtk) );
         ABC_PRT( "Total runtime", Abc_Clock() - clkTotal );
     }
-    timeRetime = Abc_Clock() - clkTotal;
     return RetValue;
 }
 
@@ -135,4 +132,3 @@ int Abc_NtkRetimeDebug( Abc_Ntk_t * pNtk )
 
 
 ABC_NAMESPACE_IMPL_END
-

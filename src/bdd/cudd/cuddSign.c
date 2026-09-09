@@ -83,11 +83,11 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddSign.c,v 1.22 2009/02/20 02:14:58 fabio Exp $";
 #endif
 
-static int    size;
+static ABC_THREAD_LOCAL int size;
 
 #ifdef DD_STATS
-static int num_calls;   /* should equal 2n-1 (n is the # of nodes) */
-static int table_mem;
+static ABC_THREAD_LOCAL int num_calls; /* should equal 2n-1 (n is the # of nodes) */
+static ABC_THREAD_LOCAL int table_mem;
 #endif
 
 
@@ -323,4 +323,3 @@ ddCofMintermAux(
 
 
 ABC_NAMESPACE_IMPL_END
-

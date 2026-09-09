@@ -1661,8 +1661,8 @@ static int Sn_MapLutRunProcess( const char * pExecutable, const char * pCommand 
 }
 
 // ABC-specific callback for the reusable snMapLut.h harness. The harness owns the input MiniAIG and returned MiniLUT.
-static Mini_Lut_t * Sn_MapLutPartition( void * pArg, sn_module_id_t Module, const char * pName,
-                                        Mini_Aig_t * pAig, const sn_blast_boundary_t * pBoundary )
+static Mini_Lut_t * Sn_MapLutPartitionInt( void * pArg, sn_module_id_t Module, const char * pName,
+                                           Mini_Aig_t * pAig, const sn_blast_boundary_t * pBoundary )
 {
     Sn_MapLutContext_t * p = (Sn_MapLutContext_t *)pArg;
     Gia_Man_t * pGia;
@@ -1787,6 +1787,16 @@ static Mini_Lut_t * Sn_MapLutPartition( void * pArg, sn_module_id_t Module, cons
     if ( p->fVerbose )
         Abc_Print( 1, "@map_lut: %-24s %7d ANDs -> %7u LUTs  level = %u  time = %.2f s.\n",
                    pName, nAnds, Stats.lut_count, Stats.lut_levels, (double)(Abc_Clock() - clk) / CLOCKS_PER_SEC );
+    return pLut;
+}
+
+static Mini_Lut_t * Sn_MapLutPartition( void * pArg, sn_module_id_t Module, const char * pName,
+                                        Mini_Aig_t * pAig, const sn_blast_boundary_t * pBoundary )
+{
+    Sn_MapLutContext_t * p = (Sn_MapLutContext_t *)pArg;
+    Abc_Frame_t * pPrevious = Abc_FrameEnter( p->pAbc );
+    Mini_Lut_t * pLut = Sn_MapLutPartitionInt( pArg, Module, pName, pAig, pBoundary );
+    Abc_FrameLeave( pPrevious );
     return pLut;
 }
 

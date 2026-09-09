@@ -454,7 +454,7 @@ word Abc_IsopCheck( word * pOn, word * pOnDc, word * pRes, int nVars, word CostL
 ***********************************************************************/
 static inline word ** Abc_IsopTtElems()
 {
-    static word TtElems[ABC_ISOP_MAX_VAR+1][ABC_ISOP_MAX_WORD], * pTtElems[ABC_ISOP_MAX_VAR+1] = {NULL};
+    static ABC_THREAD_LOCAL word TtElems[ABC_ISOP_MAX_VAR+1][ABC_ISOP_MAX_WORD], * pTtElems[ABC_ISOP_MAX_VAR+1] = {NULL};
     if ( pTtElems[0] == NULL )
     {
         int v;
@@ -1022,9 +1022,9 @@ void Abc_IsopTestNew()
 int Abc_IsopTest( word * pFunc, int nVars, Vec_Int_t * vCover )
 {
     int fVerbose = 0;    
-    static word TotalCost[6] = {0};
-    static abctime TotalTime[6] = {0};
-    static int Counter;
+    static ABC_THREAD_LOCAL word TotalCost[6] = {0};
+    static ABC_THREAD_LOCAL abctime TotalTime[6] = {0};
+    static ABC_THREAD_LOCAL int Counter;
     word pRes[ABC_ISOP_MAX_WORD];
     word Cost;
     abctime clk;
@@ -1136,4 +1136,3 @@ int Abc_IsopTest( word * pFunc, int nVars, Vec_Int_t * vCover )
 
 
 ABC_NAMESPACE_IMPL_END
-

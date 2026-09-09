@@ -346,7 +346,7 @@ If_Obj_t * Lpk_MapTreeMulti_rec( Lpk_Man_t * p, Kit_DsdNtk_t ** ppNtks, int * pi
 ***********************************************************************/
 If_Obj_t * Lpk_MapTreeMulti( Lpk_Man_t * p, unsigned * pTruth, int nVars, If_Obj_t ** ppLeaves )
 {
-    static int Counter = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
     If_Obj_t * pResult;
     Kit_DsdNtk_t * ppNtks[8] = {0}, * pTemp;
     Kit_DsdObj_t * pRoot;
@@ -510,4 +510,3 @@ If_Obj_t * Lpk_MapTreeMulti( Lpk_Man_t * p, unsigned * pTruth, int nVars, If_Obj
 
 
 ABC_NAMESPACE_IMPL_END
-

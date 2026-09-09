@@ -100,10 +100,10 @@ static char rcsid[] DD_UNUSED = "$Id: cuddAnneal.c,v 1.14 2004/08/13 18:04:46 fa
 #endif
 
 #ifdef DD_STATS
-extern  int     ddTotalNumberSwapping;
-extern  int     ddTotalNISwaps;
-static  int     tosses;
-static  int     acceptances;
+extern ABC_THREAD_LOCAL int ddTotalNumberSwapping;
+extern ABC_THREAD_LOCAL int ddTotalNISwaps;
+static ABC_THREAD_LOCAL int tosses;
+static ABC_THREAD_LOCAL int acceptances;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -818,5 +818,4 @@ restoreOrder(
 
 
 ABC_NAMESPACE_IMPL_END
-
 

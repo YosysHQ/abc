@@ -1467,8 +1467,8 @@ void DecisionDiagram::addOutput(TruthTable& tt) {
 }
 
 unsigned DecisionDiagram::randomInt(int fReset) {
-    static unsigned int m_z = 3716960521u;
-    static unsigned int m_w = 2174103536u;
+    static ABC_THREAD_LOCAL unsigned int m_z = 3716960521u;
+    static ABC_THREAD_LOCAL unsigned int m_w = 2174103536u;
     if (fReset) {
         m_z = 3716960521u;
         m_w = 2174103536u;
@@ -1479,7 +1479,7 @@ unsigned DecisionDiagram::randomInt(int fReset) {
 }
 
 unsigned DecisionDiagram::randomNum(int Seed) {
-    static unsigned RandMask = 0;
+    static ABC_THREAD_LOCAL unsigned RandMask = 0;
     if (Seed == 0)
         return RandMask ^ randomInt(0);
     RandMask = randomInt(1);

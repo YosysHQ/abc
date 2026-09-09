@@ -342,8 +342,8 @@ int Bdc_ManDecompose( Bdc_Man_t * p, unsigned * puFunc, unsigned * puCare, int n
 ***********************************************************************/
 void Bdc_ManDecomposeTest( unsigned uTruth, int nVars )
 {
-    static int Counter = 0;
-    static int Total = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
+    static ABC_THREAD_LOCAL int Total = 0;
     Bdc_Par_t Pars = {0}, * pPars = &Pars;
     Bdc_Man_t * p;
     int RetValue;
@@ -450,4 +450,3 @@ Vec_Int_t * Bdc_ManBidecResub( word * pFunc, word * pCare, int nVars )
 
 
 ABC_NAMESPACE_IMPL_END
-

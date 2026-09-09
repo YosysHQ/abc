@@ -94,17 +94,17 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddZddGroup.c,v 1.20 2009/02/19 16:25:36 fabio Exp $";
 #endif
 
-static  int     *entry;
-extern  int     zddTotalNumberSwapping;
+static ABC_THREAD_LOCAL int *entry;
+extern ABC_THREAD_LOCAL int zddTotalNumberSwapping;
 #ifdef DD_STATS
-static  int     extsymmcalls;
-static  int     extsymm;
-static  int     secdiffcalls;
-static  int     secdiff;
-static  int     secdiffmisfire;
+static ABC_THREAD_LOCAL int extsymmcalls;
+static ABC_THREAD_LOCAL int extsymm;
+static ABC_THREAD_LOCAL int secdiffcalls;
+static ABC_THREAD_LOCAL int secdiff;
+static ABC_THREAD_LOCAL int secdiffmisfire;
 #endif
 #ifdef DD_DEBUG
-static  int     pr = 0; /* flag to enable printing while debugging */
+static ABC_THREAD_LOCAL int pr = 0; /* flag to enable printing while debugging */
                         /* by depositing a 1 into it */
 #endif
 

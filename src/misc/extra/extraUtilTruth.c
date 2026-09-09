@@ -664,7 +664,7 @@ void Extra_TruthMux( unsigned * pOut, unsigned * pCof0, unsigned * pCof1, int nV
 ***********************************************************************/
 int Extra_TruthVarsSymm( unsigned * pTruth, int nVars, int iVar0, int iVar1 )
 {
-    static unsigned uTemp0[16], uTemp1[16];
+    static ABC_THREAD_LOCAL unsigned uTemp0[16], uTemp1[16];
     assert( nVars <= 9 );
     // compute Cof01
     Extra_TruthCopy( uTemp0, pTruth, nVars );
@@ -691,7 +691,7 @@ int Extra_TruthVarsSymm( unsigned * pTruth, int nVars, int iVar0, int iVar1 )
 ***********************************************************************/
 int Extra_TruthVarsAntiSymm( unsigned * pTruth, int nVars, int iVar0, int iVar1 )
 {
-    static unsigned uTemp0[16], uTemp1[16];
+    static ABC_THREAD_LOCAL unsigned uTemp0[16], uTemp1[16];
     assert( nVars <= 9 );
     // compute Cof00
     Extra_TruthCopy( uTemp0, pTruth, nVars );
@@ -774,7 +774,7 @@ void Extra_TruthChangePhase( unsigned * pTruth, int nVars, int iVar )
 ***********************************************************************/
 int Extra_TruthMinCofSuppOverlap( unsigned * pTruth, int nVars, int * pVarMin )
 {
-    static unsigned uCofactor[16];
+    static ABC_THREAD_LOCAL unsigned uCofactor[16];
     int i, ValueCur, ValueMin, VarMin;
     unsigned uSupp0, uSupp1;
     int nVars0, nVars1;
@@ -1150,4 +1150,3 @@ unsigned Extra_TruthSemiCanonicize( unsigned * pInOut, unsigned * pAux, int nVar
 
 
 ABC_NAMESPACE_IMPL_END
-

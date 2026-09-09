@@ -61,14 +61,19 @@ void Aig_ManIncrementTravId( Aig_Man_t * p )
 ***********************************************************************/
 char * Aig_TimeStamp()
 {
-    static char Buffer[100];
-    char * TimeStamp;
+    static ABC_THREAD_LOCAL char Buffer[100];
+    struct tm Time;
     time_t ltime;
     // get the current time
     time( &ltime );
-    TimeStamp = asctime( localtime( &ltime ) );
-    TimeStamp[ strlen(TimeStamp) - 1 ] = 0;
-    strcpy( Buffer, TimeStamp );
+#ifdef _WIN32
+    localtime_s( &Time, &ltime );
+#else
+    localtime_r( &ltime, &Time );
+#endif
+    strftime( Buffer, sizeof(Buffer), "%a %b %d %H:%M:%S %Y", &Time );
+    if ( Buffer[8] == '0' )
+        Buffer[8] = ' ';
     return Buffer;
 }
 
@@ -724,7 +729,7 @@ void Aig_ManPrintVerbose( Aig_Man_t * p, int fHaig )
 ***********************************************************************/
 void Aig_ManDump( Aig_Man_t * p )
 { 
-    static int Counter = 0;
+    static ABC_THREAD_LOCAL int Counter = 0;
     char FileName[200];
     // dump the logic into a file
     sprintf( FileName, "aigbug\\%03d.blif", ++Counter );
@@ -1082,7 +1087,7 @@ void Aig_ManPrintControlFanouts( Aig_Man_t * p )
 ***********************************************************************/
 char * Aig_FileNameGenericAppend( char * pBase, char * pSuffix )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     char * pDot;
     strcpy( Buffer, pBase );
     if ( (pDot = strrchr( Buffer, '.' )) )
@@ -1169,13 +1174,8 @@ void Aig_ManRandomTest1()
 ***********************************************************************/
 unsigned Aig_ManRandom( int fReset )
 {
-#ifdef _MSC_VER
-    static unsigned int m_z = NUMBER1;
-    static unsigned int m_w = NUMBER2;
-#else
-    static __thread unsigned int m_z = NUMBER1;
-    static __thread unsigned int m_w = NUMBER2;
-#endif    
+    static ABC_THREAD_LOCAL unsigned int m_z = NUMBER1;
+    static ABC_THREAD_LOCAL unsigned int m_w = NUMBER2;
     if ( fReset )
     {
         m_z = NUMBER1;
@@ -1577,4 +1577,3 @@ void Aig_ManInvertConstraints( Aig_Man_t * pAig )
 
 
 ABC_NAMESPACE_IMPL_END
-

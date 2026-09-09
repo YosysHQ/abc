@@ -317,7 +317,6 @@ static inline void act_var_rescale(sat_solver2* s)  {
     s->var_inc *= 1e-100;
 }
 static inline void act_clause2_rescale(sat_solver2* s) {
-    static abctime Total = 0;
     float * act_clas = (float *)veci_begin(&s->act_clas);
     int i;
     abctime clk = Abc_Clock();
@@ -325,9 +324,9 @@ static inline void act_clause2_rescale(sat_solver2* s) {
         act_clas[i] *= (float)1e-20;
     s->cla_inc *= (float)1e-20;
 
-    Total += Abc_Clock() - clk;
+    s->timeActRescale += Abc_Clock() - clk;
     Abc_Print(1, "Rescaling...   Cla inc = %10.3f  Conf = %10d   ", s->cla_inc,  s->stats.conflicts );
-    Abc_PrintTime( 1, "Time", Total );
+    Abc_PrintTime( 1, "Time", s->timeActRescale );
 }
 static inline void act_var_bump(sat_solver2* s, int v) {
     s->activity[v] += s->var_inc;
@@ -1405,7 +1404,6 @@ void luby2_test()
 // updates clauses, watches, units, and proof
 void sat_solver2_reducedb(sat_solver2* s)
 {
-    static abctime TimeTotal = 0;
     Sat_Mem_t * pMem = &s->Mem;
     clause * c = NULL;
     int nLearnedOld = veci_size(&s->act_clas);
@@ -1414,8 +1412,6 @@ void sat_solver2_reducedb(sat_solver2* s)
     int i, j, k, Id, nSelected;//, LastSize = 0;
     int Counter, CounterStart;
     abctime clk = Abc_Clock();
-    static int Count = 0;
-    Count++;
     assert( s->nLearntMax );
     s->nDBreduces++;
 //    printf( "Calling reduceDB with %d clause limit and parameters (%d %d %d).\n", s->nLearntMax, s->nLearntStart, s->nLearntDelta, s->nLearntRatio );
@@ -1573,12 +1569,12 @@ void sat_solver2_reducedb(sat_solver2* s)
     }
 
     // report the results
-    TimeTotal += Abc_Clock() - clk;
+    s->timeReduceDb += Abc_Clock() - clk;
     if ( s->fVerbose )
     {
         Abc_Print(1, "reduceDB: Keeping %7d out of %7d clauses (%5.2f %%)  ",
             s->stats.learnts, nLearnedOld, 100.0 * s->stats.learnts / nLearnedOld );
-        Abc_PrintTime( 1, "Time", TimeTotal );
+        Abc_PrintTime( 1, "Time", s->timeReduceDb );
     }
 }
 
@@ -1587,8 +1583,6 @@ void sat_solver2_rollback( sat_solver2* s )
 {
     Sat_Mem_t * pMem = &s->Mem;
     int i, k, j;
-    static int Count = 0;
-    Count++;
     assert( s->iVarPivot >= 0 && s->iVarPivot <= s->size );
     assert( s->iTrailPivot >= 0 && s->iTrailPivot <= s->qtail );
     assert( s->pPrf1 == NULL || (s->hProofPivot >= 1 && s->hProofPivot <= Vec_SetHandCurrent(s->pPrf1)) );

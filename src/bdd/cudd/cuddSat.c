@@ -103,7 +103,7 @@ typedef struct cuddPathPair {
 static char rcsid[] DD_UNUSED = "$Id: cuddSat.c,v 1.36 2009/03/08 02:49:02 fabio Exp $";
 #endif
 
-static  DdNode  *one, *zero;
+static ABC_THREAD_LOCAL DdNode *one, *zero;
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -1379,4 +1379,3 @@ getCube(
 
 
 ABC_NAMESPACE_IMPL_END
-

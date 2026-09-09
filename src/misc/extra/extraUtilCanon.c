@@ -373,7 +373,7 @@ static int Extra_TruthCanonN_rec( int nVars, unsigned char * pt, unsigned ** ppt
 ******************************************************************************/
 int Extra_TruthCanonFastN( int nVarsMax, int nVarsReal, unsigned * pt, unsigned ** pptRes, char ** ppfRes )
 {
-    static unsigned uTruthStore6[2];
+    static ABC_THREAD_LOCAL unsigned uTruthStore6[2];
     int RetValue;
     assert( nVarsMax <= 6 );
     assert( nVarsReal <= nVarsMax );
@@ -405,8 +405,8 @@ int Extra_TruthCanonFastN( int nVarsMax, int nVarsReal, unsigned * pt, unsigned 
 ***********************************************************************/
 int Extra_TruthCanonN_rec( int nVars, unsigned char * pt, unsigned ** pptRes, char ** ppfRes, int Flag )
 {
-    static unsigned uTruthStore[7][2][2];
-    static char uPhaseStore[7][2][64];
+    static ABC_THREAD_LOCAL unsigned uTruthStore[7][2][2];
+    static ABC_THREAD_LOCAL char uPhaseStore[7][2][64];
 
     unsigned char * pt0, * pt1;
     unsigned * ptRes0, * ptRes1, * ptRes;
@@ -688,4 +688,3 @@ void Map_Var4Test()
 
 
 ABC_NAMESPACE_IMPL_END
-

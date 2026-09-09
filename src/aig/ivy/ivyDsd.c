@@ -677,7 +677,7 @@ Ivy_Obj_t * Ivy_ManDsdConstruct( Ivy_Man_t * p, Vec_Int_t * vFront, Vec_Int_t * 
 ***********************************************************************/
 void Ivy_TruthDsdComputePrint( unsigned uTruth )
 {
-    static Vec_Int_t * vTree = NULL;
+    static ABC_THREAD_LOCAL Vec_Int_t * vTree = NULL;
     if ( vTree == NULL )
         vTree = Vec_IntAlloc( 12 );
     if ( Ivy_TruthDsd( uTruth, vTree ) )
@@ -699,8 +699,8 @@ void Ivy_TruthDsdComputePrint( unsigned uTruth )
 ***********************************************************************/
 void Ivy_TruthTestOne( unsigned uTruth )
 {
-    static int Counter = 0;
-    static Vec_Int_t * vTree = NULL;
+    static ABC_THREAD_LOCAL int Counter = 0;
+    static ABC_THREAD_LOCAL Vec_Int_t * vTree = NULL;
     // decompose
     if ( vTree == NULL )
         vTree = Vec_IntAlloc( 12 );
@@ -828,4 +828,3 @@ void Ivy_TruthTest5()
 
 
 ABC_NAMESPACE_IMPL_END
-

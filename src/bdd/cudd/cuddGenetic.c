@@ -107,8 +107,8 @@ ABC_NAMESPACE_IMPL_START
 static char rcsid[] DD_UNUSED = "$Id: cuddGenetic.c,v 1.28 2004/08/13 18:04:48 fabio Exp $";
 #endif
 
-static int popsize;             /* the size of the population */
-static int numvars;             /* the number of input variables in the ckt. */
+static ABC_THREAD_LOCAL int popsize; /* the size of the population */
+static ABC_THREAD_LOCAL int numvars; /* the number of input variables in the ckt. */
 /* storedd stores the population orders and sizes. This table has two
 ** extra rows and one extras column. The two extra rows are used for the
 ** offspring produced by a crossover. Each row stores one order and its
@@ -117,13 +117,13 @@ static int numvars;             /* the number of input variables in the ckt. */
 ** one-dimensional array which is accessed via a macro to give the illusion
 ** it is a two-dimensional structure.
 */
-static int *storedd;
-static st__table *computed;      /* hash table to identify existing orders */
-static int *repeat;             /* how many times an order is present */
-static int large;               /* stores the index of the population with
+static ABC_THREAD_LOCAL int *storedd;
+static ABC_THREAD_LOCAL st__table *computed; /* hash table to identify existing orders */
+static ABC_THREAD_LOCAL int *repeat; /* how many times an order is present */
+static ABC_THREAD_LOCAL int large; /* stores the index of the population with
                                 ** the largest number of nodes in the DD */
-static int result;
-static int cross;               /* the number of crossovers to perform */
+static ABC_THREAD_LOCAL int result;
+static ABC_THREAD_LOCAL int cross; /* the number of crossovers to perform */
 
 /*---------------------------------------------------------------------------*/
 /* Macro declarations                                                        */
@@ -953,5 +953,4 @@ roulette(
 
 
 ABC_NAMESPACE_IMPL_END
-
 

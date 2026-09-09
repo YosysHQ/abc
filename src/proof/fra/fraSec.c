@@ -682,7 +682,7 @@ ABC_PRT( "Time", Abc_Clock() - clkTotal );
         }
         if ( !TimeOut && !pParSec->fSilent )
         {
-            static int Counter = 1;
+            static ABC_THREAD_LOCAL int Counter = 1;
             char pFileName[1000];
             pParSec->nSMnumber = Counter;
             sprintf( pFileName, "sm%02d.aig", Counter++ );
@@ -714,4 +714,3 @@ ABC_PRT( "Time", Abc_Clock() - clkTotal );
 
 
 ABC_NAMESPACE_IMPL_END
-

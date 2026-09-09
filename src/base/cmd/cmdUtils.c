@@ -890,7 +890,7 @@ void Gia_ManKissatCall( Abc_Frame_t * pAbc, char * pFileName, char * pArgs, int 
 ***********************************************************************/
 char * Cmd_GenScript( char ** pComms, int nComms, int nParts )
 {
-    static char pScript[1000]; int c;
+    static ABC_THREAD_LOCAL char pScript[1000]; int c;
     pScript[0] = 0;
     for ( c = 0; c < nParts; c++ ) {
         strcat( pScript, pComms[rand() % nComms] );

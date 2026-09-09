@@ -20,6 +20,7 @@
 
 #include "base/abc/abc.h"
 #include "aig/aig/aig.h"
+#include "base/main/main.h"
 
 ABC_NAMESPACE_IMPL_START
 
@@ -49,7 +50,7 @@ struct Npn_Man_t_
 static inline Npn_Obj_t * Npn_ManObj( Npn_Man_t * p, int i )                 { assert( i < p->nBufferSize ); return i ? p->pBuffer + i : NULL;  }
 static inline int         Npn_ManObjNum( Npn_Man_t * p, Npn_Obj_t * pObj )   { assert( p->pBuffer < pObj );  return pObj - p->pBuffer;          }
 
-static word Truth[8] = {
+static const word Truth[8] = {
     ABC_CONST(0xAAAAAAAAAAAAAAAA),
     ABC_CONST(0xCCCCCCCCCCCCCCCC),
     ABC_CONST(0xF0F0F0F0F0F0F0F0),
@@ -60,7 +61,21 @@ static word Truth[8] = {
     ABC_CONST(0xFFFFFFFFFFFFFFFF)
 };
 
-static Npn_Man_t * pNpnMan = NULL;
+static ABC_THREAD_LOCAL Npn_Man_t * pNpnManStandalone = NULL;
+
+static Npn_Man_t * Npn_ManCurrent()
+{
+    return Abc_FrameReadGlobalFrame() ? (Npn_Man_t *)Abc_FrameReadManNpn() : pNpnManStandalone;
+}
+static void Npn_ManSetCurrent( Npn_Man_t * pMan )
+{
+    if ( Abc_FrameReadGlobalFrame() )
+        Abc_FrameSetManNpn( pMan );
+    else
+        pNpnManStandalone = pMan;
+}
+
+#define pNpnMan Npn_ManCurrent()
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -79,7 +94,7 @@ static Npn_Man_t * pNpnMan = NULL;
 ***********************************************************************/
 void Npn_TruthPermute_rec( char * pStr, int mid, int end )
 {
-    static int count = 0;
+    static ABC_THREAD_LOCAL int count = 0;
     char * pTemp = Abc_UtilStrsav(pStr);
     char e;
     int i;
@@ -257,7 +272,7 @@ static inline word Npn_TruthChangePhase( word t, int v )
 ***********************************************************************/
 static inline word Npn_TruthSwapAdjacentVars( word t, int v )
 {
-    static word PMasks[5][3] = {
+    static const word PMasks[5][3] = {
         { ABC_CONST(0x9999999999999999), ABC_CONST(0x2222222222222222), ABC_CONST(0x4444444444444444) },
         { ABC_CONST(0xC3C3C3C3C3C3C3C3), ABC_CONST(0x0C0C0C0C0C0C0C0C), ABC_CONST(0x3030303030303030) },
         { ABC_CONST(0xF00FF00FF00FF00F), ABC_CONST(0x00F000F000F000F0), ABC_CONST(0x0F000F000F000F00) },
@@ -651,7 +666,7 @@ void Npn_ManClean()
     if ( pNpnMan != NULL )
     {
         Npn_ManStop( pNpnMan );
-        pNpnMan = NULL;
+        Npn_ManSetCurrent( NULL );
     }
 }
 
@@ -674,7 +689,7 @@ void Npn_ManLoad( char * pFileName )
         Abc_Print( 1, "Removing old table with %d entries.\n", pNpnMan->nEntries );
         Npn_ManStop( pNpnMan );
     }
-    pNpnMan = Npn_ManStart( pFileName );
+    Npn_ManSetCurrent( Npn_ManStart(pFileName) );
     Abc_Print( 1, "Created new table with %d entries from file \"%s\".\n", pNpnMan->nEntries, pFileName );
 }
 
@@ -718,7 +733,7 @@ void Npn_ManSaveOne( unsigned * puTruth, int nVars )
     if ( pNpnMan == NULL )
     {
         Abc_Print( 1, "Creating new table with 0 entries.\n" );
-        pNpnMan = Npn_ManStart( NULL );
+        Npn_ManSetCurrent( Npn_ManStart(NULL) );
     }
     // skip truth tables that do not depend on some vars
     if ( !Npn_TruthIsMinBase( uTruth ) )
@@ -737,4 +752,3 @@ void Npn_ManSaveOne( unsigned * puTruth, int nVars )
 
 
 ABC_NAMESPACE_IMPL_END
-

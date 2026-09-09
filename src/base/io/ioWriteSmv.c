@@ -45,7 +45,7 @@ static int Io_WriteSmvOneNode( FILE * pFile, Abc_Obj_t * pNode );
 static char *cleanUNSAFE( const char *s )
 {
     char *t;
-    static char buffer[1024];
+    static ABC_THREAD_LOCAL char buffer[1024];
     assert (strlen(s) < 1024);
     strcpy(buffer, s);
     for (t = buffer; *t != 0; ++t) *t = (*t == '|') ? '_' : *t;
@@ -262,4 +262,3 @@ int Io_WriteSmvCheckNames( Abc_Ntk_t * pNtk )
 
 
 ABC_NAMESPACE_IMPL_END
-

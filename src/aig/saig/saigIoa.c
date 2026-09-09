@@ -45,7 +45,7 @@ ABC_NAMESPACE_IMPL_START
 ***********************************************************************/
 char * Saig_ObjName( Aig_Man_t * p, Aig_Obj_t * pObj )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     if ( Aig_ObjIsNode(pObj) || Aig_ObjIsConst1(pObj) )
         sprintf( Buffer, "n%0*d", (unsigned char)Abc_Base10Log(Aig_ManObjNumMax(p)), Aig_ObjId(pObj) );
     else if ( Saig_ObjIsPi(p, pObj) )
@@ -154,7 +154,7 @@ void Saig_ManDumpBlif( Aig_Man_t * p, char * pFileName )
 ***********************************************************************/
 char * Saig_ManReadToken( FILE * pFile )
 {
-    static char Buffer[1000];
+    static ABC_THREAD_LOCAL char Buffer[1000];
     if ( fscanf( pFile, "%s", Buffer ) == 1 )
         return Buffer;
     return NULL;
@@ -402,4 +402,3 @@ Aig_Man_t * Saig_ManReadBlif( char * pFileName )
 
 
 ABC_NAMESPACE_IMPL_END
-

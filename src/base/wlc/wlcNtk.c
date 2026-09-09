@@ -224,7 +224,7 @@ int Wlc_ObjCreate( Wlc_Ntk_t * p, int Type, int Signed, int End, int Beg, Vec_In
 }
 char * Wlc_ObjName( Wlc_Ntk_t * p, int iObj )
 {
-    static char Buffer[100];
+    static ABC_THREAD_LOCAL char Buffer[100];
     if ( Wlc_NtkHasNameId(p) && Wlc_ObjNameId(p, iObj) )
         return Abc_NamStr( p->pManName, Wlc_ObjNameId(p, iObj) );
     sprintf( Buffer, "n%d", iObj );
@@ -846,7 +846,7 @@ void Wlc_NtkTransferNames( Wlc_Ntk_t * pNew, Wlc_Ntk_t * p )
 }
 char * Wlc_NtkNewName( Wlc_Ntk_t * p, int iCoId, int fSeq )
 {
-    static char pBuffer[1000];
+    static ABC_THREAD_LOCAL char pBuffer[1000];
     sprintf( pBuffer, "%s_o%d_%s", p->pName, iCoId, fSeq ? "seq": "comb" );
     return pBuffer;
 }
@@ -1407,4 +1407,3 @@ int Wlc_NtkCountObjBits( Wlc_Ntk_t * p, Vec_Int_t * vPisNew )
 
 
 ABC_NAMESPACE_IMPL_END
-

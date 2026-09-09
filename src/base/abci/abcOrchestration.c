@@ -276,7 +276,8 @@ Rwr_ManAddTimeTotal( pManRwr, Abc_Clock() - clkStart );
 
 Cut_Man_t * Abc_NtkStartCutManForRewrite( Abc_Ntk_t * pNtk )
 {
-    static Cut_Params_t Params, * pParams = &Params;
+    static ABC_THREAD_LOCAL Cut_Params_t Params;
+    Cut_Params_t * pParams = &Params;
     Cut_Man_t * pManCut;
     Abc_Obj_t * pObj;
     int i;
@@ -5671,4 +5672,3 @@ pManRef->timeTotal = Abc_Clock() - clkStart;
 
 
 ABC_NAMESPACE_IMPL_END
-

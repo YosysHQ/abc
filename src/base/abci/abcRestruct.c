@@ -960,7 +960,8 @@ Dec_Graph_t * Abc_NodeEvaluateDsd( Abc_ManRst_t * pManRst, Dsd_Node_t * pNodeDsd
 ***********************************************************************/
 Cut_Man_t * Abc_NtkStartCutManForRestruct( Abc_Ntk_t * pNtk, int nCutMax, int fDag )
 {
-    static Cut_Params_t Params, * pParams = &Params;
+    static ABC_THREAD_LOCAL Cut_Params_t Params;
+    Cut_Params_t * pParams = &Params;
     Cut_Man_t * pManCut;
     Abc_Obj_t * pObj;
     int i;
@@ -1508,4 +1509,3 @@ int Abc_NtkRestructure( Abc_Ntk_t * pNtk, int nCutMax, int fUpdateLevel, int fUs
 
 
 ABC_NAMESPACE_IMPL_END
-
