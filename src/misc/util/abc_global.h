@@ -421,6 +421,15 @@ static inline abctime Abc_ThreadClock()
 #endif
 }
 
+// stopwatch timing for verbose statistics
+#if defined(ABC_NO_TIMERS)
+    #define ABC_TIME_START(cond, clk)          do { (void)(clk); } while (0)
+    #define ABC_TIME_STOP(cond, acc, clk)      do { (void)(clk); } while (0)
+#else
+    #define ABC_TIME_START(cond, clk)          do { clk = (cond) ? Abc_Clock() : 0; } while (0)
+    #define ABC_TIME_STOP(cond, acc, clk)      do { if (cond) acc += Abc_Clock() - clk; } while (0)
+#endif
+
 // misc printing procedures
 enum Abc_VerbLevel
 {
@@ -588,6 +597,25 @@ static inline void Abc_ReverseOrder( int * pA, int nA )
     int i;
     for ( i = 0; i < nA/2; i++ )
         ABC_SWAP( int, pA[i], pA[nA-1-i] );
+}
+
+static inline const char * Abc_GetTmpDir()
+{
+    const char * s;
+#if defined(_MSC_VER) || defined(__MINGW32__)
+    s = getenv( "TMP" );
+    if ( s && *s )
+        return s;
+    s = getenv( "TEMP" );
+    if ( s && *s )
+        return s;
+    return ".";
+#else
+    s = getenv( "TMPDIR" );
+    if ( s && *s )
+        return s;
+    return "/tmp";
+#endif
 }
 
 
