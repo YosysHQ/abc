@@ -52,7 +52,7 @@ typedef enum {
     ACB_XNOR,      // 13: "xnor"
     ACB_MUX,       // 14: "_HMUX"
     ACB_DC,        // 15: "_DC"
-    ACB_UNUSED     // 14: unused
+    ACB_UNUSED     // 16: unused
 } Acb_KeyWords_t; 
 
 static inline char * Acb_Num2Name( int i )
@@ -412,6 +412,7 @@ int Gia_FileSimpleParse_rec( Gia_Man_t * pNew, int Token, Vec_Int_t * vMapType, 
     nFanins = Vec_IntEntry(vTypes, Place+3) - Size - 1;
     pFanins = Vec_IntEntryP(vFanins, Size+1);
     assert( nFanins > 0 && nFanins < 16 );
+    if ( nFanins <= 0 || nFanins >= 16 ) abort();
     for ( i = 0; i < nFanins; i++ )
         Gia_FileSimpleParse_rec( pNew, pFanins[i], vMapType, vTypes, vFanins, vMap );
     for ( i = 0; i < nFanins; i++ )
@@ -3185,4 +3186,3 @@ void Acb_NtkRunEco( char * pFileNames[4], int nTimeout, int fCheck, int fRandom,
 
 
 ABC_NAMESPACE_IMPL_END
-
