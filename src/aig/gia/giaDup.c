@@ -3027,6 +3027,7 @@ int Gia_ManMiter_rec( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj )
 ***********************************************************************/
 Gia_Man_t * Gia_ManMiter( Gia_Man_t * p0, Gia_Man_t * p1, int nInsDup, int fDualOut, int fSeq, int fImplic, int fVerbose )
 {
+    extern void Gia_ManCleanupRemap( Gia_Man_t * p, Gia_Man_t * pGia );
     Gia_Man_t * pNew, * pTemp;
     Gia_Obj_t * pObj;
     int i, iLit;
@@ -3154,9 +3155,15 @@ Gia_Man_t * Gia_ManMiter( Gia_Man_t * p0, Gia_Man_t * p1, int nInsDup, int fDual
     }
     Gia_ManHashStop( pNew );
     pNew = Gia_ManCleanup( pTemp = pNew );
+    Gia_ManCleanupRemap( p0, pTemp );
+    if ( p1 != p0 )
+        Gia_ManCleanupRemap( p1, pTemp );
     Gia_ManStop( pTemp );
 
     pNew = Gia_ManDupNormalize( pTemp = pNew, 0 );
+    Gia_ManCleanupRemap( p0, pTemp );
+    if ( p1 != p0 )
+        Gia_ManCleanupRemap( p1, pTemp );
     Gia_ManStop( pTemp );
     return pNew;
 }
@@ -3671,7 +3678,7 @@ Gia_Man_t * Gia_ManDupZeroUndc( Gia_Man_t * p, char * pInit, int nNewPis, int fG
     // create flop inputs
     Gia_ManForEachRi( p, pObj, i )
         if ( pInit[i] == '1' )
-            pObj->Value = Gia_ManAppendCo( pNew, Abc_LitNot(Gia_ObjFanin0Copy(pObj)) );
+            pObj->Value = Abc_LitNot( Gia_ManAppendCo(pNew, Abc_LitNot(Gia_ObjFanin0Copy(pObj))) );
         else
             pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) );
     // create reset flop input
@@ -3917,6 +3924,7 @@ Gia_Man_t * Gia_ManDupWithConstraints( Gia_Man_t * p, Vec_Int_t * vPoTypes )
     pNew = Gia_ManStart( Gia_ManObjNum(p) );
     pNew->pName = Abc_UtilStrsav( p->pName );
     pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+    Gia_ManFillValue( p );
     Gia_ManConst0(p)->Value = 0;
     Gia_ManForEachCi( p, pObj, i )
         pObj->Value = Gia_ManAppendCi(pNew);
@@ -3927,7 +3935,7 @@ Gia_Man_t * Gia_ManDupWithConstraints( Gia_Man_t * p, Vec_Int_t * vPoTypes )
             pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) );
     Gia_ManForEachPo( p, pObj, i )
         if ( Vec_IntEntry(vPoTypes, i) == 1 ) // constraint (should be complemented!)
-            pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) ^ 1 ), nConstr++;
+            pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) ^ 1 ) ^ 1, nConstr++;
     Gia_ManForEachRi( p, pObj, i )
         pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) );
 //    Gia_ManDupRemapEquiv( pNew, p );
@@ -5766,6 +5774,10 @@ Gia_Man_t * Gia_ManDupWithCare( Gia_Man_t * p, Gia_Man_t * pCare )
     return pNew;
 }
 
+// timing memo of the arrival-driven final adder (base/wlc/wlc.h); declared at file scope
+// so that the C++ build does not take it for a type local to the function below
+typedef struct Wlc_BlastTim_t_ Wlc_BlastTim_t;
+
 /**Function*************************************************************
 
   Synopsis    []
@@ -5779,7 +5791,7 @@ Gia_Man_t * Gia_ManDupWithCare( Gia_Man_t * p, Gia_Man_t * pCare )
 ***********************************************************************/
 void Gia_ManProdAdderGen( int nArgA, int nArgB, int Seed, int fSigned, int fCla )
 {
-    extern void Wlc_BlastReduceMatrix( Gia_Man_t * pNew, Vec_Wec_t * vProds, Vec_Wec_t * vLevels, Vec_Int_t * vRes, int fSigned, int fCla );
+    extern void Wlc_BlastReduceMatrix( Gia_Man_t * pNew, Vec_Wec_t * vProds, Vec_Wec_t * vLevels, Vec_Int_t * vRes, int fSigned, int fCla, Wlc_BlastTim_t * pTim, int nBitsRes );
     int i, k, x, fCompl, iLit; char  pNameP[32], pNameT[32];
     Vec_Wec_t * vProds  = Vec_WecStart( nArgA + nArgB );
     Vec_Wec_t * vLevels = Vec_WecStart( nArgA + nArgB );
@@ -5826,7 +5838,7 @@ void Gia_ManProdAdderGen( int nArgA, int nArgB, int Seed, int fSigned, int fCla 
             if ( Vec_IntSize(vLevel) > 1 )
                 Vec_IntRandomizeOrder( vLevel );
     }
-    Wlc_BlastReduceMatrix( pTree, vProds, vLevels, vRes, fSigned, fCla );
+    Wlc_BlastReduceMatrix( pTree, vProds, vLevels, vRes, fSigned, fCla, NULL, 0 );
     Vec_IntShrink( vRes, nArgA + nArgB );
     assert( Vec_IntSize(vRes) == nArgA + nArgB );
     Vec_IntForEachEntry( vRes, iLit, x )
