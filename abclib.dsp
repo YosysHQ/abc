@@ -283,6 +283,10 @@ SOURCE=.\src\base\abci\abcExtract.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\base\abci\abcFabsorb.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\base\abci\abcFraig.c
 # End Source File
 # Begin Source File
@@ -1066,9 +1070,65 @@ SOURCE=.\src\base\wln\wlnWlc.c
 SOURCE=.\src\base\wln\wlnWriteVer.c
 # End Source File
 # End Group
+# Begin Group "parter"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterCoarse.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterRun.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterRun.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterFm.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterExtract.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterExtract.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterSn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterSn.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parter.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterInt.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\parter\parterGraph.c
+# End Source File
+# End Group
 # Begin Group "sn"
 
 # PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\base\sn\snAigCost.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\sn\snAigCost.h
+# End Source File
 # Begin Source File
 
 SOURCE=.\src\base\sn\sn.h
@@ -3883,6 +3943,26 @@ SOURCE=.\src\opt\dar\darResub.c
 # Begin Source File
 
 SOURCE=.\src\opt\dar\darScript.c
+# End Source File
+# End Group
+# Begin Group "drw"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\opt\drw\drw.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\drw\drwInt.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\drw\drwCore.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\drw\drwData.c
 # End Source File
 # End Group
 # Begin Group "rwt"
@@ -6778,6 +6858,10 @@ SOURCE=.\src\proof\cec\cecCorr.c
 # Begin Source File
 
 SOURCE=.\src\proof\cec\cecCorr2.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\cec\cecCorr3.c
 # End Source File
 # Begin Source File
 
