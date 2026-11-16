@@ -128,7 +128,7 @@ static inline Vec_Wec_t * Vec_WecStart( int nSize )
 ***********************************************************************/
 static inline void Vec_WecGrow( Vec_Wec_t * p, int nCapMin )
 {
-    if ( p->nCap >= nCapMin )
+    if ( nCapMin <= 0 || p->nCap >= nCapMin )
         return;
     p->pArray = ABC_REALLOC( Vec_Int_t, p->pArray, nCapMin ); 
     memset( p->pArray + p->nCap, 0, sizeof(Vec_Int_t) * (size_t)(nCapMin - p->nCap) );
@@ -869,14 +869,17 @@ static inline Vec_Wec_t * Vec_WecReadBin( char * pFileName, int fVerbose )
     rewind( pFile );
     RetValue = fread( &nSize, 1, sizeof(int), pFile );
     assert( RetValue == 4 );
+    (void)RetValue;
     p = Vec_WecStart( nSize );
     Vec_WecForEachLevel( p, vLevel, i )
     {
         RetValue = fread( &nSize, 1, sizeof(int), pFile );
         assert( RetValue == 4 );
+        (void)RetValue;
         Vec_IntFill( vLevel, nSize, 0 );
         RetValue = fread( Vec_IntArray(vLevel), 1, sizeof(int)*nSize, pFile );
         assert( RetValue == 4*nSize );
+        (void)RetValue;
     }
     fclose( pFile );
     if ( fVerbose )

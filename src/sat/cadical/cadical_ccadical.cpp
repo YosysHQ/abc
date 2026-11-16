@@ -117,6 +117,10 @@ int ccadical_simplify (CCaDiCaL *wrapper) {
   return ((Wrapper *) wrapper)->solver->simplify ();
 }
 
+int ccadical_simplify_rounds (CCaDiCaL *wrapper, int rounds) {
+  return ((Wrapper *) wrapper)->solver->simplify (rounds);
+}
+
 int ccadical_val (CCaDiCaL *wrapper, int lit) {
   return ((Wrapper *) wrapper)->solver->val (lit);
 }
@@ -222,6 +226,14 @@ int ccadical_is_inconsistent(CCaDiCaL *ptr) {
 
 int ccadical_clauses(CCaDiCaL *ptr) {
   return ((Wrapper *) ptr)->solver->clauses ();
+}
+
+// Returns the number of active clauses without narrowing.
+// Counts original and learned clauses currently retained.
+// See also: ccadical_clauses
+int64_t ccadical_live_clauses(CCaDiCaL *ptr) {
+  Solver *solver = ((Wrapper *) ptr)->solver;
+  return solver->irredundant () + solver->redundant ();
 }
 
 int ccadical_conflicts(CCaDiCaL *ptr) {

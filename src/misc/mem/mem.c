@@ -90,7 +90,8 @@ struct Mem_Step_t_
   Synopsis    [Allocates memory pieces of fixed size.]
 
   Description [The size of the chunk is computed as the minimum of
-  1024 entries and 64K. Can only work with entry size at least 4 byte long.]
+  1024 entries and 64K. Positive entry sizes are rounded up to pointer
+  alignment, adding at most sizeof(void*) - 1 bytes per entry.]
                
   SideEffects []
 
@@ -104,12 +105,17 @@ Mem_Fixed_t * Mem_FixedStart( int nEntrySize )
     p = ABC_ALLOC( Mem_Fixed_t, 1 );
     memset( p, 0, sizeof(Mem_Fixed_t) );
 
+    // The free list and pointer-containing objects require aligned entries.
+    assert( nEntrySize > 0 && nEntrySize <= ABC_INT_MAX - (int)sizeof(void *) );
+    if ( nEntrySize <= 0 || nEntrySize > ABC_INT_MAX - (int)sizeof(void *) )
+        abort();
+    nEntrySize = (nEntrySize + (int)sizeof(void *) - 1) / (int)sizeof(void *) * (int)sizeof(void *);
     p->nEntrySize    = nEntrySize;
     p->nEntriesAlloc = 0;
     p->nEntriesUsed  = 0;
     p->pEntriesFree  = NULL;
 
-    if ( nEntrySize * (1 << 10) < (1<<16) )
+    if ( nEntrySize < (1 << 6) )
         p->nChunkSize = (1 << 10);
     else
         p->nChunkSize = (1<<16) / nEntrySize;
@@ -245,7 +251,7 @@ void Mem_FixedEntryRecycle( Mem_Fixed_t * p, char * pEntry )
 
   Synopsis    []
 
-  Description [Relocates all the memory except the first chunk.]
+  Description [Releases all chunks except the first and restarts its free list.]
                
   SideEffects []
 
@@ -423,7 +429,7 @@ char * Mem_FlexEntryFetch( Mem_Flex_t * p, int nBytes )
 
   Synopsis    []
 
-  Description [Relocates all the memory except the first chunk.]
+  Description [Releases every chunk and resets the allocation counters.]
                
   SideEffects []
 
@@ -433,16 +439,13 @@ char * Mem_FlexEntryFetch( Mem_Flex_t * p, int nBytes )
 void Mem_FlexRestart( Mem_Flex_t * p )
 {
     int i;
-    if ( p->nChunks == 0 )
-        return;
-    // deallocate all chunks except the first one
-    for ( i = 1; i < p->nChunks; i++ )
+    // Chunk zero may be smaller than the current chunk size after a large
+    // allocation. It cannot safely be reused with the enlarged bound.
+    for ( i = 0; i < p->nChunks; i++ )
         ABC_FREE( p->pChunks[i] );
-    p->nChunks  = 1;
-    p->nMemoryAlloc = p->nChunkSize;
-    // transform these entries into a linked list
-    p->pCurrent = p->pChunks[0];
-    p->pEnd     = p->pCurrent + p->nChunkSize;
+    p->nChunks  = 0;
+    p->nMemoryAlloc = 0;
+    p->pCurrent = p->pEnd = NULL;
     p->nEntriesUsed = 0;
     p->nMemoryUsed = 0;
 }

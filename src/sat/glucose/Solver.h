@@ -60,6 +60,9 @@ public:
     int nCallConfl;                      // callback will be called every this number of conflicts
     bool terminate_search_early;         // used to stop the solver early if it as instructed by an external caller
     int * pstop;                         // another callback
+    void * pStopData;                    // cooperative stop callback context
+    int (*pStopFunc)(void *);            // polled from the solving thread
+    bool fStopRequested;                // latched for the current solve call
     uint64_t nRuntimeLimit;              // runtime limit
     vec<int> user_vec;
     vec<Lit> user_lits;
@@ -123,6 +126,7 @@ public:
     int     nVars      ()      const;       // The current number of variables.
     int     nFreeVars  ()      const;
     int *   getCex     ()      const;
+    double  memoryEstimate()  const;
 
     // Incremental mode
     void setIncrementalMode();

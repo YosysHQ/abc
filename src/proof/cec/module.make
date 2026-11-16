@@ -12,9 +12,11 @@ SRC +=    src/proof/cec/cecCec.c \
     src/proof/cec/cecCorrIncrSim.c \
     src/proof/cec/cecTrans.c \
     src/proof/cec/cecIso.c \
+    src/proof/cec/cecKind.c \
     src/proof/cec/cecMan.c \
     src/proof/cec/cecPat.c \
     src/proof/cec/cecProve.c \
+    src/proof/cec/cecSuperProve.c \
     src/proof/cec/cecSat.c \
     src/proof/cec/cecSatG.c \
     src/proof/cec/cecSatG2.c \

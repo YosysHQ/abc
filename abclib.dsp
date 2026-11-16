@@ -394,6 +394,10 @@ SOURCE=.\src\base\abci\abcFx.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\base\abci\abcFx2.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\base\abci\abcFxu.c
 # End Source File
 # Begin Source File
@@ -1330,7 +1334,15 @@ SOURCE=.\src\base\sn\snMux.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\base\sn\snMux4.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\base\sn\snNtk.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\sn\snOptArith.h
 # End Source File
 # Begin Source File
 
@@ -1351,6 +1363,10 @@ SOURCE=.\src\base\sn\snRetime.c
 # Begin Source File
 
 SOURCE=.\src\base\sn\snRetime.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\base\sn\snRewrite.h
 # End Source File
 # Begin Source File
 
@@ -2230,6 +2246,10 @@ SOURCE=.\src\sat\bmc\bmcBmc3.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\sat\bmc\bmcBmcGia.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\sat\bmc\bmcBmcAnd.c
 # End Source File
 # Begin Source File
@@ -2318,11 +2338,27 @@ SOURCE=.\src\sat\bmc\bmcLoad.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\sat\bmc\bmcLut2.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\sat\bmc\bmcExact.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\sat\bmc\bmcExact.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\sat\bmc\bmcMaj.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\src\sat\bmc\bmcMaj2.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\sat\bmc\bmcMajExact2.c
 # End Source File
 # Begin Source File
 
@@ -3685,11 +3721,7 @@ SOURCE=.\src\opt\ufar\UfarMgr.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\ufar\UfarPth.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\src\opt\ufar\UfarPth.h
+SOURCE=.\src\opt\ufar\UfarParse.h
 # End Source File
 # End Group
 # Begin Group "util"
@@ -3748,6 +3780,54 @@ SOURCE=.\src\opt\rar\rewireRar.c
 SOURCE=.\src\opt\rar\rewireRng.c
 # End Source File
 # End Group
+# Begin Group "rar2"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Map.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Miaig.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Rar.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Rng.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Time.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Tt.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Vec.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Map.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Miaig.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Rar.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\rar\rewire2Rng.c
+# End Source File
+# End Group
 # Begin Group "rwr"
 
 # PROP Default_Filter ""
@@ -3786,6 +3866,30 @@ SOURCE=.\src\opt\rwr\rwrTemp.c
 # Begin Source File
 
 SOURCE=.\src\opt\rwr\rwrUtil.c
+# End Source File
+# End Group
+# Begin Group "abs2"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\opt\abs2\abs2.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\abs2\abs2Cmd.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\abs2\abs2Cnf.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\abs2\abs2Core.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\abs2\absFla.c
 # End Source File
 # End Group
 # Begin Group "cut"
@@ -4194,6 +4298,10 @@ SOURCE=.\src\opt\drw\drwInt.h
 # Begin Source File
 
 SOURCE=.\src\opt\drw\drwCore.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\drw\drwSat.c
 # End Source File
 # Begin Source File
 
@@ -4613,11 +4721,23 @@ SOURCE=.\src\opt\eslim2\eslim2Area.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\areaEngine.hpp
+SOURCE=.\src\opt\eslim2\areaEngine.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\cadicalSolver.hpp
+SOURCE=.\src\opt\eslim2\cadicalSolver.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim2\synthesisSolver.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim2\eslim2Checkpoint.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim2\checkpoint.h
 # End Source File
 # Begin Source File
 
@@ -4625,7 +4745,7 @@ SOURCE=.\src\opt\eslim2\eslim2Delay.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\delayEngine.hpp
+SOURCE=.\src\opt\eslim2\delayEngine.h
 # End Source File
 # Begin Source File
 
@@ -4637,11 +4757,11 @@ SOURCE=.\src\opt\eslim2\eSLIM2.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\eSLIM2Man.hpp
+SOURCE=.\src\opt\eslim2\eSLIM2Man.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\eSLIM2Man.tpp
+SOURCE=.\src\opt\eslim2\eSLIM2ManImpl.h
 # End Source File
 # Begin Source File
 
@@ -4649,7 +4769,7 @@ SOURCE=.\src\opt\eslim2\eslim2CirMan.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\eslim2CirMan.hpp
+SOURCE=.\src\opt\eslim2\eslim2CirMan.h
 # End Source File
 # Begin Source File
 
@@ -4657,7 +4777,7 @@ SOURCE=.\src\opt\eslim2\eslim2Relation.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\relationGeneration.hpp
+SOURCE=.\src\opt\eslim2\relationGeneration.h
 # End Source File
 # Begin Source File
 
@@ -4665,15 +4785,15 @@ SOURCE=.\src\opt\eslim2\eslim2Synth.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\relationSynthesiser.hpp
+SOURCE=.\src\opt\eslim2\relationSynthesiser.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\selectionStrategies.hpp
+SOURCE=.\src\opt\eslim2\selectionStrategies.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\selectionStrategies.tpp
+SOURCE=.\src\opt\eslim2\selectionStrategiesImpl.h
 # End Source File
 # Begin Source File
 
@@ -4681,27 +4801,148 @@ SOURCE=.\src\opt\eslim2\eslim2Subcircuit.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\subcircuit.hpp
+SOURCE=.\src\opt\eslim2\subcircuit.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\synthesisEngines.hpp
+SOURCE=.\src\opt\eslim2\synthesisEngines.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\tabooList.hpp
+SOURCE=.\src\opt\eslim2\tabooList.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\utils.hpp
+SOURCE=.\src\opt\eslim2\utils.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\windowMan.hpp
+SOURCE=.\src\opt\eslim2\windowMan.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\opt\eslim2\windowMan.tpp
+SOURCE=.\src\opt\eslim2\windowManImpl.h
+# End Source File
+# End Group
+
+# Begin Group "eslim3"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Area.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\areaEngine.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\cadicalSolver.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Checkpoint.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\checkpoint.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Delay.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\delayEngine.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eSLIM3.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eSLIM3.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eSLIM3Man.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eSLIM3ManImpl.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3CirMan.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3CirMan.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Relation.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\relationGeneration.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Synth.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\relationSynthesiser.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\synthesisSolver.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\selectionStrategies.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\selectionStrategiesImpl.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Subcircuit.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\subcircuit.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\synthesisEngines.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\tabooList.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\utils.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\windowMan.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\windowManImpl.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\eslim3Rewrite.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opt\eslim3\rewrite.h
 # End Source File
 # End Group
 # End Group
@@ -5502,6 +5743,22 @@ SOURCE=.\src\misc\vec\vecWrd.h
 # Begin Source File
 
 SOURCE=.\src\misc\util\abc_global.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\misc\util\abc_io.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\misc\util\abc_stdio.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\misc\util\utilIoStream.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\misc\util\utilIo.c
 # End Source File
 # Begin Source File
 
@@ -7193,6 +7450,10 @@ SOURCE=.\src\bool\lms\lmsBuiltinData.inc
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\bool\lms\lmsBuiltinXorData.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\bool\lms\lmsCollect.c
 # End Source File
 # Begin Source File
@@ -7218,6 +7479,10 @@ SOURCE=.\src\bool\lms\lmsKernel.c
 # Begin Source File
 
 SOURCE=.\src\bool\lms\lmsLib.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\bool\lms\lmsOne.c
 # End Source File
 # Begin Source File
 
@@ -7372,6 +7637,10 @@ SOURCE=.\src\proof\cec\cecIso.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\proof\cec\cecKind.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\proof\cec\cecMan.c
 # End Source File
 # Begin Source File
@@ -7381,6 +7650,14 @@ SOURCE=.\src\proof\cec\cecPat.c
 # Begin Source File
 
 SOURCE=.\src\proof\cec\cecProve.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\cec\cecSuperProve.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\cec\cecSuper.h
 # End Source File
 # Begin Source File
 
@@ -7626,6 +7903,58 @@ SOURCE=.\src\proof\fraig\fraigUtil.c
 # Begin Source File
 
 SOURCE=.\src\proof\fraig\fraigVec.c
+# End Source File
+# End Group
+# Begin Group "imc"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcCore.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcHoud.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcInt.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcPred.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcPrep.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcProof.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcRwr.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcSat.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcSim.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcUnroll.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\imc\imcWalk.c
 # End Source File
 # End Group
 # Begin Group "int"
@@ -7910,6 +8239,14 @@ SOURCE=.\src\proof\ssw\sswPart.c
 # Begin Source File
 
 SOURCE=.\src\proof\ssw\sswRarity.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\ssw\sswSim4.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\proof\ssw\sswSim4.h
 # End Source File
 # Begin Source File
 

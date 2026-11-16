@@ -30,6 +30,7 @@
 #include "proof/cec/cec.h"
 #include "proof/ssw/ssw.h"
 #include "proof/abs/abs.h"
+#include "opt/ufar/UfarCmd.h"
 
 
 #ifdef ABC_USE_PTHREADS
@@ -55,7 +56,6 @@ extern int Bmcg_ManPerform( Gia_Man_t * pGia, Bmc_AndPar_t * pPars );
 
 typedef struct Par_Share_t_ Par_Share_t;
 typedef struct Par_ThData_t_ Par_ThData_t;
-typedef struct Wlc_Ntk_t_ Wlc_Ntk_t;
 struct Cec_ScorrStop_t_;
 struct Cec_SproveTrace_t_;
 static int Cec_SProveCallback( void * pUser, int fSolved, unsigned Result );
@@ -66,8 +66,6 @@ static void Cec_GiaInitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t *
 static void Cec_GiaStopThreads( Par_ThData_t * ThData, pthread_t * WorkerThread, int nWorkers );
 #endif
 static int Cec_GiaWaitThreads( Par_ThData_t * ThData, int nWorkers, Gia_Man_t * p, int RetValue, int * pRetEngine );
-
-extern int Ufar_ProveWithTimeout( Wlc_Ntk_t * pNtk, int nTimeOut, int fVerbose, int (*pFuncStop)(int), int RunId, const char * pArgs );
 
 #ifndef ABC_USE_PTHREADS
 
@@ -711,6 +709,26 @@ static void Cec_SproveTraceCheckpoint( Cec_SproveTrace_t * pTrace, int NetId, Gi
         return;
     Cec_SproveTraceWrite( pTrace, "CHECKPOINT net=%s regs=%d ands=%d pos=%d", Cec_SproveNetName(NetId), Gia_ManRegNum(pNet), Gia_ManAndNum(pNet), Gia_ManPoNum(pNet) );
 }
+/**Function*************************************************************
+
+  Synopsis    [Checks whether a gate-free miter has only constant-zero outputs.]
+
+  Description [A register or primary input can drive an output even when
+  the graph contains no AND nodes. Such an output still needs a proof.]
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+static int Cec_SproveMiterIsZero( Gia_Man_t * p )
+{
+    int i;
+    if ( Gia_ManAndNum(p) ) return 0;
+    for ( i = 0; i < Gia_ManPoNum(p); i++ )
+        if ( !Gia_ManPoIsConst0(p, i) ) return 0;
+    return 1;
+}
 static Gia_Man_t * Cec_SproveRunReduce( Gia_Man_t * pInput, Cec_SproveStage_t * pStage, Par_Share_t * pShare, Cec_SproveTrace_t * pTrace, abctime * pClkUsed, int * pRetValue, int * pRetEngine )
 {
     Cec_ScorrStop_t Stop;
@@ -728,7 +746,7 @@ static Gia_Man_t * Cec_SproveRunReduce( Gia_Man_t * pInput, Cec_SproveStage_t * 
         pOutput = Cec_GiaScorrOld( pInput, pStage->ReduceTimeout, pShare, &Stop );
     else
         assert( 0 );
-    if ( Gia_ManAndNum(pOutput) == 0 )
+    if ( Cec_SproveMiterIsZero(pOutput) )
     {
         pShare->fSolved = 1;
         pShare->Result  = 1;

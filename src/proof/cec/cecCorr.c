@@ -27,17 +27,51 @@ ABC_NAMESPACE_IMPL_START
 // them.  The existing -C limit remains per output; nConfTotal is an optional
 // deterministic cap on the exact conflicts/backtracks consumed by the whole
 // call.  &scorr leaves it at zero, so its legacy behavior is unchanged.
-ABC_INT64_T Cec_ScorrConfLimit = 0;
-ABC_INT64_T Cec_ScorrConfUsed  = 0;
-int         Cec_ScorrConfStop  = 0;
+ABC_THREAD_LOCAL ABC_INT64_T Cec_ScorrConfLimit = 0;
+ABC_THREAD_LOCAL ABC_INT64_T Cec_ScorrConfUsed  = 0;
+ABC_THREAD_LOCAL int         Cec_ScorrConfStop  = 0;
 
 static inline int Cec_ParCorShouldStop( Cec_ParCor_t * pPars )
 {
+    if ( pPars && pPars->fWorkStop )
+        return 1;
     if ( pPars && pPars->nConfTotal > 0 && Cec_ScorrConfStop )
         return 1;
     if ( pPars == NULL || pPars->pFunc == NULL )
         return 0;
     return ((int (*)(void *))pPars->pFunc)( pPars->pData );
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Reserves structural work before unrolling or packed simulation.]
+
+  Description [Conflict counts miss cheap SAT models that each trigger a
+  full sequential simulation. The optional budget spans BMC and induction.]
+
+  SideEffects [Updates work usage and marks an exhausted run incomplete.]
+
+  SeeAlso     []
+
+***********************************************************************/
+static int Cec_ParCorReserveWork( Cec_ParCor_t * pPars, Gia_Man_t * pAig, word nFrames, word nWords )
+{
+    word Work, Remaining;
+    if ( pPars == NULL || pPars->nWorkLimit == 0 )
+        return 1;
+    if ( pPars->fWorkStop )
+        return 0;
+    Work = Gia_ManObjNum(pAig);
+    Remaining = pPars->nWorkLimit - pPars->nWorkUsed;
+    nFrames = Abc_MaxWord(1, nFrames);
+    nWords = Abc_MaxWord(1, nWords);
+    if ( nFrames > Remaining / Work || nWords > Remaining / (Work * nFrames) )
+    {
+        pPars->fWorkStop = pPars->fIncomplete = 1;
+        return 0;
+    }
+    pPars->nWorkUsed += Work * nFrames * nWords;
+    return 1;
 }
 
 
@@ -53,64 +87,64 @@ extern int  Gia_ManCorrSpecReal( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pO
 ///        &scorr FINE-GRAINED PROFILING (enabled by -w)              ///
 ////////////////////////////////////////////////////////////////////////
 
-// Per-proof SAT counters (see cecInt.h). Written by Cbs/Tas/Cec miter solvers.
-int     Cec_ScorrProfOn    = 0;
-int     Cec_ScorrProfCalls = 0;
-abctime Cec_ScorrProfSetup = 0;
-abctime Cec_ScorrProfSolve = 0;
-abctime Cec_ScorrProfMax   = 0;
+// Per-thread SAT counters (see cecInt.h). Written by Cbs/Tas/Cec miter solvers.
+ABC_THREAD_LOCAL int     Cec_ScorrProfOn    = 0;
+ABC_THREAD_LOCAL int     Cec_ScorrProfCalls = 0;
+ABC_THREAD_LOCAL abctime Cec_ScorrProfSetup = 0;
+ABC_THREAD_LOCAL abctime Cec_ScorrProfSolve = 0;
+ABC_THREAD_LOCAL abctime Cec_ScorrProfMax   = 0;
 
 // Sim-phase split, filled inside Cec_ManResimulateCounterExamples (ns).
-static abctime Cec_ScorrProfSimRemap = 0; // O(N) remapping + value-ref setup
-static abctime Cec_ScorrProfSimRun   = 0; // actual bit-parallel resimulation
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfSimRemap = 0; // O(N) remapping + value-ref setup
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfSimRun   = 0; // actual bit-parallel resimulation
 // Incremental local-sim cone measurement (counts, not times).
-static int     Cec_ScorrProfIncrSrc   = 0; // # batches handled by local TFO sim
-static int     Cec_ScorrProfIncrFull  = 0; // # batches that fell back to full sweep
-static int     Cec_ScorrProfIncrTrunc = 0; // # local batches with optional TFO truncated
-static int     Cec_ScorrProfIncrRollback = 0; // # diagnosis transactions rolled back
-static int     Cec_ScorrProfIncrRollbackObjs = 0; // # class entries restored
-static int     Cec_ScorrProfIncrCoverageMiss = 0; // # unexplained packed CEX lanes
-static int     Cec_ScorrProfIncrFallbackPre = 0; // fallback before class mutation
-static int     Cec_ScorrProfIncrFallbackProcess = 0; // diagnosis budget fallback
-static int     Cec_ScorrProfIncrFallbackCoverage = 0; // diagnosis coverage fallback
-static int     Cec_ScorrProfIncrFallbackCex = 0; // oversized packed CEX batch
-static int     Cec_ScorrProfIncrFallbackBypass = 0; // repeated-fallback circuit breaker
-static int     Cec_ScorrProfIncrTruncCone = 0; // optional TFO structural truncation
-static int     Cec_ScorrProfIncrTruncEval = 0; // optional TFO evaluation truncation
-static int     Cec_ScorrProfIncrBatchCex = 0; // total real CEX records across batches
-static int     Cec_ScorrProfIncrBatchCexMax = 0; // largest packed-batch CEX count
-static int     Cec_ScorrProfIncrDeferred = 0; // fixed-frontier splits left for later rounds
-static int     Cec_ScorrProfIncrDirty = 0; // largest dirty cone across the call
-static int     Cec_ScorrProfIncrConeKeys = 0; // active/class cone keys used by event resim
-static int     Cec_ScorrProfIncrKeys  = 0; // nFrames * nObjs (cone-size denominator)
-static abctime Cec_ScorrProfIncrTry = 0; // all incremental probes
-static abctime Cec_ScorrProfIncrTryLocal = 0; // probes completed locally
-static abctime Cec_ScorrProfIncrTryFallback = 0; // probes followed by full simulation
-static abctime Cec_ScorrProfIncrDiagShape = 0; // dry-run TFI/shape admission
-static abctime Cec_ScorrProfIncrDiagCollect = 0; // lane-aware TFI diagnosis
-static abctime Cec_ScorrProfIncrDiagEval = 0; // diagnosis evaluation shape
-static abctime Cec_ScorrProfIncrDiagSim = 0; // diagnosis value evaluation/refinement
-static abctime Cec_ScorrProfIncrTfoBuild = 0; // split-driven TFO construction
-static abctime Cec_ScorrProfIncrTfoSim = 0; // TFO value evaluation/refinement
-static abctime Cec_ScorrProfIncrTxn = 0; // transaction begin/commit/rollback
-static abctime Cec_ScorrProfIncrFullRun = 0; // full sweeps after local rejection/bypass
-static int     Cec_ScorrProfEventLocal = 0;
-static int     Cec_ScorrProfEventFallback = 0;
-static int     Cec_ScorrProfEventPopsMax = 0;
-static int     Cec_ScorrProfEventEdgesMax = 0;
-static int     Cec_ScorrProfEventInputVarsMax = 0;
-static int     Cec_ScorrProfEventInputWordsMax = 0;
-static int     Cec_ScorrProfEventFallbackWork = 0;
-static int     Cec_ScorrProfEventFallbackTime = 0;
-static int     Cec_ScorrProfIncrAdaptLocal = 0;
-static int     Cec_ScorrProfIncrAdaptFail = 0;
-static int     Cec_ScorrProfIncrAdaptTrips = 0;
-static int     Cec_ScorrProfIncrAdaptCooldown = 0;
-static abctime Cec_ScorrProfEventLoad = 0;
-static abctime Cec_ScorrProfEventProp = 0;
-static abctime Cec_ScorrProfEventRefine = 0;
-static abctime Cec_ScorrProfEventRollback = 0;
-static abctime Cec_ScorrProfEventInit = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrSrc   = 0; // # batches handled by local TFO sim
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrFull  = 0; // # batches that fell back to full sweep
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrTrunc = 0; // # local batches with optional TFO truncated
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrRollback = 0; // # diagnosis transactions rolled back
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrRollbackObjs = 0; // # class entries restored
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrCoverageMiss = 0; // # unexplained packed CEX lanes
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrFallbackPre = 0; // fallback before class mutation
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrFallbackProcess = 0; // diagnosis budget fallback
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrFallbackCoverage = 0; // diagnosis coverage fallback
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrFallbackCex = 0; // oversized packed CEX batch
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrFallbackBypass = 0; // repeated-fallback circuit breaker
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrTruncCone = 0; // optional TFO structural truncation
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrTruncEval = 0; // optional TFO evaluation truncation
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrBatchCex = 0; // total real CEX records across batches
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrBatchCexMax = 0; // largest packed-batch CEX count
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrDeferred = 0; // fixed-frontier splits left for later rounds
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrDirty = 0; // largest dirty cone across the call
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrConeKeys = 0; // active/class cone keys used by event resim
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrKeys  = 0; // nFrames * nObjs (cone-size denominator)
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrTry = 0; // all incremental probes
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrTryLocal = 0; // probes completed locally
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrTryFallback = 0; // probes followed by full simulation
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrDiagShape = 0; // dry-run TFI/shape admission
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrDiagCollect = 0; // lane-aware TFI diagnosis
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrDiagEval = 0; // diagnosis evaluation shape
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrDiagSim = 0; // diagnosis value evaluation/refinement
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrTfoBuild = 0; // split-driven TFO construction
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrTfoSim = 0; // TFO value evaluation/refinement
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrTxn = 0; // transaction begin/commit/rollback
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfIncrFullRun = 0; // full sweeps after local rejection/bypass
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventLocal = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventFallback = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventPopsMax = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventEdgesMax = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventInputVarsMax = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventInputWordsMax = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventFallbackWork = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfEventFallbackTime = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrAdaptLocal = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrAdaptFail = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrAdaptTrips = 0;
+static ABC_THREAD_LOCAL int     Cec_ScorrProfIncrAdaptCooldown = 0;
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfEventLoad = 0;
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfEventProp = 0;
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfEventRefine = 0;
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfEventRollback = 0;
+static ABC_THREAD_LOCAL abctime Cec_ScorrProfEventInit = 0;
 
 // One iteration's wall-clock breakdown; all fields are nanoseconds.
 typedef struct Cec_ScorrProf_t_ Cec_ScorrProf_t;
@@ -805,22 +839,23 @@ void Gia_ManCorrPerformRemapping( Vec_Int_t * vPairs, Vec_Ptr_t * vInfo )
 int Cec_ManLoadCounterExamplesTry( Vec_Ptr_t * vInfo, Vec_Ptr_t * vPres, int iBit, int * pLits, int nLits )
 {
     unsigned * pInfo, * pPres;
+    unsigned Mask = 1u << (iBit & 31);
     int i;
     for ( i = 0; i < nLits; i++ )
     {
         pInfo = (unsigned *)Vec_PtrEntry(vInfo, Abc_Lit2Var(pLits[i]));
         pPres = (unsigned *)Vec_PtrEntry(vPres, Abc_Lit2Var(pLits[i]));
-        if ( Abc_InfoHasBit( pPres, iBit ) && 
-             Abc_InfoHasBit( pInfo, iBit ) == Abc_LitIsCompl(pLits[i]) )
+        if ( (pPres[iBit >> 5] & Mask) &&
+             ((pInfo[iBit >> 5] & Mask) != 0) == Abc_LitIsCompl(pLits[i]) )
              return 0;
     }
     for ( i = 0; i < nLits; i++ )
     {
         pInfo = (unsigned *)Vec_PtrEntry(vInfo, Abc_Lit2Var(pLits[i]));
         pPres = (unsigned *)Vec_PtrEntry(vPres, Abc_Lit2Var(pLits[i]));
-        Abc_InfoSetBit( pPres, iBit );
-        if ( Abc_InfoHasBit( pInfo, iBit ) == Abc_LitIsCompl(pLits[i]) )
-            Abc_InfoXorBit( pInfo, iBit );
+        pPres[iBit >> 5] |= Mask;
+        if ( ((pInfo[iBit >> 5] & Mask) != 0) == Abc_LitIsCompl(pLits[i]) )
+            pInfo[iBit >> 5] ^= Mask;
     }
     return 1;
 }
@@ -949,8 +984,8 @@ int Cec_ManLoadCounterExamples2( Vec_Ptr_t * vInfo, Vec_Int_t * vCexStore, int i
         {
             iLit = Vec_IntEntry( vCexStore, iStart++ );
             pInfo = (unsigned *)Vec_PtrEntry( vInfo, Abc_Lit2Var(iLit) );
-            if ( Abc_InfoHasBit( pInfo, iBit ) == Abc_LitIsCompl(iLit) )
-                Abc_InfoXorBit( pInfo, iBit );
+            if ( ((pInfo[iBit >> 5] >> (iBit & 31)) & 1) == Abc_LitIsCompl(iLit) )
+                pInfo[iBit >> 5] ^= 1u << (iBit & 31);
         }
         if ( ++iBit == nBits )
             break;
@@ -1076,6 +1111,14 @@ int Cec_ManResimulateCounterExamples( Cec_ManSim_t * pSim,
     if ( Cec_ScorrProfOn ) Cec_ScorrProfSimRemap = Abc_ClockHr() - tH;
     while ( iStart < Vec_IntSize(vCexStore) )
     {
+        // Apply all SAT counterexamples before honoring legacy timeouts.
+        // Only the explicit work cap may discard a batch; its caller must
+        // reject the incomplete correspondence instead of reducing with it.
+        if ( !Cec_ParCorReserveWork(pCorPars, pSim->pAig, nFrames, pSim->pPars->nWords) )
+        {
+            if ( pCorPars ) pCorPars->fIncomplete = 1;
+            break;
+        }
         if ( pSeed )
         {
             int LocalStatus;
@@ -1232,7 +1275,7 @@ int Cec_ManResimulateCounterExamples( Cec_ManSim_t * pSim,
     }
     if ( Cec_ScorrProfOn ) Cec_ScorrProfSimRun = Abc_ClockHr() - tH - Cec_ScorrProfSimRemap;
 //Gia_ManEquivPrintOne( pSim->pAig, 85, 0 );
-    assert( iStart == Vec_IntSize(vCexStore) );
+    assert( iStart == Vec_IntSize(vCexStore) || (pCorPars && pCorPars->fIncomplete) );
     Vec_IntFreeP( &vOutBits );
     if ( !pSeed )
         Vec_PtrFree( vSimInfo );
@@ -1606,8 +1649,12 @@ void Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPr
         int * pTfoMask = NULL;
         int nReprSeeds = 0, nTotalPairs = 0, nActivePairs = 0;
         int nBmcPos = 0;
-        if ( Cec_ParCorShouldStop( pPars ) )
+        if ( Cec_ParCorShouldStop(pPars) || !Cec_ParCorReserveWork(pPars, pAig, nBmcResimFrames, 1) )
+        {
+            pPars->fIncomplete = 1;
+            pPars->fCompleted = 0;
             break;
+        }
         abctime clkBmc = Abc_Clock();
         tWall0 = Abc_ClockHr();
         memset( &Prof, 0, sizeof(Prof) );
@@ -1802,7 +1849,11 @@ void Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPr
             Cec_ScorrProfPrint( "bmc", i, Prof.nSatCalls, &Prof );
         Cec_ScorrProfAdd( &Total, &Prof );
         if ( Cec_ParCorShouldStop( pPars ) )
+        {
+            pPars->fIncomplete = 1;
+            pPars->fCompleted = 0;
             break;
+        }
     }
     if ( pPars->fVeryVerbose )
         Cec_ScorrProfPrint( "bmc", -1, Total.nSatCalls, &Total );
@@ -2023,6 +2074,8 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     pPars->fIncomplete = 0;
     pPars->fCompleted  = 0;
     pPars->nRoundsDone = 0;
+    pPars->nWorkUsed   = 0;
+    pPars->fWorkStop   = 0;
     if ( Gia_ManRegNum(pAig) == 0 )
     {
         Abc_Print( 1, "Cec_ManLatchCorrespondence(): Not a sequential AIG.\n" );
@@ -2039,6 +2092,15 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     pParsSim->fLatchCorr = pPars->fLatchCorr;
     pParsSim->fConstCorr = pPars->fConstCorr;
     pParsSim->fSeqSimulate = 1;
+    // Class preparation uses four rounds at widths1,3,7,...,nWords
+    // (less than8*nWords), followed by nRounds full-width refinements.
+    // Reserve their upper bound before entering these simulation routines.
+    if ( Cec_ParCorShouldStop(pPars) || !Cec_ParCorReserveWork(pPars, pAig, pPars->nFrames,
+         (word)Abc_MaxInt(1, pPars->nWords) * (pAig->pReprs ? 1 : pParsSim->nRounds + 8)) )
+    {
+        pPars->fIncomplete = 1;
+        return 0;
+    }
     // create equivalence classes of registers
     pSim = Cec_ManSimStart( pAig, pParsSim );
     if ( pAig->pReprs == NULL )
@@ -2075,7 +2137,8 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     if ( pPars->nStepsMax == 0 )
     {
         pPars->fIncomplete = 1;
-        Abc_Print( 1, "Stopped signal correspondence after BMC.\n" );
+        if ( pPars->fVerbose )
+            Abc_Print( 1, "Stopped signal correspondence after BMC.\n" );
         Cec_ProfCorFinishClasses( pPars, &Total, clkProfClasses, 0 );
         Cec_ManSimStop( pSim );
         return 1;
@@ -2107,7 +2170,7 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     // perform refinement of equivalence classes
     for ( r = 0; r < nIterMax; r++ )
     {
-        if ( Cec_ParCorShouldStop( pPars ) )
+        if ( Cec_ParCorShouldStop(pPars) || !Cec_ParCorReserveWork(pPars, pAig, pPars->nFrames + 1 + nAddFrames, 1) )
         {
             pPars->fIncomplete = 1;
             Cec_ProfCorFinishClasses( pPars, &Total, clkProfClasses, clkProfInd );
@@ -2125,7 +2188,8 @@ int Cec_ManLSCorrespondenceClasses( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
             Cec_DynSrmFree( pDynSrm );
             Cec_IncrMgrFree( pMgr );
             Cec_SeedSimFree( pSeedSim );
-            Abc_Print( 1, "Stopped signal correspondence after %d refiment iterations.\n", r );
+            if ( pPars->fVerbose )
+                Abc_Print( 1, "Stopped signal correspondence after %d refinement iterations.\n", r );
             return 1;
         }
         clk = Abc_Clock();
@@ -2627,7 +2691,7 @@ unsigned * Cec_ManComputeInitState( Gia_Man_t * pAig, int nFrames )
     Gia_ManForEachRo( pAig, pObj, i )
     {
         if ( pObj->fMark1 )
-            Abc_InfoSetBit( pInitState, i );
+            pInitState[i >> 5] |= 1u << (i & 31);
 //        Abc_Print( 1, "%d", pObj->fMark1 );
     }
 //    Abc_Print( 1, "\n" );
@@ -2691,7 +2755,8 @@ Gia_Man_t * Cec_ManLSCorrespondence( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
     if ( pPars->nPrefix == 0 )
     {
         RetValue = Cec_ManLSCorrespondenceClasses( pAig, pPars );
-        if ( RetValue == 0 )
+        // Interrupted candidates have not reached an inductive fixed point.
+        if ( RetValue == 0 || pPars->fWorkStop || (pPars->fIncomplete && !pPars->fCompleted) )
         {
             clkProfReduce = pPars->pProfile ? Abc_ClockHr() : 0;
             pNew = Gia_ManDup( pAig );
@@ -2708,6 +2773,11 @@ Gia_Man_t * Cec_ManLSCorrespondence( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
         ABC_FREE( pInitState );
         // compute classes of this AIG
         RetValue = Cec_ManLSCorrespondenceClasses( pTemp, pPars );
+        if ( RetValue == 0 || pPars->fWorkStop || (pPars->fIncomplete && !pPars->fCompleted) )
+        {
+            Gia_ManStop( pTemp );
+            return Gia_ManDup( pAig );
+        }
         // transfer the class info
         pAig->pReprs = pTemp->pReprs; pTemp->pReprs = NULL;
         pAig->pNexts = pTemp->pNexts; pTemp->pNexts = NULL;
@@ -2726,6 +2796,9 @@ Gia_Man_t * Cec_ManLSCorrespondence( Gia_Man_t * pAig, Cec_ParCor_t * pPars )
         pAig->pNexts = pTemp->pNexts; pTemp->pNexts = NULL;
 */
         Gia_ManStop( pTemp );
+        // A proof from the prefix state still needs the initial-state check.
+        if ( pPars->fWorkStop || (pPars->fIncomplete && !pPars->fCompleted) )
+            return Gia_ManDup( pAig );
     }
     // derive reduced AIG
     clkProfReduce = pPars->pProfile ? Abc_ClockHr() : 0;

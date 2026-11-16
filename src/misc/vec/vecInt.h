@@ -257,7 +257,8 @@ static inline Vec_Int_t * Vec_IntDup( Vec_Int_t * pVec )
     p->nSize  = pVec->nSize;
     p->nCap   = pVec->nSize;
     p->pArray = p->nCap? ABC_ALLOC( int, p->nCap ) : NULL;
-    memcpy( p->pArray, pVec->pArray, sizeof(int) * (size_t)pVec->nSize );
+    if ( pVec->nSize )
+        memcpy( p->pArray, pVec->pArray, sizeof(int) * (size_t)pVec->nSize );
     return p;
 }
 
@@ -552,7 +553,7 @@ static inline int Vec_IntEntryLast( Vec_Int_t * p )
 ***********************************************************************/
 static inline void Vec_IntGrow( Vec_Int_t * p, int nCapMin )
 {
-    if ( p->nCap >= nCapMin )
+    if ( nCapMin <= 0 || p->nCap >= nCapMin )
         return;
     assert( p->nCap < ABC_INT_MAX );
     p->pArray = ABC_REALLOC( int, p->pArray, nCapMin ); 
@@ -574,7 +575,7 @@ static inline void Vec_IntGrow( Vec_Int_t * p, int nCapMin )
 static inline void Vec_IntGrowResize( Vec_Int_t * p, int nCapMin )
 {
     p->nSize  = nCapMin;
-    if ( p->nCap >= nCapMin )
+    if ( nCapMin <= 0 || p->nCap >= nCapMin )
         return;
     p->pArray = ABC_REALLOC( int, p->pArray, nCapMin ); 
     assert( p->pArray );
@@ -1669,6 +1670,8 @@ static inline unsigned Vec_IntUniqueHashKeyDebug( unsigned char * pStr, int nCha
 static inline void Vec_IntUniqueProfile( Vec_Int_t * vData, int * pTable, int * pNexts, int TableMask, int nIntSize )
 {
     int i, Key, Counter;
+    (void)vData;
+    (void)nIntSize;
     for ( i = 0; i <= TableMask; i++ )
     {
         Counter = 0;

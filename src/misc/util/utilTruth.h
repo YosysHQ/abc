@@ -1653,7 +1653,7 @@ static inline void Abc_TtPrintBinary( word * pTruth, int nVars )
     assert( nVars >= 2 );
     for ( pThis = pTruth; pThis < pLimit; pThis++ )
         for ( k = 0; k < Limit; k++ )
-            printf( "%d", Abc_InfoHasBit( (unsigned *)pThis, k ) );
+            printf( "%d", Abc_TtGetBit( pThis, k ) );
     printf( "\n" );
 }
 static inline void Abc_TtPrintBinary1( FILE * pFile, word * pTruth, int nVars )
@@ -1979,9 +1979,11 @@ static inline void Abc_TtSwapAdjacent( word * pTruth, int nWords, int iVar )
 }
 static inline word Abc_Tt6SwapVars( word t, int iVar, int jVar )
 {
-    word * s_PMasks = s_PPMasks[iVar][jVar];
-    int shift = (1 << jVar) - (1 << iVar);
-    assert( iVar < jVar );
+    word * s_PMasks;
+    int shift;
+    assert( 0 <= iVar && iVar < jVar && jVar < 6 );
+    s_PMasks = s_PPMasks[iVar][jVar];
+    shift = (1 << jVar) - (1 << iVar);
     return (t & s_PMasks[0]) | ((t & s_PMasks[1]) << shift) | ((t & s_PMasks[2]) >> shift);
 }
 static inline void Abc_TtSwapVars( word * pTruth, int nVars, int iVar, int jVar )
@@ -3199,6 +3201,7 @@ static inline word Abc_TtCheckDecOutOne7( word * t, int * piVar, int * pType )
             Abc_TtSwapVars( t, 7, 6, v );
             Type2 = Abc_TtCheckOutDec( t, 7, 6, Out );
             assert( Type == Type2 );
+            (void)Type2;
             *piVar = v;
             *pType = Type;
             return Out[0];
@@ -3214,6 +3217,7 @@ static inline word Abc_TtCheckDecOutOne8( word * t, int * piVar1, int * piVar2, 
             Abc_TtSwapVars( t, 8, 7, v );
             Type12 = Abc_TtCheckOutDec( t, 8, 7, Out );
             assert( Type1 == Type12 );
+            (void)Type12;
             *piVar1 = v;
             *pType1 = Type1;
             break;
@@ -3226,6 +3230,7 @@ static inline word Abc_TtCheckDecOutOne8( word * t, int * piVar1, int * piVar2, 
             Abc_TtSwapVars( Out, 7, 6, v );
             Type22 = Abc_TtCheckOutDec(Out, 7, 6, Out2);
             assert( Type2 == Type22 );
+            (void)Type22;
             *piVar2 = v;
             *pType2 = Type2;
             assert( *piVar2 < *piVar1 );
@@ -3481,7 +3486,7 @@ static inline int Abc_TtEvalLut4( int Ins[4], int Lut, int nVars )
             Cube &= ((k >> i) & 1) ? Ins[i] : ~Ins[i];
         Res |= Cube;
     }
-    return Res & ~(~0 << (1<<nVars));
+    return Res & ~(~0u << (1<<nVars));
 }
 
 
@@ -3560,6 +3565,7 @@ static inline int Abc_TtVerifyBiDec( word * pTruth, int nVars, int This, int Tha
     int nThat = Abc_TtBitCount16(That);
     int i, k, nWords = Abc_TtWordNum(nVars);
     word pThis[64] = {wThis}, pThat[64] = {wThat};
+    (void)nSuppLim;
     assert( nVars <= 12 );
     for ( i = 0; i < nVars; i++ )
         pVarsAll[i] = i;
@@ -3924,6 +3930,7 @@ static inline void Abc_TtTestFullySymmetric()
     //Abc_TtXorBit( pTruth, 171 );
     PolarOut = Abc_TtIsFullySymmetric( pTruth, 8 );
     assert( PolarIn == PolarOut );
+    (void)PolarOut;
 }
 
 

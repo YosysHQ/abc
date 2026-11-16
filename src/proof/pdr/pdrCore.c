@@ -62,6 +62,7 @@ void Pdr_ManSetDefaultParams( Pdr_Par_t * pPars )
     pPars->fTwoRounds     =       0;  // use two rounds for generalization
     pPars->fMonoCnf       =       0;  // monolythic CNF
     pPars->fNewXSim       =       0;  // updated X-valued simulation
+    pPars->fTsimStop      =       0;  // interruptible classic ternary simulation
     pPars->fFlopPrio      =       0;  // use structural flop priorities
     pPars->fFlopOrder     =       0;  // order flops for 'analyze_final' during generalization
     pPars->fDumpInv       =       0;  // dump inductive invariant
@@ -2210,11 +2211,14 @@ int Pdr_ManSolve( Aig_Man_t * pAig, Pdr_Par_t * pPars )
     if ( p->pPars->fDumpInv )
     {
         char * pFileName = pPars->pInvFileName ? pPars->pInvFileName : Extra_FileNameGenericAppend(p->pAig->pName, "_inv.pla");
-        Abc_FrameSetInv( Pdr_ManDeriveInfinityClauses( p, RetValue!=1 ) );
+        // Portfolio workers have no command frame. Keep file dumping usable
+        // there, but only retain an interactive invariant when a frame exists.
+        if ( Abc_FrameReadGlobalFrame() )
+            Abc_FrameSetInv( Pdr_ManDeriveInfinityClauses( p, RetValue!=1 ) );
         Pdr_ManDumpClauses( p, pFileName, RetValue==1 );
         printf( "Dumped inductive invariant in file \"%s\".\n", pFileName );
     }
-    else if ( RetValue == 1 )
+    else if ( RetValue == 1 && Abc_FrameReadGlobalFrame() )
         Abc_FrameSetInv( Pdr_ManDeriveInfinityClauses( p, RetValue!=1 ) );
     p->tTotal += Abc_Clock() - clk;
     Pdr_ManStop( p );

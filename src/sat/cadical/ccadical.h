@@ -51,6 +51,7 @@ void ccadical_freeze (CCaDiCaL *, int lit);
 int ccadical_frozen (CCaDiCaL *, int lit);
 void ccadical_melt (CCaDiCaL *, int lit);
 int ccadical_simplify (CCaDiCaL *);
+int ccadical_simplify_rounds (CCaDiCaL *, int rounds);
 int ccadical_vars (CCaDiCaL *);
 int ccadical_declare_more_variables (CCaDiCaL *, int number_of_vars);
 int ccadical_declare_one_more_variable (CCaDiCaL *);
@@ -62,6 +63,7 @@ void ccadical_unphase (CCaDiCaL *wrapper, int lit);
 void ccadical_resize(CCaDiCaL *, int min_max_var);
 int ccadical_is_inconsistent(CCaDiCaL *);
 int ccadical_clauses(CCaDiCaL *);
+int64_t ccadical_live_clauses(CCaDiCaL *);
 int ccadical_conflicts(CCaDiCaL *);
 int ccadical_learned(CCaDiCaL *);
 

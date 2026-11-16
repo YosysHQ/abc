@@ -313,7 +313,21 @@ static inline int      Abc_Base2LogW( word n )                { int r; if ( n < 
 static inline int      Abc_Base10LogW( word n )               { int r; if ( n < 2 ) return (int)n; for ( r = 0, n--; n; n /= 10, r++ ) {}; return r; }
 static inline int      Abc_Base16LogW( word n )               { int r; if ( n < 2 ) return (int)n; for ( r = 0, n--; n; n /= 16, r++ ) {}; return r; }
 static inline char *   Abc_UtilStrsav( char * s )             { return s ? strcpy(ABC_ALLOC(char, strlen(s)+1), s) : NULL;  }
-static inline char *   Abc_UtilStrsavTwo( char * s, char * a ){ char * r; if (!a) return Abc_UtilStrsav(s); r = ABC_ALLOC(char, strlen(s)+strlen(a)+1); snprintf(r, strlen(s)+strlen(a)+1, "%s%s", s, a ); return r; }
+static inline char *   Abc_UtilStrsavTwo( char * s, char * a )
+{
+    size_t n, m;
+    char * r;
+    if ( !s || !a ) return Abc_UtilStrsav(s);
+    n = strlen(s);
+    m = strlen(a);
+    r = ABC_ALLOC(char, n + m + 1);
+    if ( r )
+    {
+        memcpy(r, s, n);
+        memcpy(r + n, a, m + 1);
+    }
+    return r;
+}
 static inline char *   Abc_UtilStrsavNum( char * s, int n )   { char * r; if (!s) return NULL;              r = ABC_ALLOC(char, strlen(s)+12+1);        snprintf(r, strlen(s)+12+1, "%s%d", s, n ); return r; }
 static inline char *   Abc_UtilStrtok( char * s, const char * d, char ** pSave )
 {
@@ -339,9 +353,9 @@ static inline int      Abc_Bit6WordNum( int nBits )           { return (nBits>>6
 static inline int      Abc_TruthByteNum( int nVars )          { return nVars <= 3 ? 1 : (1 << (nVars - 3));                 }
 static inline int      Abc_TruthWordNum( int nVars )          { return nVars <= 5 ? 1 : (1 << (nVars - 5));                 }
 static inline int      Abc_Truth6WordNum( int nVars )         { return nVars <= 6 ? 1 : (1 << (nVars - 6));                 }
-static inline int      Abc_InfoHasBit( unsigned * p, int i )  { return (p[(i)>>5] & (unsigned)(1<<((i) & 31))) > 0;         }
-static inline void     Abc_InfoSetBit( unsigned * p, int i )  { p[(i)>>5] |= (unsigned)(1<<((i) & 31));                     }
-static inline void     Abc_InfoXorBit( unsigned * p, int i )  { p[(i)>>5] ^= (unsigned)(1<<((i) & 31));                     }
+static inline int      Abc_InfoHasBit( unsigned * p, int i )  { return (p[(i)>>5] & (1u<<((i) & 31))) > 0;                }
+static inline void     Abc_InfoSetBit( unsigned * p, int i )  { p[(i)>>5] |= (1u<<((i) & 31));                            }
+static inline void     Abc_InfoXorBit( unsigned * p, int i )  { p[(i)>>5] ^= (1u<<((i) & 31));                            }
 static inline unsigned Abc_InfoMask( int nVar )               { return (~(unsigned)0) >> (32-nVar);                         }
 
 static inline int      Abc_Var2Lit( int Var, int c )          { assert(Var >= 0 && !(c >> 1)); return Var + Var + c;        }
@@ -530,16 +544,19 @@ static inline void Abc_PrintInt( int i )
 
 static inline void Abc_PrintTime( int level, const char * pStr, abctime time )
 {
+    (void)level;
     ABC_PRT( pStr, time );
 }
 
 static inline void Abc_PrintTimeP( int level, const char * pStr, abctime time, abctime Time )
 {
+    (void)level;
     ABC_PRTP( pStr, time, Time );
 }
 
 static inline void Abc_PrintMemoryP( int level, const char * pStr, int mem, int Mem )
 {
+    (void)level;
     ABC_PRMP( pStr, mem, Mem );
 }
 
@@ -589,6 +606,7 @@ static inline void * Abc_FileReadContents( char * pFileName, int * pnFileSize )
     RetValue = fread( pBuffer, 1, nFileSize, pFile );
     memset( pBuffer + nFileSize, 0, 32 );
     assert( RetValue == nFileSize );
+    (void)RetValue;
     fclose( pFile );
     return (void *)pBuffer;
 }

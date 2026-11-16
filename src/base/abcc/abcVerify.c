@@ -17,17 +17,24 @@
 ***********************************************************************/
 
 #include "abcc.h"
+#include <errno.h>
+#include <limits.h>
+#include "proof/cec/cec.h"
 #include "base/main/mainInt.h"
 #include "aig/gia/giaAig.h"
 #include "sat/bmc/bmc.h"
 #include "proof/int/int.h"
+#include "proof/imc/imc.h"
 #include "proof/pdr/pdr.h"
 #include "proof/pdr2/pdr2.h"
 #include "bdd/llb/llb.h"
 #include "bdd/bbr/bbr.h"
 #include "base/wln/wln.h"
+#include "base/wlc/wlc.h"
 #include "base/sn/snRead.h"
 #include "base/sn/snGia.h"
+#include "proof/cec/cecSuper.h"
+#include <errno.h>
 
 ABC_NAMESPACE_IMPL_START
 
@@ -45,6 +52,7 @@ static int Abc_CommandBmc                    ( Abc_Frame_t * pAbc, int argc, cha
 static int Abc_CommandBmc2                   ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandBmc3                   ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandBmcInter               ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9Int                ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandIndcut                 ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandInduction              ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandPdr                    ( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -64,19 +72,19 @@ static int Abc_CommandAbc9ReachY             ( Abc_Frame_t * pAbc, int argc, cha
 #endif
 static int Abc_CommandAbc9GroupProve         ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9MultiProve         ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9Kind               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SProve             ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9SuperProve         ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SProve2            ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Bmc                ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9SBmc               ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9Bmc3               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9ChainBmc           ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9BCore              ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9ICheck             ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Bmci               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
-typedef struct Wlc_BstPar_t_ Wlc_BstPar_t;
-typedef struct Wlc_Ntk_t_    Wlc_Ntk_t;
-extern Gia_Man_t * Wlc_NtkBitBlast( Wlc_Ntk_t * p, Wlc_BstPar_t * pPars );
 extern int Cec_GiaProveTest( Gia_Man_t * p, int nProcs, int nTimeOut, int nTimeOut2, int nTimeOut3, int fUseUif, Wlc_Ntk_t * pWlc, int fVerbose, int fVeryVerbose, int fSilent, char * pReplayFile, char * pUfarArgs );
 extern int Cec_GiaReplayReadParams( char * pFileName, int * pnProcs, int * pnTimeOut, int * pnTimeOut2, int * pnTimeOut3, int * pfUseUif );
 extern int Cec_GiaReplayTest( Gia_Man_t * p, Wlc_Ntk_t * pWlc, char * pFileName, int fVerbose, int fVeryVerbose, int fSilent );
@@ -123,10 +131,14 @@ void Abc_InitVerify( Abc_Frame_t * pAbc )
 #endif
     Cmd_CommandAdd( pAbc, "ABC9",         "&gprove",       Abc_CommandAbc9GroupProve,   0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&mprove",       Abc_CommandAbc9MultiProve,   0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&kind",         Abc_CommandAbc9Kind,         0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&sprove",       Abc_CommandAbc9SProve,       0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&super_prove",  Abc_CommandAbc9SuperProve,   0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&sprove2",      Abc_CommandAbc9SProve2,      0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&bmc",          Abc_CommandAbc9Bmc,          0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&bmcs",         Abc_CommandAbc9SBmc,         0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&bmc3",         Abc_CommandAbc9Bmc3,         0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&int",          Abc_CommandAbc9Int,          0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&chainbmc",     Abc_CommandAbc9ChainBmc,     0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&bcore",        Abc_CommandAbc9BCore,        0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&icheck",       Abc_CommandAbc9ICheck,       0 );
@@ -1923,6 +1935,132 @@ usage:
 
 /**Function*************************************************************
 
+  Synopsis    [Performs interpolation-based safety checking on the current GIA.]
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9Int( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Imc_Par_t Pars, * pPars = &Pars;
+    int c, fSelected = 0;
+    Imc_ManSetDefaultParams( pPars );
+    Extra_UtilGetoptReset();
+    while ( (c = Extra_UtilGetopt(argc, argv, "TFCBPmbcdiprgsaeulnqzjwoxvh")) != EOF )
+    {
+        if ( strchr("mbdiprgsaeulqjwox", c) )
+            fSelected = 1;
+        switch ( c )
+        {
+        case 'T':
+        case 'F':
+        case 'C':
+        case 'B':
+        {
+            char * pEnd;
+            long Value;
+            if ( globalUtilOptind >= argc )
+                goto usage;
+            errno = 0;
+            Value = strtol( argv[globalUtilOptind], &pEnd, 10 );
+            if ( errno == ERANGE || pEnd == argv[globalUtilOptind] || *pEnd || Value < 0 || Value > INT_MAX )
+                goto usage;
+            globalUtilOptind++;
+            if ( c != 'T' && Value ) fSelected = 1;
+            if ( c == 'T' ) pPars->nTimeOut = (int)Value;
+            if ( c == 'F' ) pPars->nFrameMax = (int)Value;
+            if ( c == 'C' ) pPars->nConfLimit = (int)Value;
+            if ( c == 'B' ) pPars->nBddMax = (int)Value;
+            break;
+        }
+        case 'P': pPars->fPortfolio ^= 1; break;
+        case 'm': pPars->fUseMiniSat ^= 1; break;
+        case 'b': pPars->fBackward ^= 1; break;
+        case 'c': pPars->fCheck ^= 1; break;
+        case 'd': pPars->fDual ^= 1; break;
+        case 'i': pPars->fInductive ^= 1; break;
+        case 'p': pPars->fPudlak ^= 1; break;
+        case 'r': pPars->fUseDelta ^= 1; break;
+        case 'g': pPars->fGrowFrames ^= 1; break;
+        case 's': pPars->fSweep ^= 1; break;
+        case 'a': pPars->fAutoItp ^= 1; break;
+        case 'e': pPars->fCompose ^= 1; break;
+        case 'u': pPars->fPreprocess ^= 1; break;
+        case 'l': pPars->fIncremental ^= 1; break;
+        case 'n': pPars->fSimulate ^= 1; break;
+        case 'q': pPars->fResetPrefix ^= 1; break;
+        case 'z': pPars->fSeqSweep ^= 1; break;
+        case 'j': pPars->fMinimize ^= 1; break;
+        case 'w': pPars->fWeaken ^= 1; break;
+        case 'o': pPars->fPredicates ^= 1; break;
+        case 'x': pPars->fAbstract ^= 1; break;
+        case 'v': pPars->fVerbose ^= 1; break;
+        default: goto usage;
+        }
+    }
+    if ( fSelected )
+        pPars->fPortfolio = 0;
+    if ( globalUtilOptind != argc )
+        goto usage;
+    if ( !Imc_ManCheckParams(pPars) )
+        return 1;
+    if ( pAbc->pGia == NULL )
+    {
+        Abc_Print( -1, "Abc_CommandAbc9Int(): There is no AIG.\n" );
+        return 1;
+    }
+    if ( Gia_ManPoNum(pAbc->pGia) != 1 || pAbc->pGia->nConstrs )
+    {
+        Abc_Print( -1, "&int requires one property. Use \"fold; &get\" to fold constraints.\n" );
+        return 1;
+    }
+    pAbc->Status = Imc_ManPerform( pAbc->pGia, pPars );
+    pAbc->nFrames = pPars->iFrame;
+    Abc_FrameReplaceCex( pAbc, &pAbc->pGia->pCexSeq );
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: &int [-TFCB <num>] [-Pmbcdiprgsaeulnqzjwoxvh]\n" );
+    Abc_Print( -2, "\t           interpolation-based model checking of one safety property\n" );
+    Abc_Print( -2, "\t           inspired by Niklas Een's ,imc implementation in ZZ/Bip\n" );
+    Abc_Print( -2, "\t-T <num> : total runtime limit in seconds (0 = unlimited) [default = %d]\n", pPars->nTimeOut );
+    Abc_Print( -2, "\t-F <num> : maximum suffix depth (0 = unlimited) [default = %d]\n", pPars->nFrameMax );
+    Abc_Print( -2, "\t-C <num> : conflicts per image/induction/check query (0 = unlimited) [default = %d]\n", pPars->nConfLimit );
+    Abc_Print( -2, "\t-B <num> : total live BDD node limit (0 = disabled) [default = %d]\n", pPars->nBddMax );
+    Abc_Print( -2, "\t-P       : toggle automatic schedule (engine options/nonzero -FCB disable it) [default = %s]\n", pPars->fPortfolio ? "yes" : "no" );
+    Abc_Print( -2, "\t-m       : toggle using MiniSat instead of CaDiCaL [default = %s]\n", pPars->fUseMiniSat ? "yes" : "no" );
+    Abc_Print( -2, "\t-b       : toggle backward interpolation [default = %s]\n", pPars->fBackward ? "yes" : "no" );
+    Abc_Print( -2, "\t-c       : toggle independent interpolant and invariant checks [default = %s]\n", pPars->fCheck ? "yes" : "no" );
+    Abc_Print( -2, "\t-d       : toggle dual McMillan interpolation [default = %s]\n", pPars->fDual ? "yes" : "no" );
+    Abc_Print( -2, "\t-i       : toggle induction instead of combinational containment [default = %s]\n", pPars->fInductive ? "yes" : "no" );
+    Abc_Print( -2, "\t-p       : toggle Pudlak interpolation for CaDiCaL [default = %s]\n", pPars->fPudlak ? "yes" : "no" );
+    Abc_Print( -2, "\t-r       : toggle images of states outside the previous union [default = %s]\n", pPars->fUseDelta ? "yes" : "no" );
+    Abc_Print( -2, "\t-g       : toggle growing the suffix using the image depth [default = %s]\n", pPars->fGrowFrames ? "yes" : "no" );
+    Abc_Print( -2, "\t-s       : toggle bounded SAT sweeping of interpolants [default = %s]\n", pPars->fSweep ? "yes" : "no" );
+    Abc_Print( -2, "\t-a       : toggle selecting a small interpolant from each LRAT proof [default = %s]\n", pPars->fAutoItp ? "yes" : "no" );
+    Abc_Print( -2, "\t-e       : toggle composing and simplifying backward image queries [default = %s]\n", pPars->fCompose ? "yes" : "no" );
+    Abc_Print( -2, "\t-u       : toggle CaDiCaL preprocessing and search defaults [default = %s]\n", pPars->fPreprocess ? "yes" : "no" );
+    Abc_Print( -2, "\t-l       : toggle incremental CaDiCaL with LIDRUP proofs [default = %s]\n", pPars->fIncremental ? "yes" : "no" );
+    Abc_Print( -2, "\t-n       : toggle counterexample simulation [default = %s]\n", pPars->fSimulate ? "yes" : "no" );
+    Abc_Print( -2, "\t-q       : toggle reset-based bounded-prefix encoding [default = %s]\n", pPars->fResetPrefix ? "yes" : "no" );
+    Abc_Print( -2, "\t-z       : toggle bounded sequential equivalence preprocessing [default = %s]\n", pPars->fSeqSweep ? "yes" : "no" );
+    Abc_Print( -2, "\t-j       : toggle bounded proof-core minimization [default = %s]\n", pPars->fMinimize ? "yes" : "no" );
+    Abc_Print( -2, "\t-w       : toggle weakening interpolants with UNSAT cores [default = %s]\n", pPars->fWeaken ? "yes" : "no" );
+    Abc_Print( -2, "\t-o       : toggle sharing compound state predicates [default = %s]\n", pPars->fPredicates ? "yes" : "no" );
+    Abc_Print( -2, "\t-x       : toggle matching state predicates and Houdini induction (off = concrete states) [default = %s]\n", pPars->fAbstract ? "yes" : "no" );
+    Abc_Print( -2, "\t-v       : toggle verbose output [default = %s]\n", pPars->fVerbose ? "yes" : "no" );
+    Abc_Print( -2, "\t-h       : print the command usage\n" );
+    Abc_Print( -2, "\t           -m excludes -p/-l/-u/-a/-j; -l excludes -a/-j\n" );
+    Abc_Print( -2, "\t           Example: &r property.aig; &int -T 60; print_status\n" );
+    return 1;
+}
+
+/**Function*************************************************************
+
   Synopsis    []
 
   Description []
@@ -2711,7 +2849,7 @@ usage:
     Abc_Print( -2, "\t-d     : toggle dumping the inductive invariant (with the solved design, see -I) [default = %s]\n", pPars->fDumpInv? "yes": "no" );
     Abc_Print( -2, "\t-v     : toggle printing verbose information [default = %s]\n",                        pPars->fVerbose? "yes": "no" );
     Abc_Print( -2, "\t-w     : toggle printing very verbose information [default = %s]\n",                   pPars->fVeryVerbose? "yes": "no" );
-    Abc_Print( -2, "\t-z     : toggle suppressing report about solved outputs [default = %s]\n",             pPars->fSilent? "yes": "no" );
+    Abc_Print( -2, "\t-z     : toggle silent solver execution [default = %s]\n",                           pPars->fSilent? "yes": "no" );
     Abc_Print( -2, "\t-h     : print the command usage\n");
     Abc_Print( -2, "\t         environment: PDR2_BMC=<sec> time limit of the BMC stage after the first slice (0 = none) [default = %d],\n", pPars->nBmcTime );
     Abc_Print( -2, "\t         PDR2_TIMEGEN=0|1|2 time generalization (off, frame infinity only, also frame jumps) [default = %d],\n", pPars->fTimeGen );
@@ -3958,7 +4096,238 @@ usage:
 
 /**Function*************************************************************
 
-  Synopsis    []
+  Synopsis    [Runs the bounded induction precheck on the current Gia manager.]
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9Kind( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Cec_ParKind_t Pars;
+    abctime clk;
+    int c, fSilent = 0;
+    Cec_ManKindSetDefaultParams( &Pars );
+    Extra_UtilGetoptReset();
+    while ( (c = Extra_UtilGetopt(argc, argv, "FCNTsvh")) != EOF )
+    {
+        switch ( c )
+        {
+        case 'F':
+        case 'C':
+        case 'N':
+        {
+            char * pArg, * pEnd;
+            long Value;
+            if ( globalUtilOptind >= argc ) goto usage;
+            pArg = argv[globalUtilOptind++];
+            errno = 0;
+            Value = strtol( pArg, &pEnd, 10 );
+            if ( errno || pEnd == pArg || *pEnd || Value < (c == 'F') || Value >= INT_MAX ) goto usage;
+            if ( c == 'F' ) Pars.nFramesMax = (int)Value;
+            if ( c == 'C' ) Pars.nConfLimit = (int)Value;
+            if ( c == 'N' ) Pars.nAndMax = (int)Value;
+            break;
+        }
+        case 'T':
+        {
+            char * pArg, * pEnd;
+            double Value;
+            if ( globalUtilOptind >= argc ) goto usage;
+            pArg = argv[globalUtilOptind++];
+            errno = 0;
+            Value = strtod( pArg, &pEnd );
+            if ( errno || pEnd == pArg || *pEnd || !(Value >= 0 && Value <= (double)INT_MAX / 1000) ) goto usage;
+            Pars.nTimeOutMs = (int)ceil( 1000 * Value );
+            break;
+        }
+        case 's': fSilent ^= 1; break;
+        case 'v': Pars.fVerbose ^= 1; break;
+        default: goto usage;
+        }
+    }
+    if ( globalUtilOptind != argc ) goto usage;
+    if ( pAbc->pGia == NULL )
+    {
+        Abc_Print( -1, "&kind: There is no AIG.\n" );
+        return 1;
+    }
+    Abc_CexFreeP( &pAbc->pGia->pCexComb );
+    Abc_CexFreeP( &pAbc->pGia->pCexSeq );
+    Abc_FrameReplaceCex( pAbc, &pAbc->pGia->pCexSeq );
+    clk = Abc_Clock();
+    pAbc->Status = Cec_GiaKind( pAbc->pGia, &Pars );
+    pAbc->nFrames = Pars.iFrame;
+    if ( !fSilent )
+    {
+        Abc_Print( 1, "Kind result = %s.  K = %d.  SAT calls = %d.  Time = %.6f sec.\n",
+            pAbc->Status == 1 ? "UNSATISFIABLE" : "UNDECIDED", Pars.iFrame, Pars.nQueries,
+            (double)(Abc_Clock() - clk) / CLOCKS_PER_SEC );
+    }
+    return 0;
+usage:
+    Abc_Print( -2, "usage: &kind [-FCN <num>] [-T <sec>] [-svh]\n" );
+    Abc_Print( -2, "\t           bounded k-induction on zero-initialized registers\n" );
+    Abc_Print( -2, "\t-F <num> : maximum induction depth [default = %d]\n", Pars.nFramesMax );
+    Abc_Print( -2, "\t-C <num> : conflicts per query (0 = unlimited) [default = %d]\n", Pars.nConfLimit );
+    Abc_Print( -2, "\t-N <num> : maximum input AND count (0 = unlimited) [default = %d]\n", Pars.nAndMax );
+    Abc_Print( -2, "\t-T <sec> : total time limit, rounded up to ms (0 = unlimited) [default = %g]\n", Pars.nTimeOutMs / 1000.0 );
+    Abc_Print( -2, "\t-s       : toggle silent result reporting [default = %s]\n", fSilent ? "yes" : "no" );
+    Abc_Print( -2, "\t-v       : toggle reporting each proof obligation [default = %s]\n", Pars.fVerbose ? "yes" : "no" );
+    Abc_Print( -2, "\t-h       : print the command usage\n" );
+    Abc_Print( -2, "\t           Example: &read design.aig; &kind -T 1; print_status\n" );
+    Abc_Print( -2, "\t           Returns proved or undecided; &read normalizes initial values.\n" );
+    return 1;
+}
+
+
+/**Function*************************************************************
+
+  Synopsis    [Runs the native simplify/prove/abstract portfolio.]
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9SuperProve( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Cec_ParSuper_t Pars;
+    Gia_Man_t * pNew = NULL;
+    int c, Result, fUseUfar = 0;
+    Cec_ManSuperSetDefaultParams( &Pars );
+    Extra_UtilGetoptReset();
+    while ( (c = Extra_UtilGetopt(argc, argv, "PTMEurvsh")) != EOF )
+    {
+        switch ( c )
+        {
+        case 'P':
+        case 'T':
+        case 'M':
+        {
+            char * pEnd, * pArg;
+            long Value;
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-%c\" should be followed by an integer.\n", c );
+                goto usage;
+            }
+            pArg = argv[globalUtilOptind++];
+            errno = 0;
+            Value = strtol( pArg, &pEnd, 10 );
+            if ( errno || pEnd == pArg || *pEnd )
+            {
+                Abc_Print( -1, "Command line switch \"-%c\" should be followed by an integer.\n", c );
+                goto usage;
+            }
+            if ( Value < (c == 'M' ? 0 : 1) || Value > (c == 'P' ? 256 : c == 'M' ? 65536 : 86400) )
+            {
+                Abc_Print( -1, "Command line switch \"-%c\" expects an integer from %d to %d.\n",
+                    c, c == 'M' ? 0 : 1, c == 'P' ? 256 : c == 'M' ? 65536 : 86400 );
+                goto usage;
+            }
+            if ( c == 'P' ) Pars.nProcs = (int)Value;
+            else if ( c == 'M' ) Pars.nBmcMemory = (int)Value;
+            else Pars.nTimeOut = (int)Value;
+            break;
+        }
+        case 'E':
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-E\" should be followed by an engine name.\n" );
+                goto usage;
+            }
+            Pars.iEngine = Cec_ManSuperEngineId( argv[globalUtilOptind++] );
+            if ( Pars.iEngine < 0 )
+            {
+                Abc_Print( -1, "Unknown &super_prove engine \"%s\".\n", argv[globalUtilOptind-1] );
+                goto usage;
+            }
+            break;
+        case 'u': fUseUfar ^= 1; break;
+        case 'r': Pars.fRewrite ^= 1; break;
+        case 'v': Pars.fVerbose ^= 1; break;
+        case 's': Pars.fSilent ^= 1; break;
+        default: goto usage;
+        }
+    }
+    if ( globalUtilOptind != argc ) goto usage;
+    if ( fUseUfar )
+    {
+        Wlc_Ntk_t * pWlc = (Wlc_Ntk_t *)pAbc->pAbcWlc;
+        if ( !pWlc || Wlc_NtkPoNum(pWlc) != 2 ||
+             Wlc_ObjRange(Wlc_NtkPo(pWlc, 0)) != Wlc_ObjRange(Wlc_NtkPo(pWlc, 1)) )
+        {
+            Abc_Print( -1, "&super_prove -u: Requires two equally wide word-level outputs.\n" );
+            return 1;
+        }
+        Result = Cec_WlcSuperProve( pWlc, &Pars, &pNew );
+    }
+    else
+    {
+        if ( !pAbc->pGia ) { Abc_Print(-1, "&super_prove: There is no AIG.\n"); return 1; }
+        if ( Pars.iEngine == Cec_ManSuperEngineId("ufar") )
+        {
+            Abc_Print( -1, "&super_prove: The ufar engine requires -u.\n" );
+            return 1;
+        }
+        Result = Cec_GiaSuperProve( pAbc->pGia, &Pars );
+    }
+    if ( Result == -2 )
+    {
+        Gia_ManStopP( &pNew );
+        Abc_Print( -1, "&super_prove: Requires a zero-initialized, unconstrained AIG "
+            "without boxes, choices, or XOR/MUX/buffer nodes.\n" );
+        return 1;
+    }
+    if ( Result == -3 )
+    {
+        Gia_ManStopP( &pNew );
+        Abc_Print( -1, "&super_prove: Cannot initialize worker synchronization.\n" );
+        return 1;
+    }
+    if ( pNew ) Abc_FrameUpdateGia( pAbc, pNew );
+    pAbc->Status = Result;
+    Abc_FrameReplaceCex( pAbc, &pAbc->pGia->pCexSeq );
+    return 0;
+usage:
+    Abc_Print( -2, "usage: &super_prove [-PTM <num>] [-E str] [-urvsh]\n" );
+    Abc_Print( -2, "\t           native simplify/prove/abstract portfolio\n" );
+    Abc_Print( -2, "\t-P <num> : maximum solver workers (1..256) [default = %d]\n", Pars.nProcs );
+    Abc_Print( -2, "\t-T <num> : total time limit in seconds [default = %d]\n", Pars.nTimeOut );
+    Abc_Print( -2, "\t-M <num> : estimated MiB per BMC lane (0 = unlimited) [default = %d]\n", Pars.nBmcMemory );
+    Abc_Print( -2, "\t-E <str> : select one engine experiment [default = auto]\n" );
+    Abc_Print( -2, "\t           pdr2, pdr2-t, fla, int, pdr, pdr-t, pdr-t-or, rar, sim4, kind,\n" );
+    Abc_Print( -2, "\t           scorr3, scorr4, scorr, gla, gla-pdr, gla-pdr-original, abs, drwsat,\n" );
+    Abc_Print( -2, "\t           scnew, pdr-t-scorr, rar-scnew, syn2-scorr, retime-scorr, int-old,\n" );
+    Abc_Print( -2, "\t           ufar (requires -u),\n" );
+    Abc_Print( -2, "\t           pdr2-quick, pdr2-t-quick, pdr2-sim, pdr2-sim-quick,\n" );
+    Abc_Print( -2, "\t           pdr2-temporal, pdr2-startup, gla-temporal, pdr2-rpm,\n" );
+    Abc_Print( -2, "\t           phase-scorr, int-syn2, bdd-simplify, bmc3-classic, bmc3-glucose,\n" );
+    Abc_Print( -2, "\t           bmc3-cadical, bmc3-cadical-glucose (15-second CaDiCaL prefix)\n" );
+    Abc_Print( -2, "\t           aliases: bmc, bmc-g, bmc3, bmc3-g, respectively\n" );
+    Abc_Print( -2, "\t-u       : toggle word-level miter construction and UFAR/PDR2 [default = %s]\n",
+        fUseUfar ? "yes" : "no" );
+    Abc_Print( -2, "\t           replaces the current AIG with the word-level miter\n" );
+    Abc_Print( -2, "\t-r       : toggle balance-free rewriting [default = %s]\n", Pars.fRewrite ? "yes" : "no" );
+    Abc_Print( -2, "\t-v       : toggle reporting engine progress [default = %s]\n", Pars.fVerbose ? "yes" : "no" );
+    Abc_Print( -2, "\t-s       : toggle silent result reporting [default = %s]\n", Pars.fSilent ? "yes" : "no" );
+    Abc_Print( -2, "\t-h       : print the command usage\n\n" );
+    Abc_Print( -2, "\t           This command was inspired by 'super_prove', an award-winning\n" );
+    Abc_Print( -2, "\t           (https://hwmcc.github.io/2025/) concurrent sequential model checker\n" );
+    Abc_Print( -2, "\t           developed in Python by Robert Brayton in 2013-2018 and maintained on github\n" );
+    Abc_Print( -2, "\t           (https://github.com/sterin/super-prove-build) by Baruch Sterin.\n" );
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Runs the established staged sequential portfolio.]
 
   Description []
 
@@ -4391,7 +4760,95 @@ usage:
 
 /**Function*************************************************************
 
-  Synopsis    []
+  Synopsis    [Runs incremental GIA BMC with CaDiCaL.]
+
+  Description []
+
+  SideEffects [Updates the frame's verification status and counterexample.]
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_CommandAbc9Bmc3( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Bmc_GiaPar_t Pars;
+    int c, Result;
+    Bmc_GiaSetDefaultParams( &Pars );
+    Extra_UtilGetoptReset();
+    while ( (c = Extra_UtilGetopt(argc, argv, "FTCKMvsh")) != EOF )
+    {
+        switch ( c )
+        {
+        case 'F':
+        case 'T':
+        case 'C':
+        case 'K':
+        case 'M':
+        {
+            char * pArg, * pEnd;
+            long Value;
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-%c\" should be followed by an integer.\n", c );
+                goto usage;
+            }
+            pArg = argv[globalUtilOptind++];
+            errno = 0;
+            Value = strtol( pArg, &pEnd, 10 );
+            if ( errno || pEnd == pArg || *pEnd || Value < 0 || Value >= INT_MAX ||
+                 (c == 'T' && Value > 86400) || (c == 'M' && Value > (1 << 20)) ||
+                 (c == 'K' && (Value < 3 || Value > 8)) )
+            {
+                Abc_Print( -1, "Command line switch \"-%c\" should be followed by an integer in range.\n", c );
+                goto usage;
+            }
+            if ( c == 'F' ) Pars.nFramesMax = (int)Value;
+            if ( c == 'T' ) Pars.nTimeOut = (int)Value;
+            if ( c == 'C' ) Pars.nConfLimit = (int)Value;
+            if ( c == 'K' ) Pars.nLutSize = (int)Value;
+            if ( c == 'M' ) Pars.nMemoryLimit = (int)Value;
+            break;
+        }
+        case 'v': Pars.fVerbose ^= 1; break;
+        case 's': Pars.fSilent ^= 1; break;
+        default: goto usage;
+        }
+    }
+    if ( globalUtilOptind != argc ) goto usage;
+    if ( !pAbc->pGia )
+    {
+        Abc_Print( -1, "&bmc3: There is no AIG.\n" );
+        return 1;
+    }
+    Result = Bmc_GiaPerform( pAbc->pGia, &Pars );
+    if ( Result == -2 )
+    {
+        Abc_Print( -1, "&bmc3 requires a plain AIG with zero initial states and no constraints or boxes.\n" );
+        return 1;
+    }
+    pAbc->Status = Result;
+    pAbc->nFrames = Pars.iFrame;
+    Abc_CexFreeP( &pAbc->pGia->pCexComb );
+    Abc_FrameReplaceCex( pAbc, &pAbc->pGia->pCexSeq );
+    return 0;
+usage:
+    Abc_Print( -2, "usage: &bmc3 [-FTCKM <num>] [-vsh]\n" );
+    Abc_Print( -2, "\t            incremental GIA bounded model checking using CaDiCaL\n" );
+    Abc_Print( -2, "\t-F <num> : maximum frames to check (0 = unlimited) [default = %d]\n", Pars.nFramesMax );
+    Abc_Print( -2, "\t-T <num> : wall-clock seconds (0 = unlimited, max 86400) [default = %d]\n", Pars.nTimeOut );
+    Abc_Print( -2, "\t-C <num> : conflicts per query (0 = unlimited) [default = %d]\n", Pars.nConfLimit );
+    Abc_Print( -2, "\t-K <num> : CNF cut size (3..8) [default = %d]\n", Pars.nLutSize );
+    Abc_Print( -2, "\t-M <num> : estimated memory budget in MiB (0 = unlimited) [default = %d]\n", Pars.nMemoryLimit );
+    Abc_Print( -2, "\t-v       : toggle reporting completed frames [default = %s]\n", Pars.fVerbose ? "yes" : "no" );
+    Abc_Print( -2, "\t-s       : toggle suppressing the final result [default = %s]\n", Pars.fSilent ? "yes" : "no" );
+    Abc_Print( -2, "\t-h       : print the command usage\n" );
+    Abc_Print( -2, "\t           A frame limit alone does not establish an unbounded proof.\n" );
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    [Runs incremental BMC with the existing Satoko/Glucose engines.]
 
   Description []
 

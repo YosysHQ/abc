@@ -393,12 +393,12 @@ typedef struct Cec_DynSrm_t_ Cec_DynSrm_t;
 ////////////////////////////////////////////////////////////////////////
 
 /*=== cecCorr.c ============================================================*/
+extern void                 Cec_ManLSCorrespondenceBmc( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nPrefs );
 extern void                 Cec_ManRefinedClassPrintStats( Gia_Man_t * p, Vec_Str_t * vStatus, int iIter, abctime Time );
 /*=== cecCorr2.c ===========================================================*/
 extern int                  Gia_ManCorr2SpecReal( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix );
 extern void                 Gia_ManCorr2SpecReduce_rec( Gia_Man_t * pNew, Gia_Man_t * p, Gia_Obj_t * pObj, int f, int nPrefix );
 extern Gia_Man_t *          Gia_ManCorr2SpecReduce( Gia_Man_t * p, int nFrames, int fScorr, Vec_Int_t ** pvOutputs, int fRings, Vec_Int_t ** pvOutLits );
-extern Gia_Man_t *          Cec_ManLSCorrespondence2( Gia_Man_t * pAig, Cec_ParCor_t * pPars );
 extern void                 Cec_ManStartSimInfo( Vec_Ptr_t * vInfo, int nFlops );
 extern Vec_Int_t *          Gia_ManCorrCreateRemapping( Gia_Man_t * p );
 extern void                 Gia_ManCorrPerformRemapping( Vec_Int_t * vPairs, Vec_Ptr_t * vInfo );
@@ -408,14 +408,14 @@ extern void                 Gia_ManCorrSpecReduce_rec( Gia_Man_t * pNew, Gia_Man
 extern Gia_Man_t *          Gia_ManCorrSpecReduce( Gia_Man_t * p, int nFrames, int fScorr, Vec_Int_t ** pvOutputs, int fRings, Vec_Int_t ** pvOutLits );
 /* &scorr per-proof profiling counters: defined in cecCorr.c, written by the    */
 /* SAT/CSAT miter solvers, reset+read by the &scorr loop. All times in ns.      */
-extern int                  Cec_ScorrProfOn;     // master enable (gates all profiling work)
-extern int                  Cec_ScorrProfCalls;  // # of per-PO solve calls in the last miter
-extern abctime              Cec_ScorrProfSetup;  // solver alloc + AIG prep before the PO loop
-extern abctime              Cec_ScorrProfSolve;  // summed over every per-PO solve call
-extern abctime              Cec_ScorrProfMax;    // slowest single per-PO solve call
-extern ABC_INT64_T          Cec_ScorrConfLimit;  // total conflict cap for the current correspondence call
-extern ABC_INT64_T          Cec_ScorrConfUsed;   // exact conflicts/backtracks consumed by that call
-extern int                  Cec_ScorrConfStop;   // the total conflict cap has been reached
+extern ABC_THREAD_LOCAL int                  Cec_ScorrProfOn;     // master enable (gates all profiling work)
+extern ABC_THREAD_LOCAL int                  Cec_ScorrProfCalls;  // # of per-PO solve calls in the last miter
+extern ABC_THREAD_LOCAL abctime              Cec_ScorrProfSetup;  // solver alloc + AIG prep before the PO loop
+extern ABC_THREAD_LOCAL abctime              Cec_ScorrProfSolve;  // summed over every per-PO solve call
+extern ABC_THREAD_LOCAL abctime              Cec_ScorrProfMax;    // slowest single per-PO solve call
+extern ABC_THREAD_LOCAL ABC_INT64_T          Cec_ScorrConfLimit;  // total conflict cap for this call
+extern ABC_THREAD_LOCAL ABC_INT64_T          Cec_ScorrConfUsed;   // exact conflicts/backtracks consumed by that call
+extern ABC_THREAD_LOCAL int                  Cec_ScorrConfStop;   // the total conflict cap has been reached
 //=== cecCorr3.c ============================================================
 extern Gia_Man_t *          Cec_ManLSCorrespondenceShared( Gia_Man_t * pAig, Cec_ParCor_t * pPars, int nSides );
 //=== cecCorr4.c ============================================================
@@ -526,7 +526,6 @@ extern abctime              Cec_SeedSimTimeEventRollback( Cec_SeedSim_t * p );
 extern abctime              Cec_SeedSimTimeEventInit( Cec_SeedSim_t * p );
 /*=== cecClass.c ============================================================*/
 extern int                  Cec_ManSimClassRemoveOne( Cec_ManSim_t * p, int i );
-extern void                 Cec_ManSimClassCreate( Gia_Man_t * p, Vec_Int_t * vClass );
 extern int                  Cec_ManSimCompareEqual( unsigned * p0, unsigned * p1, int nWords );
 extern int                  Cec_ManSimHashKey( unsigned * pSim, int nWords, int nTableSize );
 extern int                  Cec_ManSimClassesPrepare( Cec_ManSim_t * p, int LevelMax );
@@ -545,6 +544,7 @@ extern void                 Cec_ManPatPrintStats( Cec_ManPat_t * p );
 extern void                 Cec_ManPatStop( Cec_ManPat_t * p );
 extern Cec_ManSim_t *       Cec_ManSimStart( Gia_Man_t * pAig, Cec_ParSim_t *  pPars ); 
 extern void                 Cec_ManSimStop( Cec_ManSim_t * p );  
+extern int                  Cec_ManResimulateCounterExamples( Cec_ManSim_t * pSim, Vec_Int_t * vCexStore, int nFrames, Cec_SeedSim_t * pSeed, Vec_Int_t * vOutputs, Cec_ParCor_t * pCorPars, int fInduction );
 extern Cec_ManFra_t *       Cec_ManFraStart( Gia_Man_t * pAig, Cec_ParFra_t *  pPars );  
 extern void                 Cec_ManFraStop( Cec_ManFra_t * p );
 /*=== cecPat.c ============================================================*/
