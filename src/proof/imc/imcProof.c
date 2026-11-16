@@ -121,6 +121,8 @@ FILE * Imc_ProofFile( void )
     if ( pFile == NULL )
         _close( Fd );
     return pFile;
+#elif defined(__wasi__)
+    return NULL;
 #else
     return tmpfile();
 #endif
